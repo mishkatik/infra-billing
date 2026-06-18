@@ -10,7 +10,7 @@ export function faviconResolver(link: string | null | undefined): string | null 
   }
 }
 
-/** Resolve a provider's favicon from its login URL ("Ссылка на ЛК"). */
+/** Resolve a provider's favicon from its login URL (the provider's dashboard link). */
 export function providerFavicon(p: {
   faviconLink: string | null;
   loginUrl: string | null;

@@ -49,7 +49,7 @@ export class SyncService implements OnModuleInit {
     }
     const interval = setInterval(() => void this.syncAllProviders(), hours * 3_600_000);
     this.scheduler.addInterval(SYNC_INTERVAL_NAME, interval);
-    this.logger.log(`Автосинк провайдеров каждые ${hours}ч`);
+    this.logger.log(`Provider autosync every ${hours}h`);
   }
 
   /** Sync every non-manual provider; failures are isolated. */
@@ -63,7 +63,7 @@ export class SyncService implements OnModuleInit {
         await this.syncProvider(p.uuid);
       } catch (e) {
         this.logger.error(
-          `Синк «${p.name}» (${p.uuid}) завершился ошибкой`,
+          `Sync "${p.name}" (${p.uuid}) failed`,
           e instanceof Error ? e.stack : String(e),
         );
       }
@@ -88,9 +88,9 @@ export class SyncService implements OnModuleInit {
 
   async syncProvider(uuid: string): Promise<SyncRunDto> {
     const provider = await this.prisma.provider.findUnique({ where: { uuid } });
-    if (!provider) throw new NotFoundException('Провайдер не найден');
+    if (!provider) throw new NotFoundException('Provider not found');
     if (provider.kind === 'manual') {
-      throw new BadRequestException('Ручной провайдер не синхронизируется');
+      throw new BadRequestException('Manual providers cannot be synced');
     }
 
     const run = await this.prisma.syncRun.create({
@@ -100,7 +100,7 @@ export class SyncService implements OnModuleInit {
     const timer = setTimeout(() => controller.abort(), SYNC_TIMEOUT_MS);
 
     try {
-      if (!provider.credentialsEnc) throw new Error('У провайдера нет API-токена');
+      if (!provider.credentialsEnc) throw new Error('Provider has no API token');
       const token = this.crypto.decrypt(provider.credentialsEnc);
       const connector = this.connectors.create(provider.kind, token);
 
@@ -127,13 +127,11 @@ export class SyncService implements OnModuleInit {
           const payments = await connector.fetchPayments(controller.signal);
           const imported = await this.upsertPayments(uuid, payments);
           if (imported) {
-            this.logger.log(
-              `Синк «${provider.name}» (${uuid}): платежей импортировано ${imported}`,
-            );
+            this.logger.log(`Sync "${provider.name}" (${uuid}): imported ${imported} payment(s)`);
           }
         } catch (e) {
           this.logger.warn(
-            `Импорт платежей «${provider.name}» (${uuid}) пропущен: ${e instanceof Error ? e.message : String(e)}`,
+            `Payment import for "${provider.name}" (${uuid}) skipped: ${e instanceof Error ? e.message : String(e)}`,
           );
         }
       }
@@ -146,7 +144,7 @@ export class SyncService implements OnModuleInit {
         where: { id: run.id },
         data: { status: 'ok', servicesFound, finishedAt: new Date() },
       });
-      this.logger.log(`Синк «${provider.name}» (${uuid}): ok, сервисов ${servicesFound}`);
+      this.logger.log(`Sync "${provider.name}" (${uuid}): ok, ${servicesFound} service(s)`);
       return mapSyncRun(done);
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
@@ -157,7 +155,7 @@ export class SyncService implements OnModuleInit {
         where: { id: run.id },
         data: { status: 'error', error: message, finishedAt: new Date() },
       });
-      this.logger.warn(`Синк «${provider.name}» (${uuid}): ошибка — ${message}`);
+      this.logger.warn(`Sync "${provider.name}" (${uuid}): error — ${message}`);
       return mapSyncRun(failed);
     } finally {
       clearTimeout(timer);

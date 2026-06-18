@@ -29,12 +29,12 @@ const ITEM_FUNCS: { func: string; type: string }[] = [
 // confirm automatically given the secret; for SMS there is no secret to store. Kept short so it
 // survives the notification's 200-char clamp.
 const TWO_FACTOR_MESSAGE =
-  'BILLmanager: на аккаунте включена 2FA. Если это OTP (Google Authenticator) — добавьте TOTP-секрет ' +
-  'в настройках провайдера, и синк будет подтверждать код сам. SMS-2FA автоматизировать нельзя — отключите её.';
+  'BILLmanager: 2FA is enabled on the account. If it is OTP (Google Authenticator) — add the TOTP secret ' +
+  'in the provider settings and the sync will confirm the code itself. SMS-2FA cannot be automated — disable it.';
 
 const TOTP_FAILED_MESSAGE =
-  'BILLmanager: не удалось подтвердить вход по OTP — проверьте TOTP-секрет (тот же, что в приложении-аутентификаторе) ' +
-  'и синхронизацию времени на сервере.';
+  'BILLmanager: failed to confirm login via OTP — check the TOTP secret (the same one as in your authenticator app) ' +
+  'and the server clock synchronization.';
 
 /**
  * ISPsystem BILLmanager connector (https://docs.ispsystem.com/billmanager). CGI API at
@@ -77,7 +77,7 @@ export class BillmgrConnector implements Connector {
     });
     if (data?.doc?.error) throw new Error(`BILLmanager: ${billmgrError(data.doc.error)}`);
     const id = data?.doc?.auth?.$id ?? data?.doc?.session?.$id;
-    if (!id) throw new Error('BILLmanager: сессия не получена');
+    if (!id) throw new Error('BILLmanager: session was not obtained');
 
     // The session id alone doesn't prove the session is usable: with 2FA enabled, func=auth
     // returns an id but the session is unconfirmed, and whoami (like every data func) comes
@@ -96,7 +96,7 @@ export class BillmgrConnector implements Connector {
       // one we can't supply the rotating code, so fail with guidance instead of 0 services.
       if (!this.creds.totpSecret) throw new Error(TWO_FACTOR_MESSAGE);
       // Confirmation returns a NEW, fully-authorized session id — the original one stays
-      // half-privileged ("недостаточно прав"), so we must switch to the new id.
+      // half-privileged ("insufficient privileges"), so we must switch to the new id.
       sessionId = await this.confirmTotp(id, signal);
       probe = await this.http.get<BillmgrDoc>('', {
         params: { func: 'whoami', auth: sessionId, out: 'json' },
@@ -176,8 +176,8 @@ export class BillmgrConnector implements Connector {
   }
 
   /**
-   * BILLmanager exposes a ledger: func=payment (пополнения/платежи) and func=expense (списания
-   * за услуги). We import both — payments as `topup`, expenses as `charge` linked to the parent
+   * BILLmanager exposes a ledger: func=payment (top-ups/payments) and func=expense (charges
+   * for services). We import both — payments as `topup`, expenses as `charge` linked to the parent
    * service via `main_item`. Each ledger is best-effort (skipped if unavailable on the install).
    */
   async fetchPayments(signal: AbortSignal): Promise<PaymentData[]> {
@@ -203,7 +203,7 @@ export class BillmgrConnector implements Connector {
           amount: new Decimal(amountStr).mul(sign),
           currency: currencyFromAmount(amountRaw),
           date,
-          description: number ? `Платёж ${number}` : 'Платёж',
+          description: number ? `Payment ${number}` : 'Payment',
         });
       }
     } catch {

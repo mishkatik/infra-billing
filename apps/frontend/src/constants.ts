@@ -1,49 +1,55 @@
+import { useTranslation } from 'react-i18next';
 import type { Period, ProviderKind, ServiceType } from '@infra/shared';
 
-export const PERIOD_LABELS: Record<Period, string> = {
-  monthly: 'Ежемесячно',
-  yearly: 'Ежегодно',
-  quarterly: 'Ежеквартально',
-  daily: 'Ежедневно',
-  hourly: 'Почасово',
-  onetime: 'Разово',
-};
+export const PERIODS: Period[] = ['monthly', 'yearly', 'quarterly', 'daily', 'hourly', 'onetime'];
+export const SERVICE_TYPES: ServiceType[] = [
+  'vps',
+  'dedicated',
+  'domain',
+  'cdn',
+  'storage',
+  'db',
+  'license',
+  'other',
+];
+export const PROVIDER_KINDS: ProviderKind[] = [
+  'timeweb',
+  'hetzner',
+  'hostbill',
+  'billmgr',
+  'selectel',
+  '4vps',
+  'manual',
+];
 
-export const SERVICE_TYPE_LABELS: Record<ServiceType, string> = {
-  vps: 'VPS',
-  dedicated: 'Выделенный сервер',
-  domain: 'Домен',
-  cdn: 'CDN',
-  storage: 'Хранилище',
-  db: 'База данных',
-  license: 'Лицензия',
-  other: 'Другое',
-};
-
-export const PROVIDER_KIND_LABELS: Record<ProviderKind, string> = {
-  timeweb: 'Timeweb Cloud',
-  hetzner: 'Hetzner Cloud',
-  hostbill: 'HostBill',
-  billmgr: 'ISP BILLmanager',
-  selectel: 'Selectel',
-  '4vps': '4VPS.SU',
-  manual: 'Ручной',
-};
-
-export const PERIOD_OPTIONS = (Object.keys(PERIOD_LABELS) as Period[]).map((value) => ({
-  value,
-  label: PERIOD_LABELS[value],
-}));
-
-export const SERVICE_TYPE_OPTIONS = (Object.keys(SERVICE_TYPE_LABELS) as ServiceType[]).map(
-  (value) => ({ value, label: SERVICE_TYPE_LABELS[value] }),
-);
-
-export const PROVIDER_KIND_OPTIONS = (Object.keys(PROVIDER_KIND_LABELS) as ProviderKind[]).map(
-  (value) => ({ value, label: PROVIDER_KIND_LABELS[value] }),
-);
-
+// Currency codes are language-neutral, so they stay static.
 export const CURRENCY_OPTIONS = ['RUB', 'USD', 'EUR', 'KZT', 'CNY'].map((c) => ({
   value: c,
   label: c,
 }));
+
+/**
+ * Translated labels and `<Select>` options for the domain enums. The underlying values
+ * (`monthly`, `vps`, `timeweb`, …) are stable; only the displayed label is localized.
+ */
+export function useEnums() {
+  const { t } = useTranslation();
+  const periodLabel = (p: string) => t(`enums.period.${p}`, p);
+  const serviceTypeLabel = (s: string) => t(`enums.serviceType.${s}`, s);
+  const providerKindLabel = (k: string) => t(`enums.providerKind.${k}`, k);
+  const rateSourceLabel = (r: string) => t(`enums.rateSource.${r}`, r);
+
+  return {
+    periodLabel,
+    serviceTypeLabel,
+    providerKindLabel,
+    rateSourceLabel,
+    periodOptions: PERIODS.map((value) => ({ value, label: periodLabel(value) })),
+    serviceTypeOptions: SERVICE_TYPES.map((value) => ({ value, label: serviceTypeLabel(value) })),
+    providerKindOptions: PROVIDER_KINDS.map((value) => ({
+      value,
+      label: providerKindLabel(value),
+    })),
+    currencyOptions: CURRENCY_OPTIONS,
+  };
+}

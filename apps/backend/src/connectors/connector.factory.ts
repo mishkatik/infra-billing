@@ -36,7 +36,7 @@ export class ConnectorFactory {
         // 4VPS secret is JSON: { token, panelId? }.
         return new FourVpsConnector(JSON.parse(token) as FourVpsCredentials);
       default:
-        throw new Error(`Коннектор для kind="${kind}" не поддерживается`);
+        throw new Error(`Connector for kind="${kind}" is not supported`);
     }
   }
 }

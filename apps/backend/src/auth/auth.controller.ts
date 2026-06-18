@@ -24,7 +24,7 @@ export class AuthController {
   @HttpCode(200)
   login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response): Me {
     if (!this.auth.verifyCredentials(dto.username, dto.password)) {
-      throw new UnauthorizedException('Неверный логин или пароль');
+      throw new UnauthorizedException('Invalid username or password');
     }
     res.cookie(SESSION_COOKIE, this.auth.sign(dto.username), this.auth.cookieOptions());
     return { username: dto.username };

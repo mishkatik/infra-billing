@@ -28,7 +28,7 @@ export class ProvidersService {
       where: { uuid },
       include: { ...COUNT_INCLUDE, services: { orderBy: { createdAt: 'asc' } } },
     });
-    if (!p) throw new NotFoundException('Провайдер не найден');
+    if (!p) throw new NotFoundException('Provider not found');
     const dto = this.withCredentialHints(mapProvider(p), p.kind, p.credentialsEnc);
     return { ...dto, services: p.services.map(mapService) };
   }
@@ -74,7 +74,7 @@ export class ProvidersService {
       where: { uuid },
       select: { kind: true, credentialsEnc: true },
     });
-    if (!existing) throw new NotFoundException('Провайдер не найден');
+    if (!existing) throw new NotFoundException('Provider not found');
     const data: Prisma.ProviderUpdateInput = {};
     if (dto.name !== undefined) data.name = dto.name;
     if (dto.loginUrl !== undefined) data.loginUrl = dto.loginUrl;
@@ -116,7 +116,7 @@ export class ProvidersService {
       if (!dto.token && !dto.panelId) return null;
       const base = this.decodeCredentials(existingEnc);
       const token = dto.token ?? base.token;
-      if (!token) throw new BadRequestException('Укажите API-токен 4VPS');
+      if (!token) throw new BadRequestException('Provide the 4VPS API token');
       const creds: Record<string, string> = { token };
       const panelId = dto.panelId ?? base.panelId;
       if (panelId) creds.panelId = panelId;
@@ -131,7 +131,7 @@ export class ProvidersService {
       const username = dto.username ?? base.username;
       const password = dto.password ?? base.password;
       if (!accountId || !username || !password) {
-        throw new BadRequestException('Укажите номер аккаунта, имя пользователя и пароль вместе');
+        throw new BadRequestException('Provide the account number, username and password together');
       }
       const creds: Record<string, string> = { accountId, username, password };
       const projectName = dto.projectName ?? base.projectName;
@@ -149,7 +149,7 @@ export class ProvidersService {
       const username = dto.username ?? base.username;
       const password = dto.password ?? base.password;
       if (!baseUrl || !username || !password) {
-        throw new BadRequestException('Укажите baseUrl, username и password вместе');
+        throw new BadRequestException('Provide baseUrl, username and password together');
       }
       const creds: Record<string, string> = { baseUrl, username, password };
       const totpSecret = supportsTotp ? (dto.totpSecret ?? base.totpSecret) : undefined;
@@ -175,6 +175,6 @@ export class ProvidersService {
       where: { uuid },
       select: { uuid: true },
     });
-    if (!found) throw new NotFoundException('Провайдер не найден');
+    if (!found) throw new NotFoundException('Provider not found');
   }
 }

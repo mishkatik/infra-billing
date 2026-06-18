@@ -2,8 +2,11 @@ import { MantineProvider } from '@mantine/core';
 import { DatesProvider } from '@mantine/dates';
 import { Notifications } from '@mantine/notifications';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import dayjs from 'dayjs';
+import { useTranslation } from 'react-i18next';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import 'dayjs/locale/ru';
+import 'dayjs/locale/en';
 import { theme } from './theme';
 import { RequireAuth } from './auth/RequireAuth';
 import { AppLayout } from './layout/AppLayout';
@@ -19,9 +22,13 @@ const queryClient = new QueryClient({
 });
 
 export default function App() {
+  const { i18n } = useTranslation();
+  const locale = i18n.resolvedLanguage ?? 'en';
+  dayjs.locale(locale);
+
   return (
     <MantineProvider theme={theme} defaultColorScheme="light">
-      <DatesProvider settings={{ locale: 'ru', firstDayOfWeek: 1, weekendDays: [0, 6] }}>
+      <DatesProvider settings={{ locale, firstDayOfWeek: 1, weekendDays: [0, 6] }}>
         <Notifications position="top-right" />
         <QueryClientProvider client={queryClient}>
           <BrowserRouter>

@@ -21,38 +21,41 @@ import {
   IconStack2,
   type Icon,
 } from '@tabler/icons-react';
+import { useTranslation } from 'react-i18next';
 import { NavLink as RouterNavLink, Outlet, useLocation } from 'react-router-dom';
 import { useLogout, useMe } from '@/api/auth';
 import { BuildInfo } from '@/components/BuildInfo';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 
 interface NavItem {
   to: string;
-  label: string;
+  labelKey: string;
   icon: Icon;
   end?: boolean;
 }
 
-const NAV: { section: string; items: NavItem[] }[] = [
+const NAV: { sectionKey: string; items: NavItem[] }[] = [
   {
-    section: 'Обзор',
-    items: [{ to: '/', label: 'Дашборд', icon: IconLayoutDashboard, end: true }],
+    sectionKey: 'nav.overview',
+    items: [{ to: '/', labelKey: 'nav.dashboard', icon: IconLayoutDashboard, end: true }],
   },
   {
-    section: 'Инфраструктура',
+    sectionKey: 'nav.infrastructure',
     items: [
-      { to: '/providers', label: 'Провайдеры', icon: IconServer2 },
-      { to: '/services', label: 'Сервисы', icon: IconStack2 },
-      { to: '/payments', label: 'Платежи', icon: IconReceipt2 },
+      { to: '/providers', labelKey: 'nav.providers', icon: IconServer2 },
+      { to: '/services', labelKey: 'nav.services', icon: IconStack2 },
+      { to: '/payments', labelKey: 'nav.payments', icon: IconReceipt2 },
     ],
   },
   {
-    section: 'Настройки',
-    items: [{ to: '/settings', label: 'Настройки', icon: IconSettings }],
+    sectionKey: 'nav.settings',
+    items: [{ to: '/settings', labelKey: 'nav.settingsItem', icon: IconSettings }],
   },
 ];
 
 export function AppLayout() {
   const { pathname } = useLocation();
+  const { t } = useTranslation();
   const me = useMe();
   const logout = useLogout();
 
@@ -66,7 +69,10 @@ export function AppLayout() {
             </ThemeIcon>
             <Text fw={700}>Infra Billing</Text>
           </Group>
-          <BuildInfo />
+          <Group gap="xs">
+            <LanguageSwitcher />
+            <BuildInfo />
+          </Group>
         </Group>
       </AppShell.Header>
 
@@ -74,9 +80,9 @@ export function AppLayout() {
         <AppShell.Section grow component={ScrollArea}>
           <Stack gap="lg">
             {NAV.map((group) => (
-              <div key={group.section}>
+              <div key={group.sectionKey}>
                 <Text size="xs" c="dimmed" fw={700} tt="uppercase" px="sm" mb={6}>
-                  {group.section}
+                  {t(group.sectionKey)}
                 </Text>
                 {group.items.map((it) => {
                   const active = it.end ? pathname === it.to : pathname.startsWith(it.to);
@@ -88,7 +94,7 @@ export function AppLayout() {
                       to={it.to}
                       end={it.end}
                       active={active}
-                      label={it.label}
+                      label={t(it.labelKey)}
                       leftSection={<ItemIcon size={18} stroke={1.5} />}
                     />
                   );
@@ -109,11 +115,11 @@ export function AppLayout() {
                   {me.data?.username ?? '—'}
                 </Text>
                 <Text size="xs" c="dimmed">
-                  single-user
+                  {t('app.singleUser')}
                 </Text>
               </Box>
             </Group>
-            <Tooltip label="Выйти">
+            <Tooltip label={t('app.logout')}>
               <ActionIcon
                 variant="subtle"
                 color="gray"

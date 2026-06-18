@@ -69,7 +69,7 @@ export class ServicesService {
 
   private async ensureExists(uuid: string): Promise<void> {
     const found = await this.prisma.service.findUnique({ where: { uuid }, select: { uuid: true } });
-    if (!found) throw new NotFoundException('Сервис не найден');
+    if (!found) throw new NotFoundException('Service not found');
   }
 
   private async ensureProvider(uuid: string): Promise<void> {
@@ -77,6 +77,6 @@ export class ServicesService {
       where: { uuid },
       select: { uuid: true },
     });
-    if (!found) throw new NotFoundException('Провайдер не найден');
+    if (!found) throw new NotFoundException('Provider not found');
   }
 }

@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { API_PREFIX, API_PATH } from '@infra/shared';
+import i18n from '@/i18n';
 
 /** Single axios instance. Cookie session → withCredentials. */
 export const api = axios.create({
@@ -24,8 +25,8 @@ api.interceptors.response.use(
 );
 
 /** Extract a human-readable message from an API error envelope (clamped for notifications). */
-export function apiErrorMessage(error: unknown, fallback = 'Ошибка'): string {
+export function apiErrorMessage(error: unknown, fallback?: string): string {
   const e = error as { response?: { data?: { error?: { message?: string } } } };
-  const msg = e?.response?.data?.error?.message ?? fallback;
+  const msg = e?.response?.data?.error?.message ?? fallback ?? i18n.t('notify.errorTitle');
   return msg.length > 200 ? `${msg.slice(0, 200)}…` : msg;
 }

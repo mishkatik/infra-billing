@@ -51,7 +51,7 @@ export function aggregateConsumptionByDay(rows: ConsumptionRow[]): PaymentData[]
       amount: value.div(100), // kopecks → RUB
       currency: 'RUB',
       date: new Date(`${day}T00:00:00Z`),
-      description: 'Потребление Selectel',
+      description: 'Selectel consumption',
     });
   }
   return out;

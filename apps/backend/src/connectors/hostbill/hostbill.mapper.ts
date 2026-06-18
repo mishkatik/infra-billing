@@ -77,6 +77,6 @@ export function invoiceToPayment(inv: HostbillInvoice): PaymentData | null {
     amount: new Decimal(inv.total ?? inv.subtotal ?? 0),
     currency: normalizeCurrency(inv.currency, HOSTBILL_FALLBACK_CURRENCY),
     date,
-    description: `Счёт ${inv.number ?? inv.id}`,
+    description: `Invoice ${inv.number ?? inv.id}`,
   };
 }

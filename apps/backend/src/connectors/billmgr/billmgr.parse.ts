@@ -36,7 +36,7 @@ export function billmgrError(err: unknown): string {
   if (err && typeof err === 'object') {
     const e = err as Record<string, unknown>;
     return (
-      val(e.msg) ?? val(e.detail) ?? (e.$object != null ? String(e.$object) : undefined) ?? 'ошибка'
+      val(e.msg) ?? val(e.detail) ?? (e.$object != null ? String(e.$object) : undefined) ?? 'error'
     );
   }
   return String(err);

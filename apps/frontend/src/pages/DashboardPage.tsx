@@ -7,27 +7,37 @@ import {
   IconChartBar,
   IconWallet,
 } from '@tabler/icons-react';
+import { useTranslation } from 'react-i18next';
 import { useForecast, useSummary } from '@/api/analytics';
 import { StatCard } from '@/components/StatCard';
-import { SERVICE_TYPE_LABELS } from '@/constants';
+import { useEnums } from '@/constants';
 import { formatDateShort, formatMoney } from '@/utils/format';
 
 const COLORS = ['brand.6', 'teal.6', 'blue.6', 'orange.6', 'pink.6', 'grape.6', 'cyan.6', 'lime.6'];
 
-const dayLabel = (n: number) => (n <= 0 ? 'сегодня' : n === 1 ? 'завтра' : `через ${n} дн.`);
 const severityColor = (s: 'critical' | 'warning' | 'ok') =>
   s === 'critical' ? 'red' : s === 'warning' ? 'orange' : undefined;
 
 export function DashboardPage() {
+  const { t } = useTranslation();
+  const enums = useEnums();
   const { data: summary, isLoading } = useSummary();
   const { data: forecast } = useForecast(6);
 
+  const dayLabel = (n: number) =>
+    n <= 0
+      ? t('dashboard.due.today')
+      : n === 1
+        ? t('dashboard.due.tomorrow')
+        : t('dashboard.due.inDays', { n });
+
   const base = summary?.baseCurrency ?? '';
+  const chartMoney = (v: number) => formatMoney(String(v), base);
   const donutData = (summary?.byType ?? [])
-    .filter((t) => Number(t.monthlyCost) > 0)
-    .map((t, i) => ({
-      name: SERVICE_TYPE_LABELS[t.type as keyof typeof SERVICE_TYPE_LABELS] ?? t.type,
-      value: Number(t.monthlyCost),
+    .filter((tp) => Number(tp.monthlyCost) > 0)
+    .map((tp, i) => ({
+      name: enums.serviceTypeLabel(tp.type),
+      value: Number(tp.monthlyCost),
       color: COLORS[i % COLORS.length],
     }));
   const forecastData = (forecast ?? []).map((p) => ({
@@ -40,30 +50,30 @@ export function DashboardPage() {
   return (
     <Stack gap="lg">
       <div>
-        <Title order={2}>Дашборд</Title>
-        <Text c="dimmed">Обзор расходов на инфраструктуру</Text>
+        <Title order={2}>{t('dashboard.title')}</Title>
+        <Text c="dimmed">{t('dashboard.subtitle')}</Text>
       </div>
 
       <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }}>
         <StatCard
-          label="Расходы в месяц"
+          label={t('dashboard.kpi.monthly')}
           value={formatMoney(summary?.monthlyTotal ?? '0', base)}
           icon={IconWallet}
         />
         <StatCard
-          label="Прогноз в год"
+          label={t('dashboard.kpi.yearly')}
           value={formatMoney(summary?.yearlyProjection ?? '0', base)}
           icon={IconChartBar}
           color="blue"
         />
         <StatCard
-          label="Платежи в этом месяце"
+          label={t('dashboard.kpi.currentMonthPayments')}
           value={formatMoney(summary?.currentMonthPayments ?? '0', base)}
           icon={IconCash}
           color="teal"
         />
         <StatCard
-          label="Всего потрачено"
+          label={t('dashboard.kpi.totalSpent')}
           value={formatMoney(summary?.totalSpent ?? '0', base)}
           icon={IconCalendarDollar}
           color="grape"
@@ -74,7 +84,7 @@ export function DashboardPage() {
         <Alert
           color="red"
           icon={<IconAlertTriangle size={18} />}
-          title="Критично: не хватит на списание"
+          title={t('dashboard.critical.title')}
         >
           <Stack gap={4}>
             {critical.map((b) => (
@@ -82,9 +92,17 @@ export function DashboardPage() {
                 <b>
                   {b.providerName} — {b.name}
                 </b>
-                : списание {dayLabel(b.daysUntil)} на {formatMoney(b.cost, b.currency)}
+                :{' '}
+                {t('dashboard.critical.charge', {
+                  when: dayLabel(b.daysUntil),
+                  amount: formatMoney(b.cost, b.currency),
+                })}
                 {b.providerBalance != null && (
-                  <> · баланс {formatMoney(b.providerBalance, b.providerBalanceCurrency)}</>
+                  <>
+                    {t('dashboard.critical.balance', {
+                      amount: formatMoney(b.providerBalance, b.providerBalanceCurrency),
+                    })}
+                  </>
                 )}
               </Text>
             ))}
@@ -95,33 +113,45 @@ export function DashboardPage() {
       <SimpleGrid cols={{ base: 1, md: 2 }}>
         <Card withBorder radius="md" padding="lg">
           <Text fw={600} mb="md">
-            Расходы по типам ({base}/мес)
+            {t('dashboard.charts.byType', { base })}
           </Text>
           {donutData.length > 0 ? (
             <Group justify="center">
-              <DonutChart data={donutData} withLabelsLine withTooltip size={180} thickness={28} />
+              <DonutChart
+                data={donutData}
+                withLabelsLine
+                withTooltip
+                size={180}
+                thickness={28}
+                strokeWidth={0}
+                valueFormatter={chartMoney}
+              />
             </Group>
           ) : (
             <Text c="dimmed" size="sm">
-              {isLoading ? 'Загрузка…' : 'Нет активных сервисов'}
+              {isLoading ? t('common.loading') : t('dashboard.empty.noServices')}
             </Text>
           )}
         </Card>
 
         <Card withBorder radius="md" padding="lg">
           <Text fw={600} mb="md">
-            Прогноз списаний ({base})
+            {t('dashboard.charts.forecast', { base })}
           </Text>
           {forecastData.length > 0 ? (
             <BarChart
               h={200}
               data={forecastData}
               dataKey="month"
-              series={[{ name: 'value', label: 'Прогноз', color: 'brand.6' }]}
+              series={[
+                { name: 'value', label: t('dashboard.charts.forecastSeries'), color: 'brand.6' },
+              ]}
+              valueFormatter={chartMoney}
+              yAxisProps={{ tickFormatter: (v: number) => formatMoney(String(v)) }}
             />
           ) : (
             <Text c="dimmed" size="sm">
-              Нет данных
+              {t('dashboard.empty.noData')}
             </Text>
           )}
         </Card>
@@ -129,7 +159,7 @@ export function DashboardPage() {
 
       <Card withBorder radius="md" padding="lg">
         <Text fw={600} mb="md">
-          Ближайшие списания (14 дней)
+          {t('dashboard.upcoming.title')}
         </Text>
         {upcoming.length > 0 ? (
           <Stack gap="xs">
@@ -141,8 +171,7 @@ export function DashboardPage() {
                     {ub.providerName} — <b>{ub.name}</b>
                     {ub.covered === false && (
                       <Text span size="xs" c="red">
-                        {' '}
-                        · не хватает баланса
+                        {t('dashboard.upcoming.insufficientBalance')}
                       </Text>
                     )}
                   </Text>
@@ -163,7 +192,7 @@ export function DashboardPage() {
           </Stack>
         ) : (
           <Text c="dimmed" size="sm">
-            Нет списаний в ближайшие 14 дней
+            {t('dashboard.empty.noUpcoming')}
           </Text>
         )}
       </Card>

@@ -18,7 +18,7 @@ x-env: &env
   env_file: .env
 
 services:
-  app:
+  infra-billing:
     image: infra-billing:latest
     build:
       context: .

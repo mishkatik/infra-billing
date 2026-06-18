@@ -21,7 +21,7 @@ export interface ServiceData {
 export interface PaymentData {
   /** Provider record id, namespaced to stay unique across ledgers (e.g. "payment:242"/"expense:889"). */
   externalId: string;
-  /** `topup` = пополнение/платёж провайдеру; `charge` = списание за услугу. */
+  /** `topup` = top-up/payment to the provider; `charge` = charge for a service. */
   type: 'topup' | 'charge';
   amount: Decimal;
   currency: string;

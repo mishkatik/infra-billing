@@ -39,7 +39,7 @@ export class TelegramService {
           topicId: s.telegramTopicId ?? '',
         };
       } catch {
-        this.logger.error('Не удалось расшифровать Telegram-токен из настроек');
+        this.logger.error('Failed to decrypt the Telegram token from settings');
       }
     }
     return null;
@@ -64,7 +64,7 @@ export class TelegramService {
       return true;
     } catch (e) {
       this.logger.error(
-        'Не удалось отправить Telegram-уведомление',
+        'Failed to send the Telegram notification',
         e instanceof Error ? e.stack : String(e),
       );
       return false;

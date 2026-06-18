@@ -16,6 +16,7 @@ import {
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { useDisclosure } from '@mantine/hooks';
+import { useTranslation } from 'react-i18next';
 import { notifyError, notifySuccess } from '@/utils/notify';
 import { IconEdit, IconExternalLink, IconPlus, IconRefresh, IconTrash } from '@tabler/icons-react';
 import type { Provider, ProviderKind } from '@infra/shared';
@@ -28,7 +29,7 @@ import {
   useUpdateProvider,
 } from '@/api/providers';
 import { apiErrorMessage } from '@/api/client';
-import { PROVIDER_KIND_LABELS, PROVIDER_KIND_OPTIONS } from '@/constants';
+import { useEnums } from '@/constants';
 import { formatDate, formatMoney } from '@/utils/format';
 import { providerFavicon } from '@/utils/favicon';
 import { ProviderIcon } from '@/components/ProviderIcon';
@@ -62,6 +63,8 @@ const EMPTY_FORM: FormValues = {
 };
 
 export function ProvidersPage() {
+  const { t } = useTranslation();
+  const enums = useEnums();
   const { data: providers, isLoading } = useProviders();
   const create = useCreateProvider();
   const update = useUpdateProvider();
@@ -73,7 +76,7 @@ export function ProvidersPage() {
 
   const form = useForm<FormValues>({
     initialValues: EMPTY_FORM,
-    validate: { name: (v) => (v.trim() ? null : 'Укажите имя') },
+    validate: { name: (v) => (v.trim() ? null : t('validation.enterName')) },
   });
 
   const openCreate = () => {
@@ -88,7 +91,7 @@ export function ProvidersPage() {
       name: p.name,
       kind: p.kind,
       loginUrl: p.loginUrl ?? '',
-      // Non-secret fields are prefilled; password/totpSecret stay blank ("не менять").
+      // Non-secret fields are prefilled; password/totpSecret stay blank ("keep unchanged").
       baseUrl: p.baseUrl ?? '',
       username: p.username ?? '',
       accountId: p.accountId ?? '',
@@ -104,15 +107,15 @@ export function ProvidersPage() {
       (v.kind === 'hostbill' || v.kind === 'billmgr') &&
       !(v.baseUrl && v.username && v.password)
     ) {
-      notifyError('Укажите base URL, логин и пароль');
+      notifyError(t('providers.err.hostbillCreds'));
       return;
     }
     if (!editing && v.kind === 'selectel' && !(v.accountId && v.username && v.password)) {
-      notifyError('Укажите номер аккаунта, имя пользователя и пароль');
+      notifyError(t('providers.err.selectelCreds'));
       return;
     }
     if (!editing && v.kind === '4vps' && !v.token) {
-      notifyError('Укажите API-токен 4VPS');
+      notifyError(t('providers.err.vps4Token'));
       return;
     }
     const creds = {
@@ -141,7 +144,7 @@ export function ProvidersPage() {
         });
       }
       close();
-      notifySuccess(editing ? 'Провайдер обновлён' : 'Провайдер создан');
+      notifySuccess(editing ? t('providers.updated') : t('providers.created'));
       // Auto-sync syncable providers so credential/token changes take effect right away.
       if (saved.kind !== 'manual') void doSync(saved.uuid);
     } catch (e) {
@@ -152,8 +155,8 @@ export function ProvidersPage() {
   const doSyncAll = async () => {
     try {
       const res = await syncAll.mutateAsync();
-      if (res.failed === 0) notifySuccess(`Синхронизировано провайдеров: ${res.ok}`);
-      else notifyError(`Синхронизация: ${res.ok} ок, ${res.failed} с ошибкой`);
+      if (res.failed === 0) notifySuccess(t('providers.syncedAll', { count: res.ok }));
+      else notifyError(t('providers.syncedMixed', { ok: res.ok, failed: res.failed }));
     } catch (e) {
       notifyError(apiErrorMessage(e));
     }
@@ -162,18 +165,19 @@ export function ProvidersPage() {
   const doSync = async (uuid: string) => {
     try {
       const run = await sync.mutateAsync(uuid);
-      if (run.status === 'ok') notifySuccess(`Синхронизация: сервисов ${run.servicesFound}`);
-      else notifyError((run.error ?? '').slice(0, 200) || 'Синхронизация не удалась');
+      if (run.status === 'ok')
+        notifySuccess(t('providers.syncedOne', { count: run.servicesFound }));
+      else notifyError((run.error ?? '').slice(0, 200) || t('providers.syncFailed'));
     } catch (e) {
       notifyError(apiErrorMessage(e));
     }
   };
 
   const doDelete = async (p: Provider) => {
-    if (!window.confirm(`Удалить «${p.name}» и все его сервисы/платежи?`)) return;
+    if (!window.confirm(t('providers.confirmDelete', { name: p.name }))) return;
     try {
       await del.mutateAsync(p.uuid);
-      notifySuccess('Удалено');
+      notifySuccess(t('common.deleted'));
     } catch (e) {
       notifyError(apiErrorMessage(e));
     }
@@ -183,8 +187,8 @@ export function ProvidersPage() {
     <Stack gap="lg">
       <Group justify="space-between">
         <div>
-          <Title order={2}>Провайдеры</Title>
-          <Text c="dimmed">Аккаунты у хостинг-провайдеров</Text>
+          <Title order={2}>{t('providers.title')}</Title>
+          <Text c="dimmed">{t('providers.subtitle')}</Text>
         </div>
         <Group>
           <Button
@@ -193,10 +197,10 @@ export function ProvidersPage() {
             loading={syncAll.isPending}
             onClick={doSyncAll}
           >
-            Синхронизировать всё
+            {t('providers.syncAll')}
           </Button>
           <Button leftSection={<IconPlus size={16} />} onClick={openCreate}>
-            Добавить
+            {t('common.add')}
           </Button>
         </Group>
       </Group>
@@ -205,12 +209,12 @@ export function ProvidersPage() {
         <Table verticalSpacing="sm" highlightOnHover>
           <Table.Thead>
             <Table.Tr>
-              <Table.Th>Имя</Table.Th>
-              <Table.Th>Тип</Table.Th>
-              <Table.Th>Баланс</Table.Th>
-              <Table.Th>Сервисов</Table.Th>
-              <Table.Th>Платежей</Table.Th>
-              <Table.Th>Синхронизация</Table.Th>
+              <Table.Th>{t('providers.th.name')}</Table.Th>
+              <Table.Th>{t('providers.th.type')}</Table.Th>
+              <Table.Th>{t('providers.th.balance')}</Table.Th>
+              <Table.Th>{t('providers.th.services')}</Table.Th>
+              <Table.Th>{t('providers.th.payments')}</Table.Th>
+              <Table.Th>{t('providers.th.sync')}</Table.Th>
               <Table.Th />
             </Table.Tr>
           </Table.Thead>
@@ -236,7 +240,7 @@ export function ProvidersPage() {
                 </Table.Td>
                 <Table.Td>
                   <Badge variant="light" color={p.kind === 'manual' ? 'gray' : 'brand'}>
-                    {PROVIDER_KIND_LABELS[p.kind]}
+                    {enums.providerKindLabel(p.kind)}
                   </Badge>
                 </Table.Td>
                 <Table.Td>{formatMoney(p.balance, p.balanceCurrency)}</Table.Td>
@@ -246,7 +250,7 @@ export function ProvidersPage() {
                   {p.lastSyncError ? (
                     <Tooltip label={p.lastSyncError} w={260} style={{ whiteSpace: 'normal' }}>
                       <Badge color="red" variant="light">
-                        ошибка
+                        {t('providers.syncError')}
                       </Badge>
                     </Tooltip>
                   ) : (
@@ -258,7 +262,7 @@ export function ProvidersPage() {
                 <Table.Td>
                   <Group gap={4} justify="flex-end" wrap="nowrap">
                     {p.kind !== 'manual' && (
-                      <Tooltip label="Обновить">
+                      <Tooltip label={t('common.refresh')}>
                         <ActionIcon
                           variant="subtle"
                           loading={sync.isPending}
@@ -282,7 +286,7 @@ export function ProvidersPage() {
               <Table.Tr>
                 <Table.Td colSpan={7}>
                   <Text c="dimmed" ta="center" py="md">
-                    Нет провайдеров
+                    {t('providers.empty')}
                   </Text>
                 </Table.Td>
               </Table.Tr>
@@ -294,15 +298,15 @@ export function ProvidersPage() {
       <Modal
         opened={opened}
         onClose={close}
-        title={editing ? 'Редактировать провайдера' : 'Новый провайдер'}
+        title={editing ? t('providers.modalEdit') : t('providers.modalCreate')}
       >
         <form onSubmit={submit}>
           <Stack>
-            <TextInput label="Имя" required {...form.getInputProps('name')} />
+            <TextInput label={t('providers.field.name')} required {...form.getInputProps('name')} />
             {!editing && (
               <Select
-                label="Тип"
-                data={PROVIDER_KIND_OPTIONS}
+                label={t('providers.field.type')}
+                data={enums.providerKindOptions}
                 allowDeselect={false}
                 {...form.getInputProps('kind')}
               />
@@ -310,24 +314,24 @@ export function ProvidersPage() {
             {form.values.kind === 'selectel' ? (
               <>
                 <TextInput
-                  label="Номер аккаунта"
-                  description="Номер аккаунта Selectel (в правом верхнем углу панели)"
+                  label={t('providers.field.accountId')}
+                  description={t('providers.field.accountIdDesc')}
                   placeholder="123456"
                   {...form.getInputProps('accountId')}
                 />
                 <TextInput
-                  label="Имя пользователя (сервисный)"
-                  description="Сервисный пользователь IAM: Профиль → Управление пользователями"
+                  label={t('providers.field.serviceUsername')}
+                  description={t('providers.field.serviceUsernameDesc')}
                   {...form.getInputProps('username')}
                 />
                 <PasswordInput
-                  label="Пароль"
-                  placeholder={editing ? 'оставьте пустым, чтобы не менять' : ''}
+                  label={t('providers.field.password')}
+                  placeholder={editing ? t('providers.keepEmpty') : ''}
                   {...form.getInputProps('password')}
                 />
                 <TextInput
-                  label="Проект (необязательно)"
-                  description="Имя проекта Облачной платформы — для импорта облачных серверов"
+                  label={t('providers.field.project')}
+                  description={t('providers.field.projectDesc')}
                   placeholder="my-project"
                   {...form.getInputProps('projectName')}
                 />
@@ -335,7 +339,7 @@ export function ProvidersPage() {
             ) : form.values.kind === 'hostbill' || form.values.kind === 'billmgr' ? (
               <>
                 <TextInput
-                  label="API base URL"
+                  label={t('providers.field.apiBaseUrl')}
                   placeholder={
                     form.values.kind === 'billmgr'
                       ? 'https://my.akenai.host/billmgr'
@@ -343,17 +347,20 @@ export function ProvidersPage() {
                   }
                   {...form.getInputProps('baseUrl')}
                 />
-                <TextInput label="Логин (email)" {...form.getInputProps('username')} />
+                <TextInput
+                  label={t('providers.field.loginEmail')}
+                  {...form.getInputProps('username')}
+                />
                 <PasswordInput
-                  label="Пароль"
-                  placeholder={editing ? 'оставьте пустым, чтобы не менять' : ''}
+                  label={t('providers.field.password')}
+                  placeholder={editing ? t('providers.keepEmpty') : ''}
                   {...form.getInputProps('password')}
                 />
                 {form.values.kind === 'billmgr' && (
                   <PasswordInput
-                    label="TOTP-секрет (если включена 2FA по OTP)"
-                    description="Base32-секрет из приложения-аутентификатора — синк будет сам генерировать код"
-                    placeholder={editing ? 'оставьте пустым, чтобы не менять' : 'необязательно'}
+                    label={t('providers.field.totpSecret')}
+                    description={t('providers.field.totpSecretDesc')}
+                    placeholder={editing ? t('providers.keepEmpty') : t('common.optional')}
                     {...form.getInputProps('totpSecret')}
                   />
                 )}
@@ -361,14 +368,14 @@ export function ProvidersPage() {
             ) : form.values.kind === '4vps' ? (
               <>
                 <TextInput
-                  label="API-токен"
-                  description="Личный кабинет 4VPS → раздел API"
-                  placeholder={editing ? 'оставьте пустым, чтобы не менять' : ''}
+                  label={t('providers.field.apiToken')}
+                  description={t('providers.field.apiTokenDesc4vps')}
+                  placeholder={editing ? t('providers.keepEmpty') : ''}
                   {...form.getInputProps('token')}
                 />
                 <TextInput
-                  label="ID панели"
-                  description="panel_id — обычно 1"
+                  label={t('providers.field.panelId')}
+                  description={t('providers.field.panelIdDesc')}
                   placeholder="1"
                   {...form.getInputProps('panelId')}
                 />
@@ -376,15 +383,15 @@ export function ProvidersPage() {
             ) : (
               form.values.kind !== 'manual' && (
                 <TextInput
-                  label="API-токен"
-                  placeholder={editing ? 'оставьте пустым, чтобы не менять' : ''}
+                  label={t('providers.field.apiToken')}
+                  placeholder={editing ? t('providers.keepEmpty') : ''}
                   {...form.getInputProps('token')}
                 />
               )
             )}
-            <TextInput label="Ссылка на ЛК" {...form.getInputProps('loginUrl')} />
+            <TextInput label={t('providers.field.loginUrl')} {...form.getInputProps('loginUrl')} />
             <Button type="submit" loading={create.isPending || update.isPending}>
-              Сохранить
+              {t('common.save')}
             </Button>
           </Stack>
         </form>

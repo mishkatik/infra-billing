@@ -61,11 +61,11 @@ export class NotificationsService {
     for (const run of errorRuns) {
       if (seenProviders.has(run.providerUuid)) continue;
       seenProviders.add(run.providerUuid);
-      const html = syncErrorMessage(run.provider.name, run.error ?? 'неизвестная ошибка');
+      const html = syncErrorMessage(run.provider.name, run.error ?? 'unknown error');
       if (await this.maybeSend(`sync-error:${run.providerUuid}`, html)) sent += 1;
     }
 
-    if (sent > 0) this.logger.log(`Отправлено уведомлений: ${sent}`);
+    if (sent > 0) this.logger.log(`Notifications sent: ${sent}`);
     return sent;
   }
 
@@ -83,7 +83,7 @@ export class NotificationsService {
     try {
       await this.checkAndNotify();
     } catch (e) {
-      this.logger.error('Проверка уведомлений упала', e instanceof Error ? e.stack : String(e));
+      this.logger.error('Notification check failed', e instanceof Error ? e.stack : String(e));
     }
   }
 

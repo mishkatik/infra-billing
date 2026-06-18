@@ -17,6 +17,7 @@ import {
 import { DatePickerInput } from '@mantine/dates';
 import { useForm } from '@mantine/form';
 import { useDisclosure } from '@mantine/hooks';
+import { useTranslation } from 'react-i18next';
 import { notifyError, notifySuccess } from '@/utils/notify';
 import { IconEdit, IconMapPin, IconPlus, IconReceipt2, IconTrash } from '@tabler/icons-react';
 import dayjs from 'dayjs';
@@ -31,16 +32,10 @@ import {
 import { useProviders } from '@/api/providers';
 import { usePayments } from '@/api/payments';
 import { apiErrorMessage } from '@/api/client';
-import {
-  CURRENCY_OPTIONS,
-  PERIOD_LABELS,
-  PERIOD_OPTIONS,
-  SERVICE_TYPE_LABELS,
-  SERVICE_TYPE_OPTIONS,
-} from '@/constants';
+import { useEnums } from '@/constants';
 import { countryFlag, formatDateShort, formatMoney } from '@/utils/format';
 import { providerFavicon } from '@/utils/favicon';
-import { COUNTRY_OPTIONS } from '@/utils/countries';
+import { useCountryOptions } from '@/utils/countries';
 import { ProviderIcon } from '@/components/ProviderIcon';
 
 interface SForm {
@@ -58,6 +53,9 @@ interface SForm {
 const toIso = (d: string) => (d ? new Date(`${d}T00:00:00Z`).toISOString() : undefined);
 
 export function ServicesPage() {
+  const { t } = useTranslation();
+  const enums = useEnums();
+  const countryOptions = useCountryOptions();
   const { data: providers } = useProviders();
   const [filter, setFilter] = useState<ServiceFilter>({});
   const { data: services, isLoading } = useServices(filter);
@@ -89,9 +87,9 @@ export function ServicesPage() {
       isActive: true,
     },
     validate: {
-      name: (v) => (v.trim() ? null : 'Укажите имя'),
-      cost: (v) => (/^\d+(\.\d{1,2})?$/.test(v) ? null : 'Сумма вида 100 или 100.50'),
-      providerUuid: (v) => (v ? null : 'Выберите провайдера'),
+      name: (v) => (v.trim() ? null : t('validation.enterName')),
+      cost: (v) => (/^\d+(\.\d{1,2})?$/.test(v) ? null : t('validation.amountFormat')),
+      providerUuid: (v) => (v ? null : t('validation.selectProvider')),
     },
   });
 
@@ -157,17 +155,17 @@ export function ServicesPage() {
         });
       }
       close();
-      notifySuccess(editing ? 'Сервис обновлён' : 'Сервис создан');
+      notifySuccess(editing ? t('services.updatedToast') : t('services.createdToast'));
     } catch (e) {
       notifyError(apiErrorMessage(e));
     }
   });
 
   const doDelete = async (s: Service) => {
-    if (!window.confirm(`Удалить «${s.name}»?`)) return;
+    if (!window.confirm(t('services.confirmDelete', { name: s.name }))) return;
     try {
       await del.mutateAsync(s.uuid);
-      notifySuccess('Удалено');
+      notifySuccess(t('common.deleted'));
     } catch (e) {
       notifyError(apiErrorMessage(e));
     }
@@ -177,21 +175,21 @@ export function ServicesPage() {
     <Stack gap="lg">
       <Group justify="space-between">
         <div>
-          <Title order={2}>Сервисы</Title>
-          <Text c="dimmed">Платные ресурсы у провайдеров</Text>
+          <Title order={2}>{t('services.title')}</Title>
+          <Text c="dimmed">{t('services.subtitle')}</Text>
         </div>
         <Button
           leftSection={<IconPlus size={16} />}
           onClick={openCreate}
           disabled={providerOptions.length === 0}
         >
-          Добавить
+          {t('common.add')}
         </Button>
       </Group>
 
       <Group>
         <Select
-          placeholder="Все провайдеры"
+          placeholder={t('services.filterAllProviders')}
           clearable
           data={providerOptions}
           value={filter.providerUuid ?? null}
@@ -199,19 +197,19 @@ export function ServicesPage() {
           w={220}
         />
         <Select
-          placeholder="Все типы"
+          placeholder={t('services.filterAllTypes')}
           clearable
-          data={SERVICE_TYPE_OPTIONS}
+          data={enums.serviceTypeOptions}
           value={filter.type ?? null}
           onChange={(v) => setFilter((f) => ({ ...f, type: v ?? undefined }))}
           w={200}
         />
         <Select
-          placeholder="Активность"
+          placeholder={t('services.filterActivity')}
           clearable
           data={[
-            { value: 'true', label: 'Активные' },
-            { value: 'false', label: 'Неактивные' },
+            { value: 'true', label: t('services.activityActive') },
+            { value: 'false', label: t('services.activityInactive') },
           ]}
           value={filter.isActive === undefined ? null : String(filter.isActive)}
           onChange={(v) =>
@@ -225,12 +223,12 @@ export function ServicesPage() {
         <Table verticalSpacing="sm" highlightOnHover>
           <Table.Thead>
             <Table.Tr>
-              <Table.Th>Имя</Table.Th>
-              <Table.Th>Провайдер</Table.Th>
-              <Table.Th>Тип</Table.Th>
-              <Table.Th>Стоимость</Table.Th>
-              <Table.Th>Период</Table.Th>
-              <Table.Th>Источник</Table.Th>
+              <Table.Th>{t('services.colName')}</Table.Th>
+              <Table.Th>{t('services.colProvider')}</Table.Th>
+              <Table.Th>{t('services.colType')}</Table.Th>
+              <Table.Th>{t('services.colCost')}</Table.Th>
+              <Table.Th>{t('services.colPeriod')}</Table.Th>
+              <Table.Th>{t('services.colSource')}</Table.Th>
               <Table.Th />
             </Table.Tr>
           </Table.Thead>
@@ -243,7 +241,7 @@ export function ServicesPage() {
                     <Text fw={600}>{s.name}</Text>
                     {!s.isActive && (
                       <Badge size="xs" color="gray">
-                        неактивен
+                        {t('services.badgeInactive')}
                       </Badge>
                     )}
                   </Group>
@@ -260,18 +258,20 @@ export function ServicesPage() {
                     <Text size="sm">{providerOf(s.providerUuid)?.name ?? ''}</Text>
                   </Group>
                 </Table.Td>
-                <Table.Td>{SERVICE_TYPE_LABELS[s.type as ServiceType] ?? s.type}</Table.Td>
+                <Table.Td>{enums.serviceTypeLabel(s.type)}</Table.Td>
                 <Table.Td>{formatMoney(s.cost, s.currency)}</Table.Td>
-                <Table.Td>{PERIOD_LABELS[s.period as Period] ?? s.period}</Table.Td>
+                <Table.Td>{enums.periodLabel(s.period)}</Table.Td>
                 <Table.Td>
                   <Badge variant="light" color={s.isManaged ? 'brand' : 'gray'}>
-                    {s.isManaged ? 'синк' : 'ручной'}
+                    {s.isManaged ? t('services.sourceManaged') : t('services.sourceManual')}
                   </Badge>
                 </Table.Td>
                 <Table.Td>
                   <Group gap={4} justify="flex-end" wrap="nowrap">
                     {(s.paymentsCount ?? 0) > 0 && (
-                      <Tooltip label={`Платежи по сервису (${s.paymentsCount})`}>
+                      <Tooltip
+                        label={t('services.paymentsTooltip', { count: s.paymentsCount ?? 0 })}
+                      >
                         <ActionIcon variant="subtle" onClick={() => setPaymentsFor(s)}>
                           <IconReceipt2 size={16} />
                         </ActionIcon>
@@ -291,7 +291,7 @@ export function ServicesPage() {
               <Table.Tr>
                 <Table.Td colSpan={7}>
                   <Text c="dimmed" ta="center" py="md">
-                    Нет сервисов
+                    {t('services.empty')}
                   </Text>
                 </Table.Td>
               </Table.Tr>
@@ -303,64 +303,67 @@ export function ServicesPage() {
       <Modal
         opened={opened}
         onClose={close}
-        title={editing ? 'Редактировать сервис' : 'Новый сервис'}
+        title={editing ? t('services.modalEdit') : t('services.modalCreate')}
       >
         <form onSubmit={submit}>
           <Stack>
             {!editing && (
               <Select
-                label="Провайдер"
+                label={t('services.fieldProvider')}
                 data={providerOptions}
                 allowDeselect={false}
                 {...form.getInputProps('providerUuid')}
               />
             )}
-            <TextInput label="Имя" required {...form.getInputProps('name')} />
+            <TextInput label={t('services.fieldName')} required {...form.getInputProps('name')} />
             <Group grow>
               <Select
-                label="Тип"
-                data={SERVICE_TYPE_OPTIONS}
+                label={t('services.fieldType')}
+                data={enums.serviceTypeOptions}
                 allowDeselect={false}
                 {...form.getInputProps('type')}
               />
               <Select
-                label="Период"
-                data={PERIOD_OPTIONS}
+                label={t('services.fieldPeriod')}
+                data={enums.periodOptions}
                 allowDeselect={false}
                 {...form.getInputProps('period')}
               />
             </Group>
             <Group grow>
-              <TextInput label="Стоимость" required {...form.getInputProps('cost')} />
+              <TextInput label={t('services.fieldCost')} required {...form.getInputProps('cost')} />
               <Select
-                label="Валюта"
-                data={CURRENCY_OPTIONS}
+                label={t('services.fieldCurrency')}
+                data={enums.currencyOptions}
                 allowDeselect={false}
                 {...form.getInputProps('currency')}
               />
             </Group>
             <Group grow>
               <Select
-                label="Страна"
-                placeholder="Не задана"
+                label={t('services.fieldCountry')}
+                placeholder={t('services.countryPlaceholder')}
                 searchable
                 clearable
-                data={COUNTRY_OPTIONS}
+                data={countryOptions}
                 leftSection={<IconMapPin size={16} />}
                 {...form.getInputProps('countryCode')}
               />
               <DatePickerInput
-                label="След. списание"
+                label={t('services.fieldNextBilling')}
                 clearable
                 valueFormat="DD.MM.YYYY"
-                placeholder="дд.мм.гггг"
+                placeholder={t('services.nextBillingPlaceholder')}
                 value={form.values.nextBillingAt || null}
                 onChange={(v) => form.setFieldValue('nextBillingAt', v ?? '')}
               />
             </Group>
-            <Switch label="Активен" {...form.getInputProps('isActive', { type: 'checkbox' })} />
+            <Switch
+              label={t('services.fieldActive')}
+              {...form.getInputProps('isActive', { type: 'checkbox' })}
+            />
             <Button type="submit" loading={create.isPending || update.isPending}>
-              Сохранить
+              {t('common.save')}
             </Button>
           </Stack>
         </form>
@@ -369,26 +372,32 @@ export function ServicesPage() {
       <Modal
         opened={!!paymentsFor}
         onClose={() => setPaymentsFor(null)}
-        title={`Платежи · ${paymentsFor?.name ?? ''}`}
+        title={t('services.paymentsTitle', { name: paymentsFor?.name ?? '' })}
         size="xl"
       >
         {servicePayments.isLoading ? (
           <Text c="dimmed" py="md" ta="center">
-            Загрузка…
+            {t('common.loading')}
           </Text>
         ) : servicePaymentItems.length === 0 ? (
           <Text c="dimmed" py="md" ta="center">
-            Нет платежей по этому сервису
+            {t('services.paymentsEmpty')}
           </Text>
         ) : (
           <Table.ScrollContainer minWidth={620}>
             <Table verticalSpacing="xs">
               <Table.Thead>
                 <Table.Tr>
-                  <Table.Th style={{ whiteSpace: 'nowrap' }}>Дата</Table.Th>
-                  <Table.Th style={{ whiteSpace: 'nowrap' }}>Тип</Table.Th>
-                  <Table.Th style={{ whiteSpace: 'nowrap' }}>Сумма</Table.Th>
-                  <Table.Th>Описание</Table.Th>
+                  <Table.Th style={{ whiteSpace: 'nowrap' }}>
+                    {t('services.paymentsColDate')}
+                  </Table.Th>
+                  <Table.Th style={{ whiteSpace: 'nowrap' }}>
+                    {t('services.paymentsColType')}
+                  </Table.Th>
+                  <Table.Th style={{ whiteSpace: 'nowrap' }}>
+                    {t('services.paymentsColAmount')}
+                  </Table.Th>
+                  <Table.Th>{t('services.paymentsColDescription')}</Table.Th>
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
@@ -406,7 +415,9 @@ export function ServicesPage() {
                           label: { overflow: 'visible' },
                         }}
                       >
-                        {p.type === 'charge' ? 'списание' : 'платёж'}
+                        {p.type === 'charge'
+                          ? t('services.paymentCharge')
+                          : t('services.paymentTopup')}
                       </Badge>
                     </Table.Td>
                     <Table.Td style={{ whiteSpace: 'nowrap' }}>
@@ -414,7 +425,7 @@ export function ServicesPage() {
                     </Table.Td>
                     <Table.Td>
                       <Text size="sm" c="dimmed" style={{ wordBreak: 'break-word' }}>
-                        {p.description ?? '—'}
+                        {p.description ?? t('common.none')}
                       </Text>
                     </Table.Td>
                   </Table.Tr>

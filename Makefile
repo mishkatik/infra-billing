@@ -26,7 +26,7 @@ help:
 	@echo "  studio        - open prisma studio"
 	@echo "  docker-build  - build the production image locally"
 	@echo "  docker-save   - build and save the image to $(IMAGE).tar.gz"
-	@echo "  docker-up     - docker compose up -d (postgres + app)"
+	@echo "  docker-up     - docker compose up -d (postgres + infra-billing)"
 	@echo "  docker-down   - docker compose down"
 	@echo "  bump-patch|minor|major - bump version (root + all workspaces in sync) and reinstall"
 	@echo "  tag-release   - create and push a signed git tag"

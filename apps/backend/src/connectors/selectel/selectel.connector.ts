@@ -85,15 +85,15 @@ export class SelectelConnector implements Connector {
       validateStatus: () => true,
     });
     if (res.status === 401)
-      throw new Error('Selectel: неверные имя пользователя, пароль или номер аккаунта');
+      throw new Error('Selectel: invalid username, password or account number');
     if (res.status === 403) {
       throw new Error(
-        'Selectel: у сервисного пользователя нет доступа к проекту — назначьте ему роль в проекте.',
+        'Selectel: the service user has no access to the project — assign it a role in the project.',
       );
     }
-    if (res.status >= 400) throw new Error(`Selectel: авторизация не удалась (HTTP ${res.status})`);
+    if (res.status >= 400) throw new Error(`Selectel: authorization failed (HTTP ${res.status})`);
     const token = res.headers['x-subject-token'];
-    if (!token) throw new Error('Selectel: токен не получен (нет заголовка X-Subject-Token)');
+    if (!token) throw new Error('Selectel: token was not obtained (no X-Subject-Token header)');
     return { token: String(token), catalog: res.data?.token?.catalog ?? [] };
   }
 
@@ -125,8 +125,8 @@ export class SelectelConnector implements Connector {
       // The Keystone token works, but the service user may lack a billing role → 403.
       if (axios.isAxiosError(e) && e.response?.status === 403) {
         throw new Error(
-          'Selectel: у сервисного пользователя нет прав на биллинг. Назначьте ему роль ' +
-            '(«Администратор аккаунта», «Биллинг» или «Просмотр») в Управлении пользователями.',
+          'Selectel: the service user has no billing permissions. Assign it a role ' +
+            '("Account Administrator", "Billing" or "Viewer") in User Management.',
         );
       }
       throw e;

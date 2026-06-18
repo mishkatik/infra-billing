@@ -29,7 +29,7 @@ export class FourVpsConnector implements Connector {
     this.http.interceptors.response.use(undefined, (e) => {
       const status = axios.isAxiosError(e) ? e.response?.status : undefined;
       if (status === 400 || status === 401 || status === 403) {
-        throw new Error(`4VPS: неверный API-токен или panel_id (HTTP ${status})`);
+        throw new Error(`4VPS: invalid API token or panel_id (HTTP ${status})`);
       }
       throw e;
     });
@@ -79,7 +79,7 @@ export class FourVpsConnector implements Connector {
 /** 4VPS returns 200 with `{ error: true, data: <message> }` on logical failures. */
 function assertOk(res: ApiResponse<unknown>): void {
   if (res?.error) {
-    const msg = typeof res.data === 'string' ? res.data : 'запрос отклонён';
+    const msg = typeof res.data === 'string' ? res.data : 'request rejected';
     throw new Error(`4VPS: ${msg}`);
   }
 }

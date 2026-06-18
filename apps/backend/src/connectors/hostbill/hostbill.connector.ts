@@ -56,7 +56,7 @@ export class HostbillConnector implements Connector {
         );
       }
       this.token = data?.token ?? data?.access_token ?? null;
-      if (!this.token) throw new Error('HostBill login: токен не получен');
+      if (!this.token) throw new Error('HostBill login: token was not obtained');
     }
     return { Authorization: `Bearer ${this.token}` };
   }

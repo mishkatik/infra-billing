@@ -1,10 +1,11 @@
 import { notifications } from '@mantine/notifications';
 import { IconCheck, IconExclamationCircle } from '@tabler/icons-react';
+import i18n from '@/i18n';
 
 export function notifyError(message: string): void {
   notifications.show({
     color: 'red',
-    title: 'Ошибка',
+    title: i18n.t('notify.errorTitle'),
     message,
     icon: <IconExclamationCircle size={18} />,
     withBorder: true,

@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, type OnApplicationBootstrap } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { ExchangeRate } from '@generated/prisma/client';
 import Decimal from 'decimal.js';
@@ -12,13 +12,27 @@ const ONE = new Decimal(1);
 const REFRESH_TIMEOUT_MS = 15_000;
 
 @Injectable()
-export class CurrencyService {
+export class CurrencyService implements OnApplicationBootstrap {
   private readonly logger = new Logger(CurrencyService.name);
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly cbr: CbrRateProvider,
   ) {}
+
+  /** Refresh rates on startup (best-effort, fire-and-forget — never blocks/crashes boot). */
+  onApplicationBootstrap(): void {
+    void this.refreshRates()
+      .then((n) => {
+        if (n > 0) this.logger.log(`Rates refreshed on startup: ${n}`);
+      })
+      .catch((e) =>
+        this.logger.error(
+          'Failed to refresh rates on startup',
+          e instanceof Error ? e.stack : String(e),
+        ),
+      );
+  }
 
   async getEffectiveSettings(): Promise<{ baseCurrency: string; rateSource: 'cbr' | 'manual' }> {
     const s = await this.prisma.settings.findUnique({ where: { id: 1 } });
@@ -48,7 +62,7 @@ export class CurrencyService {
     const fromRate = rates.get(from);
     const baseRate = rates.get(toBase);
     if (!fromRate || !baseRate) {
-      this.logger.warn(`Нет курса ${from}->${toBase}; сумма оставлена как есть`);
+      this.logger.warn(`No rate ${from}->${toBase}; amount left unchanged`);
       return amount;
     }
     return amount.mul(fromRate).div(baseRate);
@@ -58,7 +72,7 @@ export class CurrencyService {
   async refreshRates(): Promise<number> {
     const { rateSource } = await this.getEffectiveSettings();
     if (rateSource !== 'cbr') {
-      this.logger.log(`rateSource=${rateSource}: внешнее обновление курсов пропущено`);
+      this.logger.log(`rateSource=${rateSource}: external rate refresh skipped`);
       return 0;
     }
     const controller = new AbortController();
@@ -73,7 +87,7 @@ export class CurrencyService {
           source: 'cbr',
         })),
       });
-      this.logger.log(`Обновлено курсов: ${quotes.length} (источник cbr)`);
+      this.logger.log(`Rates refreshed: ${quotes.length} (source cbr)`);
       return quotes.length;
     } finally {
       clearTimeout(timer);
@@ -108,10 +122,7 @@ export class CurrencyService {
     try {
       await this.refreshRates();
     } catch (e) {
-      this.logger.error(
-        'Не удалось обновить курсы по расписанию',
-        e instanceof Error ? e.stack : String(e),
-      );
+      this.logger.error('Scheduled rate refresh failed', e instanceof Error ? e.stack : String(e));
     }
   }
 

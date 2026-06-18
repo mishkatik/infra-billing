@@ -11,11 +11,13 @@ import {
 import { useForm } from '@mantine/form';
 import { zodResolver } from 'mantine-form-zod-resolver';
 import { IconCoin } from '@tabler/icons-react';
+import { useTranslation } from 'react-i18next';
 import { loginSchema, type LoginInput } from '@infra/shared';
 import { useLogin } from '@/api/auth';
 import { apiErrorMessage } from '@/api/client';
 
 export function LoginPage() {
+  const { t } = useTranslation();
   const login = useLogin();
   const form = useForm<LoginInput>({
     initialValues: { username: '', password: '' },
@@ -35,15 +37,19 @@ export function LoginPage() {
         </Stack>
         <form onSubmit={form.onSubmit((values) => login.mutate(values))}>
           <Stack>
-            <TextInput label="Логин" required {...form.getInputProps('username')} />
-            <PasswordInput label="Пароль" required {...form.getInputProps('password')} />
+            <TextInput label={t('login.username')} required {...form.getInputProps('username')} />
+            <PasswordInput
+              label={t('login.password')}
+              required
+              {...form.getInputProps('password')}
+            />
             {login.isError && (
               <Text c="red" size="sm">
-                {apiErrorMessage(login.error, 'Не удалось войти')}
+                {apiErrorMessage(login.error, t('login.failed'))}
               </Text>
             )}
             <Button type="submit" loading={login.isPending} fullWidth>
-              Войти
+              {t('login.signIn')}
             </Button>
           </Stack>
         </form>

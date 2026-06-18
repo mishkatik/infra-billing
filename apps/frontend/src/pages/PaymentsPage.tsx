@@ -17,6 +17,7 @@ import {
 import { DatePickerInput } from '@mantine/dates';
 import { useForm } from '@mantine/form';
 import { useDisclosure } from '@mantine/hooks';
+import { useTranslation } from 'react-i18next';
 import { notifyError, notifySuccess } from '@/utils/notify';
 import { IconPlus, IconTrash } from '@tabler/icons-react';
 import dayjs from 'dayjs';
@@ -29,7 +30,7 @@ import {
 import { useServices } from '@/api/services';
 import { useProviders } from '@/api/providers';
 import { apiErrorMessage } from '@/api/client';
-import { CURRENCY_OPTIONS } from '@/constants';
+import { useEnums } from '@/constants';
 import { formatDateShort, formatMoney } from '@/utils/format';
 
 interface PForm {
@@ -45,6 +46,8 @@ const toIso = (d: string) => (d ? new Date(`${d}T00:00:00Z`).toISOString() : und
 const PAGE_SIZE = 50;
 
 export function PaymentsPage() {
+  const { t } = useTranslation();
+  const enums = useEnums();
   const { data: providers } = useProviders();
   const [filter, setFilter] = useState<PaymentFilter>({});
   const [page, setPage] = useState(1);
@@ -70,9 +73,9 @@ export function PaymentsPage() {
       description: '',
     },
     validate: {
-      providerUuid: (v) => (v ? null : 'Выберите провайдера'),
-      amount: (v) => (/^\d+(\.\d{1,2})?$/.test(v) ? null : 'Сумма вида 100 или 100.50'),
-      paymentDate: (v) => (v ? null : 'Укажите дату'),
+      providerUuid: (v) => (v ? null : t('validation.selectProvider')),
+      amount: (v) => (/^\d+(\.\d{1,2})?$/.test(v) ? null : t('validation.amountFormat')),
+      paymentDate: (v) => (v ? null : t('validation.enterDate')),
     },
   });
 
@@ -102,17 +105,17 @@ export function PaymentsPage() {
         description: v.description || undefined,
       });
       close();
-      notifySuccess('Платёж добавлен');
+      notifySuccess(t('payments.created'));
     } catch (e) {
       notifyError(apiErrorMessage(e));
     }
   });
 
   const doDelete = async (uuid: string) => {
-    if (!window.confirm('Удалить платёж?')) return;
+    if (!window.confirm(t('payments.confirmDelete'))) return;
     try {
       await del.mutateAsync(uuid);
-      notifySuccess('Удалено');
+      notifySuccess(t('common.deleted'));
     } catch (e) {
       notifyError(apiErrorMessage(e));
     }
@@ -122,22 +125,22 @@ export function PaymentsPage() {
     <Stack gap="lg">
       <Group justify="space-between">
         <div>
-          <Title order={2}>Платежи</Title>
-          <Text c="dimmed">Журнал фактических платежей</Text>
+          <Title order={2}>{t('payments.title')}</Title>
+          <Text c="dimmed">{t('payments.subtitle')}</Text>
         </div>
         <Button
           leftSection={<IconPlus size={16} />}
           onClick={openCreate}
           disabled={providerOptions.length === 0}
         >
-          Добавить
+          {t('common.add')}
         </Button>
       </Group>
 
       <Group align="flex-end">
         <Select
-          label="Провайдер"
-          placeholder="Все провайдеры"
+          label={t('payments.filterProvider')}
+          placeholder={t('payments.filterAllProviders')}
           clearable
           data={providerOptions}
           value={filter.providerUuid ?? null}
@@ -145,8 +148,8 @@ export function PaymentsPage() {
           w={220}
         />
         <DatePickerInput
-          label="С"
-          placeholder="дд.мм.гггг"
+          label={t('payments.filterFrom')}
+          placeholder={t('payments.datePlaceholder')}
           valueFormat="DD.MM.YYYY"
           clearable
           w={160}
@@ -154,8 +157,8 @@ export function PaymentsPage() {
           onChange={(v) => setFilter((f) => ({ ...f, from: v ? toIso(v) : undefined }))}
         />
         <DatePickerInput
-          label="По"
-          placeholder="дд.мм.гггг"
+          label={t('payments.filterTo')}
+          placeholder={t('payments.datePlaceholder')}
           valueFormat="DD.MM.YYYY"
           clearable
           w={160}
@@ -168,11 +171,11 @@ export function PaymentsPage() {
         <Table verticalSpacing="sm" highlightOnHover>
           <Table.Thead>
             <Table.Tr>
-              <Table.Th>Дата</Table.Th>
-              <Table.Th>Провайдер</Table.Th>
-              <Table.Th>Тип</Table.Th>
-              <Table.Th>Сумма</Table.Th>
-              <Table.Th>Описание</Table.Th>
+              <Table.Th>{t('payments.colDate')}</Table.Th>
+              <Table.Th>{t('payments.colProvider')}</Table.Th>
+              <Table.Th>{t('payments.colType')}</Table.Th>
+              <Table.Th>{t('payments.colAmount')}</Table.Th>
+              <Table.Th>{t('payments.colDescription')}</Table.Th>
               <Table.Th />
             </Table.Tr>
           </Table.Thead>
@@ -190,7 +193,7 @@ export function PaymentsPage() {
                       label: { overflow: 'visible' },
                     }}
                   >
-                    {p.type === 'charge' ? 'списание' : 'платёж'}
+                    {p.type === 'charge' ? t('payments.typeCharge') : t('payments.typeTopup')}
                   </Badge>
                 </Table.Td>
                 <Table.Td>
@@ -198,7 +201,7 @@ export function PaymentsPage() {
                 </Table.Td>
                 <Table.Td>
                   <Text size="sm" c="dimmed">
-                    {p.description ?? '—'}
+                    {p.description ?? t('common.none')}
                   </Text>
                 </Table.Td>
                 <Table.Td>
@@ -214,7 +217,7 @@ export function PaymentsPage() {
               <Table.Tr>
                 <Table.Td colSpan={6}>
                   <Text c="dimmed" ta="center" py="md">
-                    Нет платежей
+                    {t('payments.empty')}
                   </Text>
                 </Table.Td>
               </Table.Tr>
@@ -226,54 +229,58 @@ export function PaymentsPage() {
       {total > PAGE_SIZE && (
         <Group justify="space-between">
           <Text size="sm" c="dimmed">
-            Всего: {total}
+            {t('payments.total', { count: total })}
           </Text>
           <Pagination total={Math.ceil(total / PAGE_SIZE)} value={page} onChange={setPage} />
         </Group>
       )}
 
-      <Modal opened={opened} onClose={close} title="Новый платёж">
+      <Modal opened={opened} onClose={close} title={t('payments.modalTitle')}>
         <form onSubmit={submit}>
           <Stack>
             <Select
-              label="Провайдер"
+              label={t('payments.fieldProvider')}
               data={providerOptions}
               allowDeselect={false}
               {...form.getInputProps('providerUuid')}
             />
             <Select
-              label="Сервис (необязательно)"
-              placeholder="—"
+              label={t('payments.fieldService', { optional: t('common.optional') })}
+              placeholder={t('common.none')}
               clearable
               data={serviceOptions}
               {...form.getInputProps('serviceUuid')}
             />
             <Group grow>
-              <TextInput label="Сумма" required {...form.getInputProps('amount')} />
+              <TextInput
+                label={t('payments.fieldAmount')}
+                required
+                {...form.getInputProps('amount')}
+              />
               <Select
-                label="Валюта"
-                data={CURRENCY_OPTIONS}
+                label={t('payments.fieldCurrency')}
+                data={enums.currencyOptions}
                 allowDeselect={false}
                 {...form.getInputProps('currency')}
               />
             </Group>
             <DatePickerInput
-              label="Дата"
+              label={t('payments.fieldDate')}
               required
               valueFormat="DD.MM.YYYY"
-              placeholder="дд.мм.гггг"
+              placeholder={t('payments.datePlaceholder')}
               value={form.values.paymentDate || null}
               onChange={(v) => form.setFieldValue('paymentDate', v ?? '')}
               error={form.errors.paymentDate}
             />
             <Textarea
-              label="Описание"
+              label={t('payments.fieldDescription')}
               autosize
               minRows={2}
               {...form.getInputProps('description')}
             />
             <Button type="submit" loading={create.isPending}>
-              Сохранить
+              {t('common.save')}
             </Button>
           </Stack>
         </form>

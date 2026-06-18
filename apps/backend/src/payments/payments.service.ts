@@ -48,7 +48,7 @@ export class PaymentsService {
 
   async remove(uuid: string): Promise<void> {
     const found = await this.prisma.payment.findUnique({ where: { uuid }, select: { uuid: true } });
-    if (!found) throw new NotFoundException('Платёж не найден');
+    if (!found) throw new NotFoundException('Payment not found');
     await this.prisma.payment.delete({ where: { uuid } });
   }
 
@@ -57,11 +57,11 @@ export class PaymentsService {
       where: { uuid },
       select: { uuid: true },
     });
-    if (!found) throw new NotFoundException('Провайдер не найден');
+    if (!found) throw new NotFoundException('Provider not found');
   }
 
   private async ensureService(uuid: string): Promise<void> {
     const found = await this.prisma.service.findUnique({ where: { uuid }, select: { uuid: true } });
-    if (!found) throw new NotFoundException('Сервис не найден');
+    if (!found) throw new NotFoundException('Service not found');
   }
 }

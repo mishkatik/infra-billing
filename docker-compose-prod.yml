@@ -18,7 +18,7 @@ x-env: &env
   env_file: .env
 
 services:
-  app:
+  infra-billing:
     image: ghcr.io/mishkatik/infra-billing:latest
     container_name: infra-billing
     hostname: infra-billing

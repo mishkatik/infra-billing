@@ -23,37 +23,37 @@ export function esc(s: string): string {
 
 /** Low balance: an imminent charge the provider balance won't cover. */
 export function lowBalanceMessage(ub: UpcomingBilling, baseCurrency: string): string {
-  const when = ub.daysUntil === 0 ? 'сегодня' : `через ${ub.daysUntil} дн.`;
+  const when = ub.daysUntil === 0 ? 'today' : `in ${ub.daysUntil} day(s)`;
   return (
-    `${EMOJI.lowBalance} <b>Низкий баланс</b>\n` +
+    `${EMOJI.lowBalance} <b>Low balance</b>\n` +
     `${esc(ub.providerName)} — <b>${esc(ub.name)}</b>\n` +
-    `Не хватит на списание <code>${esc(ub.costBase)} ${esc(baseCurrency)}</code> (${when})\n` +
-    `Баланс: <code>${esc(ub.providerBalance ?? '0')} ${esc(ub.providerBalanceCurrency ?? '')}</code>`
+    `Not enough to cover charge <code>${esc(ub.costBase)} ${esc(baseCurrency)}</code> (${when})\n` +
+    `Balance: <code>${esc(ub.providerBalance ?? '0')} ${esc(ub.providerBalanceCurrency ?? '')}</code>`
   );
 }
 
 /** Upcoming charge reminder (regardless of coverage). `day` is YYYY-MM-DD. */
 export function upcomingBillingMessage(ub: UpcomingBilling, day: string): string {
   return (
-    `${EMOJI.upcoming} <b>Скоро списание</b>\n` +
+    `${EMOJI.upcoming} <b>Upcoming charge</b>\n` +
     `${esc(ub.providerName)} — <b>${esc(ub.name)}</b>\n` +
-    `Дата: <code>${esc(day)}</code>\n` +
-    `Сумма: <code>${esc(ub.cost)} ${esc(ub.currency)}</code>`
+    `Date: <code>${esc(day)}</code>\n` +
+    `Amount: <code>${esc(ub.cost)} ${esc(ub.currency)}</code>`
   );
 }
 
 /** Provider sync failure. */
 export function syncErrorMessage(providerName: string, error: string): string {
   return (
-    `${EMOJI.syncError} <b>Ошибка синхронизации</b>\n` +
-    `Провайдер: <b>${esc(providerName)}</b>\n` +
+    `${EMOJI.syncError} <b>Sync error</b>\n` +
+    `Provider: <b>${esc(providerName)}</b>\n` +
     `<code>${esc(error)}</code>`
   );
 }
 
 /** Manual "test" send to verify the Telegram configuration. */
 export function testMessage(): string {
-  return `${EMOJI.test} <b>Infra Billing</b>: тестовое уведомление`;
+  return `${EMOJI.test} <b>Infra Billing</b>: test notification`;
 }
 
 /**
@@ -65,7 +65,7 @@ export function sampleMessages(): string[] {
   const sample: UpcomingBilling = {
     serviceUuid: '00000000-0000-0000-0000-000000000000',
     name: 'demo-vps',
-    providerName: 'Пример провайдера',
+    providerName: 'Example provider',
     nextBillingAt: `${inTwoDays}T00:00:00.000Z`,
     cost: '500.00',
     currency: 'RUB',
@@ -77,9 +77,9 @@ export function sampleMessages(): string[] {
     severity: 'critical',
   };
   return [
-    `${EMOJI.test} <b>Тест уведомлений</b> — ниже примеры всех типов:`,
+    `${EMOJI.test} <b>Notification test</b> — samples of all types below:`,
     lowBalanceMessage(sample, 'RUB'),
     upcomingBillingMessage(sample, inTwoDays),
-    syncErrorMessage('Пример провайдера', 'HTTP 401: неверный API-токен'),
+    syncErrorMessage('Example provider', 'HTTP 401: invalid API token'),
   ];
 }
