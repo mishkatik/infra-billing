@@ -421,6 +421,13 @@ export function ProvidersPage() {
                   {...form.getInputProps('token')}
                 />
               </>
+            ) : form.values.kind === 'netlen' ? (
+              <TextInput
+                label={t('providers.field.apiToken')}
+                description={t('providers.field.apiTokenDescNetlen')}
+                placeholder={editing ? t('providers.keepEmpty') : ''}
+                {...form.getInputProps('token')}
+              />
             ) : (
               form.values.kind !== 'manual' && (
                 <TextInput

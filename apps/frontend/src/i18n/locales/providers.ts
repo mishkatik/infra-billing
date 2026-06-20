@@ -40,6 +40,7 @@ export const providers = {
         'Base32 secret from the authenticator app — the sync will generate the code itself',
       apiToken: 'API token',
       apiTokenDesc4vps: '4VPS personal account → API section',
+      apiTokenDescNetlen: 'Netlen panel → API. Important: whitelist the server IP for the key.',
       refreshToken: 'Refresh token (OAuth2)',
       refreshTokenDescNetcup:
         'Use “Authorize via netcup” above, or paste an offline refresh token manually',
@@ -114,6 +115,7 @@ export const providers = {
         'Base32-секрет из приложения-аутентификатора — синк будет сам генерировать код',
       apiToken: 'API-токен',
       apiTokenDesc4vps: 'Личный кабинет 4VPS → раздел API',
+      apiTokenDescNetlen: 'Панель Netlen → API. Важно: добавьте IP сервера в whitelist ключа.',
       refreshToken: 'Refresh-токен (OAuth2)',
       refreshTokenDescNetcup:
         'Нажмите «Авторизоваться через netcup» выше или вставьте offline refresh-токен вручную',

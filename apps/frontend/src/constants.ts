@@ -20,6 +20,7 @@ export const PROVIDER_KINDS: ProviderKind[] = [
   'billmgr',
   'selectel',
   '4vps',
+  'netlen',
   'manual',
 ];
 

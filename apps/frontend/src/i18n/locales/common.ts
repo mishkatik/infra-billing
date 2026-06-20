@@ -90,6 +90,7 @@ export const common = {
         billmgr: 'ISP BILLmanager',
         selectel: 'Selectel',
         '4vps': '4VPS.SU',
+        netlen: 'Netlen',
         manual: 'Manual',
       },
       rateSource: {
@@ -186,6 +187,7 @@ export const common = {
         billmgr: 'ISP BILLmanager',
         selectel: 'Selectel',
         '4vps': '4VPS.SU',
+        netlen: 'Netlen',
         manual: 'Ручной',
       },
       rateSource: {

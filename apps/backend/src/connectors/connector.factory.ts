@@ -8,6 +8,7 @@ import { HetznerConnector } from './hetzner/hetzner.connector';
 import { HostbillConnector } from './hostbill/hostbill.connector';
 import type { HostbillCredentials } from './hostbill/hostbill.types';
 import { NetcupConnector } from './netcup/netcup.connector';
+import { NetlenConnector } from './netlen/netlen.connector';
 import { SelectelConnector } from './selectel/selectel.connector';
 import type { SelectelCredentials } from './selectel/selectel.types';
 import { TimewebConnector } from './timeweb/timeweb.connector';
@@ -24,6 +25,9 @@ export class ConnectorFactory {
         return new TimewebConnector(token);
       case 'hetzner':
         return new HetznerConnector(token);
+      case 'netlen':
+        // Netlen secret is the raw API key (single string, sent as the X-API-Key header).
+        return new NetlenConnector(token);
       case 'netcup':
         // netcup secret is the OAuth2 offline refresh token (single string, like timeweb).
         return new NetcupConnector(token);
