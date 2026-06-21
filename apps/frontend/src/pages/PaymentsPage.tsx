@@ -14,7 +14,7 @@ import {
   Textarea,
   Title,
 } from '@mantine/core';
-import { DatePickerInput } from '@mantine/dates';
+import { DateInput } from '@mantine/dates';
 import { useForm } from '@mantine/form';
 import { useDisclosure } from '@mantine/hooks';
 import { useTranslation } from 'react-i18next';
@@ -31,7 +31,7 @@ import { useServices } from '@/api/services';
 import { useProviders } from '@/api/providers';
 import { apiErrorMessage } from '@/api/client';
 import { useEnums } from '@/constants';
-import { formatDateShort, formatMoney } from '@/utils/format';
+import { formatDateShort, formatMoney, trimMoney } from '@/utils/format';
 
 interface PForm {
   providerUuid: string;
@@ -74,7 +74,8 @@ export function PaymentsPage() {
     },
     validate: {
       providerUuid: (v) => (v ? null : t('validation.selectProvider')),
-      amount: (v) => (/^\d+(\.\d{1,2})?$/.test(v) ? null : t('validation.amountFormat')),
+      // Accept any number of decimals — extra ones are trimmed to 2 (on blur + submit).
+      amount: (v) => (/^\d+(\.\d+)?$/.test(v) ? null : t('validation.amountFormat')),
       paymentDate: (v) => (v ? null : t('validation.enterDate')),
     },
   });
@@ -99,7 +100,7 @@ export function PaymentsPage() {
       await create.mutateAsync({
         providerUuid: v.providerUuid,
         serviceUuid: v.serviceUuid || undefined,
-        amount: v.amount,
+        amount: trimMoney(v.amount),
         currency: v.currency,
         paymentDate: toIso(v.paymentDate)!,
         description: v.description || undefined,
@@ -147,7 +148,7 @@ export function PaymentsPage() {
           onChange={(v) => setFilter((f) => ({ ...f, providerUuid: v ?? undefined }))}
           w={220}
         />
-        <DatePickerInput
+        <DateInput
           label={t('payments.filterFrom')}
           placeholder={t('payments.datePlaceholder')}
           valueFormat="DD.MM.YYYY"
@@ -156,7 +157,7 @@ export function PaymentsPage() {
           value={filter.from ? dayjs(filter.from).format('YYYY-MM-DD') : null}
           onChange={(v) => setFilter((f) => ({ ...f, from: v ? toIso(v) : undefined }))}
         />
-        <DatePickerInput
+        <DateInput
           label={t('payments.filterTo')}
           placeholder={t('payments.datePlaceholder')}
           valueFormat="DD.MM.YYYY"
@@ -256,6 +257,7 @@ export function PaymentsPage() {
                 label={t('payments.fieldAmount')}
                 required
                 {...form.getInputProps('amount')}
+                onBlur={(e) => form.setFieldValue('amount', trimMoney(e.currentTarget.value))}
               />
               <Select
                 label={t('payments.fieldCurrency')}
@@ -264,7 +266,7 @@ export function PaymentsPage() {
                 {...form.getInputProps('currency')}
               />
             </Group>
-            <DatePickerInput
+            <DateInput
               label={t('payments.fieldDate')}
               required
               valueFormat="DD.MM.YYYY"

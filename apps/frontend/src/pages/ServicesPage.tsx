@@ -14,7 +14,7 @@ import {
   Title,
   Tooltip,
 } from '@mantine/core';
-import { DatePickerInput } from '@mantine/dates';
+import { DateInput } from '@mantine/dates';
 import { useForm } from '@mantine/form';
 import { useDisclosure } from '@mantine/hooks';
 import { useTranslation } from 'react-i18next';
@@ -33,7 +33,7 @@ import { useProviders } from '@/api/providers';
 import { usePayments } from '@/api/payments';
 import { apiErrorMessage } from '@/api/client';
 import { useEnums } from '@/constants';
-import { countryFlag, formatDateShort, formatMoney } from '@/utils/format';
+import { countryFlag, formatDateShort, formatMoney, trimMoney } from '@/utils/format';
 import { providerFavicon } from '@/utils/favicon';
 import { useCountryOptions } from '@/utils/countries';
 import { ProviderIcon } from '@/components/ProviderIcon';
@@ -88,7 +88,8 @@ export function ServicesPage() {
     },
     validate: {
       name: (v) => (v.trim() ? null : t('validation.enterName')),
-      cost: (v) => (/^\d+(\.\d{1,2})?$/.test(v) ? null : t('validation.amountFormat')),
+      // Accept any number of decimals — extra ones are trimmed to 2 (on blur + submit).
+      cost: (v) => (/^\d+(\.\d+)?$/.test(v) ? null : t('validation.amountFormat')),
       providerUuid: (v) => (v ? null : t('validation.selectProvider')),
     },
   });
@@ -133,7 +134,7 @@ export function ServicesPage() {
           dto: {
             name: v.name,
             type: v.type as ServiceType,
-            cost: v.cost,
+            cost: trimMoney(v.cost),
             currency: v.currency,
             period: v.period as Period,
             countryCode: v.countryCode || null,
@@ -146,7 +147,7 @@ export function ServicesPage() {
           providerUuid: v.providerUuid,
           name: v.name,
           type: v.type as ServiceType,
-          cost: v.cost,
+          cost: trimMoney(v.cost),
           currency: v.currency,
           period: v.period as Period,
           countryCode: v.countryCode || undefined,
@@ -335,7 +336,12 @@ export function ServicesPage() {
               />
             </Group>
             <Group grow>
-              <TextInput label={t('services.fieldCost')} required {...form.getInputProps('cost')} />
+              <TextInput
+                label={t('services.fieldCost')}
+                required
+                {...form.getInputProps('cost')}
+                onBlur={(e) => form.setFieldValue('cost', trimMoney(e.currentTarget.value))}
+              />
               <Select
                 label={t('services.fieldCurrency')}
                 data={enums.currencyOptions}
@@ -353,7 +359,7 @@ export function ServicesPage() {
                 leftSection={<IconMapPin size={16} />}
                 {...form.getInputProps('countryCode')}
               />
-              <DatePickerInput
+              <DateInput
                 label={t('services.fieldNextBilling')}
                 clearable
                 valueFormat="DD.MM.YYYY"
