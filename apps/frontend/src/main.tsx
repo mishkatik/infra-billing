@@ -13,6 +13,7 @@ import '@fontsource/mulish/500.css';
 import '@fontsource/mulish/600.css';
 import '@fontsource/mulish/700.css';
 import './theme-transition.css';
+import './mobile.css';
 
 // Fix country-flag emoji rendering on Windows (injects 'Twemoji Country Flags').
 polyfillCountryFlagEmojis();

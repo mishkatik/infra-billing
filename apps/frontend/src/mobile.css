@@ -1,0 +1,10 @@
+/* iOS Safari auto-zooms a focused input whose font-size is < 16px, and inside a
+   scroll-locked Modal the page then gets stuck — you can't scroll or pinch back out.
+   Raise form controls to 16px on touch / narrow viewports to suppress that auto-zoom;
+   desktop (fine pointer, wide screen) keeps Mantine's compact 14px. Imported after the
+   Mantine stylesheet so it wins on source order (same selector specificity). */
+@media (max-width: 768px), (pointer: coarse) {
+  .mantine-Input-input {
+    font-size: 16px;
+  }
+}
