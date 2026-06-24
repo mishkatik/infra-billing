@@ -1,4 +1,16 @@
-import { Alert, Badge, Card, Group, SimpleGrid, Stack, Table, Text, Title } from '@mantine/core';
+import { useState } from 'react';
+import {
+  Alert,
+  Badge,
+  Card,
+  Group,
+  Pagination,
+  SimpleGrid,
+  Stack,
+  Table,
+  Text,
+  Title,
+} from '@mantine/core';
 import { BarChart, DonutChart } from '@mantine/charts';
 import {
   IconAlertTriangle,
@@ -18,6 +30,7 @@ import { formatDateShort, formatMoney } from '@/utils/format';
 import { projectFavicon, providerFavicon } from '@/utils/favicon';
 
 const COLORS = ['brand.6', 'teal.6', 'blue.6', 'orange.6', 'pink.6', 'grape.6', 'cyan.6', 'lime.6'];
+const PROVIDER_PAGE_SIZE = 5;
 
 const severityColor = (s: 'critical' | 'warning' | 'ok') =>
   s === 'critical' ? 'red' : s === 'warning' ? 'orange' : undefined;
@@ -57,6 +70,14 @@ export function DashboardPage() {
   const critical = upcoming.filter((b) => b.severity === 'critical');
   const providerRows = [...(summary?.byProvider ?? [])].sort(
     (a, b) => Number(b.spent) - Number(a.spent),
+  );
+  const [providerPage, setProviderPage] = useState(1);
+  const providerPageCount = Math.max(1, Math.ceil(providerRows.length / PROVIDER_PAGE_SIZE));
+  // Clamp in case the provider list shrank below the current page.
+  const provPage = Math.min(providerPage, providerPageCount);
+  const providerRowsPage = providerRows.slice(
+    (provPage - 1) * PROVIDER_PAGE_SIZE,
+    provPage * PROVIDER_PAGE_SIZE,
   );
   const projectRows = [...(summary?.byProject ?? [])].sort(
     (a, b) => Number(b.monthlyCost) - Number(a.monthlyCost),
@@ -248,7 +269,7 @@ export function DashboardPage() {
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
-                {providerRows.map((p) => (
+                {providerRowsPage.map((p) => (
                   <Table.Tr key={p.providerUuid}>
                     <Table.Td>
                       <Group gap={8} wrap="nowrap">
@@ -285,6 +306,16 @@ export function DashboardPage() {
           <Text c="dimmed" size="sm">
             {isLoading ? t('common.loading') : t('dashboard.empty.noProviders')}
           </Text>
+        )}
+        {providerRows.length > PROVIDER_PAGE_SIZE && (
+          <Group justify="center" mt="md">
+            <Pagination
+              size="sm"
+              total={providerPageCount}
+              value={provPage}
+              onChange={setProviderPage}
+            />
+          </Group>
         )}
       </Card>
 
