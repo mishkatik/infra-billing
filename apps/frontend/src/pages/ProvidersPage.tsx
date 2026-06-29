@@ -38,6 +38,7 @@ import {
   useUpdateProvider,
 } from '@/api/providers';
 import { useBalanceHistory } from '@/api/analytics';
+import { useSettings } from '@/api/settings';
 import { apiErrorMessage } from '@/api/client';
 import { useEnums } from '@/constants';
 import { formatDate, formatDateShort, formatMoney } from '@/utils/format';
@@ -106,6 +107,7 @@ export function ProvidersPage() {
   const del = useDeleteProvider();
   const sync = useSyncProvider();
   const syncAll = useSyncAllProviders();
+  const { data: settings } = useSettings();
   const [opened, { open, close }] = useDisclosure(false);
   const [editing, setEditing] = useState<Provider | null>(null);
   const [historyFor, setHistoryFor] = useState<Provider | null>(null);
@@ -274,6 +276,11 @@ export function ProvidersPage() {
         <div>
           <Title order={2}>{t('providers.title')}</Title>
           <Text c="dimmed">{t('providers.subtitle')}</Text>
+          {settings?.nextSyncAt && (
+            <Text c="dimmed" size="sm" mt={4}>
+              {t('providers.nextSync', { when: formatDate(settings.nextSyncAt) })}
+            </Text>
+          )}
         </div>
         <Group>
           <Button

@@ -1,10 +1,12 @@
 import { z } from 'zod';
 import { rateSourceSchema } from '../enums';
-import { currencySchema } from './common';
+import { currencySchema, isoDateSchema } from './common';
 
 export const settingsSchema = z.object({
   baseCurrency: currencySchema.describe('Base currency for analytics'),
   syncIntervalHours: z.number().int().positive().describe('Auto-sync interval in hours'),
+  // When the next scheduled autosync will run (read-only; not part of the update payload).
+  nextSyncAt: isoDateSchema.describe('Next scheduled autosync').nullable(),
   rateSource: rateSourceSchema.describe('Exchange rate source'),
   // Telegram notifications. The bot token is NEVER returned — only whether it's set.
   notificationsEnabled: z.boolean().describe('Telegram notifications enabled'),

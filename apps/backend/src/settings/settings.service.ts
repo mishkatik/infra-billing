@@ -59,6 +59,7 @@ export class SettingsService {
     return {
       baseCurrency: row.baseCurrency,
       syncIntervalHours: row.syncIntervalHours,
+      nextSyncAt: this.sync.getNextSyncAt()?.toISOString() ?? null,
       rateSource: row.rateSource as RateSource,
       notificationsEnabled: row.notificationsEnabled,
       upcomingBillingDays: row.upcomingBillingDays,

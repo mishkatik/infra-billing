@@ -21,6 +21,10 @@ const DEFAULT_SYNC_INTERVAL_HOURS = 6; // fallback only, until the Settings row 
 @Injectable()
 export class SyncService implements OnModuleInit {
   private readonly logger = new Logger(SyncService.name);
+  private intervalMs = DEFAULT_SYNC_INTERVAL_HOURS * 3_600_000;
+  // When the next scheduled autosync fires. In-memory: set on boot/reschedule and advanced on each
+  // tick, so it resets to now+interval whenever the process restarts (which is when the timer does).
+  private nextRunAt: Date | null = null;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -40,6 +44,11 @@ export class SyncService implements OnModuleInit {
     this.applyInterval(hours);
   }
 
+  /** When the next scheduled autosync will run (null until the scheduler is armed). */
+  getNextSyncAt(): Date | null {
+    return this.nextRunAt;
+  }
+
   private applyInterval(hours: number): void {
     // Clear any prior timer, then (re)register at the new cadence.
     try {
@@ -47,8 +56,14 @@ export class SyncService implements OnModuleInit {
     } catch {
       // not scheduled yet (first run) — nothing to clear
     }
-    const interval = setInterval(() => void this.syncAllProviders(), hours * 3_600_000);
+    this.intervalMs = hours * 3_600_000;
+    const interval = setInterval(() => {
+      void this.syncAllProviders();
+      // The timer just fired — the next tick is one interval out.
+      this.nextRunAt = new Date(Date.now() + this.intervalMs);
+    }, this.intervalMs);
     this.scheduler.addInterval(SYNC_INTERVAL_NAME, interval);
+    this.nextRunAt = new Date(Date.now() + this.intervalMs);
     this.logger.log(`Provider autosync every ${hours}h`);
   }
 

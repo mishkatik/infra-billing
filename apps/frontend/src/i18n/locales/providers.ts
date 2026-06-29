@@ -4,6 +4,7 @@ export const providers = {
     title: 'Providers',
     subtitle: 'Accounts with hosting providers',
     syncAll: 'Sync all',
+    nextSync: 'Next sync: {{when}}',
     th: {
       name: 'Name',
       type: 'Type',
@@ -102,6 +103,7 @@ export const providers = {
     title: 'Провайдеры',
     subtitle: 'Аккаунты у хостинг-провайдеров',
     syncAll: 'Синхронизировать всё',
+    nextSync: 'Следующая синхронизация: {{when}}',
     th: {
       name: 'Имя',
       type: 'Тип',
