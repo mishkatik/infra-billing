@@ -6,6 +6,7 @@ import { AppConfigService } from '@config/app-config.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthConfigService } from './auth-config.service';
 import { verifyPassword } from './password.util';
+import { hashToken } from '../api-tokens/token.util';
 
 export const SESSION_COOKIE = 'infra_session';
 const SESSION_MAX_AGE_SEC = 7 * 24 * 60 * 60; // 7 days
@@ -56,7 +57,8 @@ export class AuthService {
   /** Validate an API token (Authorization: Bearer), returning its name or null. */
   async verifyApiToken(token: string | undefined): Promise<string | null> {
     if (!token) return null;
-    const row = await this.prisma.apiToken.findUnique({ where: { token } });
+    // Only the hash is stored; look the presented token up by its SHA-256.
+    const row = await this.prisma.apiToken.findUnique({ where: { tokenHash: hashToken(token) } });
     if (!row) return null;
     // Throttle the lastUsedAt write to ~once/min so we don't write on every request.
     const now = Date.now();

@@ -2,7 +2,10 @@ model ApiToken {
   uuid String @id @default(uuid()) @map("uuid")
 
   tokenName String @map("token_name")
-  token     String @unique @map("token")
+  // Only the SHA-256 hash of the token is stored — the raw value is shown once at creation and
+  // never again. tokenPrefix is the masked display (`ib_` + first 8 chars).
+  tokenHash   String @unique @map("token_hash")
+  tokenPrefix String @map("token_prefix")
 
   lastUsedAt DateTime? @map("last_used_at")
 

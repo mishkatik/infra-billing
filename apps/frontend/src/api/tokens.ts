@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { ApiToken, CreateApiToken } from '@infra/shared';
+import type { ApiToken, CreateApiToken, CreatedApiToken } from '@infra/shared';
 import { api } from './client';
 import { API_PATH } from '@infra/shared';
 
@@ -13,8 +13,9 @@ export function useTokens() {
 export function useCreateToken() {
   const qc = useQueryClient();
   return useMutation({
+    // The create response carries the raw token once — the caller shows it, then it's gone.
     mutationFn: async (dto: CreateApiToken) =>
-      (await api.post<ApiToken>(API_PATH.TOKENS.ROOT, dto)).data,
+      (await api.post<CreatedApiToken>(API_PATH.TOKENS.ROOT, dto)).data,
     onSuccess: () => qc.invalidateQueries({ queryKey: ['tokens'] }),
   });
 }

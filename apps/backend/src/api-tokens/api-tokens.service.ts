@@ -1,9 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { ApiToken as ApiTokenDto } from '@infra/shared';
+import { ApiToken as ApiTokenDto, CreatedApiToken as CreatedApiTokenDto } from '@infra/shared';
 import { mapApiToken } from '@common/mappers';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateApiTokenDto } from './dto/api-token.dto';
-import { generateToken } from './token.util';
+import { generateToken, hashToken, tokenPrefix } from './token.util';
 
 @Injectable()
 export class ApiTokensService {
@@ -14,11 +14,17 @@ export class ApiTokensService {
     return rows.map(mapApiToken);
   }
 
-  async create(dto: CreateApiTokenDto): Promise<ApiTokenDto> {
+  /** Create a token; the raw value is returned ONCE here and only its hash is stored. */
+  async create(dto: CreateApiTokenDto): Promise<CreatedApiTokenDto> {
+    const token = generateToken();
     const row = await this.prisma.apiToken.create({
-      data: { tokenName: dto.tokenName, token: generateToken() },
+      data: {
+        tokenName: dto.tokenName,
+        tokenHash: hashToken(token),
+        tokenPrefix: tokenPrefix(token),
+      },
     });
-    return mapApiToken(row);
+    return { ...mapApiToken(row), token };
   }
 
   async remove(uuid: string): Promise<void> {

@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import {
   ActionIcon,
+  Alert,
   Button,
   Code,
   CopyButton,
@@ -15,8 +17,8 @@ import {
 import { useForm } from '@mantine/form';
 import { useDisclosure } from '@mantine/hooks';
 import { useTranslation } from 'react-i18next';
-import { IconCheck, IconCopy, IconPlus, IconTrash } from '@tabler/icons-react';
-import type { ApiToken } from '@infra/shared';
+import { IconAlertTriangle, IconCheck, IconCopy, IconPlus, IconTrash } from '@tabler/icons-react';
+import type { ApiToken, CreatedApiToken } from '@infra/shared';
 import { useCreateToken, useDeleteToken, useTokens } from '@/api/tokens';
 import { apiErrorMessage } from '@/api/client';
 import { notifyError, notifySuccess } from '@/utils/notify';
@@ -28,6 +30,8 @@ export function TokensPage() {
   const create = useCreateToken();
   const del = useDeleteToken();
   const [opened, { open, close }] = useDisclosure(false);
+  // The raw token, captured from the create response — shown once, then cleared.
+  const [created, setCreated] = useState<CreatedApiToken | null>(null);
 
   const form = useForm<{ tokenName: string }>({
     initialValues: { tokenName: '' },
@@ -41,9 +45,9 @@ export function TokensPage() {
 
   const submit = form.onSubmit(async (v) => {
     try {
-      await create.mutateAsync({ tokenName: v.tokenName.trim() });
+      const res = await create.mutateAsync({ tokenName: v.tokenName.trim() });
       close();
-      notifySuccess(t('tokens.created'));
+      setCreated(res); // open the one-time reveal — the raw token isn't recoverable afterwards
     } catch (e) {
       notifyError(apiErrorMessage(e));
     }
@@ -89,18 +93,7 @@ export function TokensPage() {
                   <Text fw={600}>{tok.tokenName}</Text>
                 </Table.Td>
                 <Table.Td>
-                  <CopyButton value={tok.token}>
-                    {({ copied, copy }) => (
-                      <Group gap={6} wrap="nowrap">
-                        <Code>{`${tok.token.slice(0, 12)}…`}</Code>
-                        <Tooltip label={copied ? t('tokens.copied') : t('tokens.copy')}>
-                          <ActionIcon variant="subtle" color="gray" size="sm" onClick={copy}>
-                            {copied ? <IconCheck size={14} /> : <IconCopy size={14} />}
-                          </ActionIcon>
-                        </Tooltip>
-                      </Group>
-                    )}
-                  </CopyButton>
+                  <Code>{`${tok.tokenPrefix}…`}</Code>
                 </Table.Td>
                 <Table.Td style={{ whiteSpace: 'nowrap' }}>
                   {formatDateShort(tok.createdAt)}
@@ -145,6 +138,32 @@ export function TokensPage() {
             </Button>
           </Stack>
         </form>
+      </Modal>
+
+      <Modal
+        opened={!!created}
+        onClose={() => setCreated(null)}
+        title={t('tokens.reveal.title')}
+        closeOnClickOutside={false}
+      >
+        <Stack>
+          <Alert color="yellow" variant="light" icon={<IconAlertTriangle size={18} />}>
+            {t('tokens.reveal.warning')}
+          </Alert>
+          <CopyButton value={created?.token ?? ''}>
+            {({ copied, copy }) => (
+              <Group gap={6} wrap="nowrap">
+                <Code style={{ flex: 1, wordBreak: 'break-all' }}>{created?.token}</Code>
+                <Tooltip label={copied ? t('tokens.copied') : t('tokens.copy')}>
+                  <ActionIcon variant="subtle" color="gray" onClick={copy}>
+                    {copied ? <IconCheck size={16} /> : <IconCopy size={16} />}
+                  </ActionIcon>
+                </Tooltip>
+              </Group>
+            )}
+          </CopyButton>
+          <Button onClick={() => setCreated(null)}>{t('tokens.reveal.done')}</Button>
+        </Stack>
       </Modal>
     </Stack>
   );

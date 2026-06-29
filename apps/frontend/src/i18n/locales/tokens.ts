@@ -17,6 +17,11 @@ export const tokens = {
     copy: 'Copy token',
     copied: 'Copied',
     confirmDelete: 'Delete token “{{name}}”?',
+    reveal: {
+      title: 'Token created',
+      warning: 'Copy the token now — it will not be shown again.',
+      done: 'Done',
+    },
   },
   ru: {
     title: 'API токены',
@@ -35,5 +40,10 @@ export const tokens = {
     copy: 'Скопировать токен',
     copied: 'Скопировано',
     confirmDelete: 'Удалить токен «{{name}}»?',
+    reveal: {
+      title: 'Токен создан',
+      warning: 'Скопируйте токен сейчас — больше он не будет показан.',
+      done: 'Готово',
+    },
   },
 };

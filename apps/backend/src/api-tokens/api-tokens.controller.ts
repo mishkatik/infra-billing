@@ -19,7 +19,7 @@ import {
 import { API, API_SUB, CONTROLLERS_INFO, ID_PARAM } from '@infra/shared';
 import { SessionOnly } from '../auth/session-only.decorator';
 import { ApiTokensService } from './api-tokens.service';
-import { ApiTokenDto, CreateApiTokenDto } from './dto/api-token.dto';
+import { ApiTokenDto, CreateApiTokenDto, CreatedApiTokenDto } from './dto/api-token.dto';
 
 // Session-only: API tokens can't manage API tokens — only the admin login (cookie) can.
 @ApiTags(CONTROLLERS_INFO.API_TOKENS.TAG)
@@ -39,7 +39,7 @@ export class ApiTokensController {
   @Post()
   @HttpCode(201)
   @ApiOperation({ summary: 'Create an API token' })
-  @ApiCreatedResponse({ type: ApiTokenDto })
+  @ApiCreatedResponse({ type: CreatedApiTokenDto })
   create(@Body() dto: CreateApiTokenDto) {
     return this.tokens.create(dto);
   }
