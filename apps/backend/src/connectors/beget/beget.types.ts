@@ -47,6 +47,7 @@ export interface BegetVps {
   status?: string; // "RUNNING" | "STOPPED" | …
   region?: string; // region id, mapped to a country via /v1/vps/region
   ip_address?: string;
+  additional_ip_address?: string[]; // all assigned IPv4s (incl. the primary) — each billed separately
   date_create?: string; // ISO 8601 with offset (creation date, NOT next billing)
   configuration?: BegetVpsConfiguration;
   software?: { name?: string; display_name?: string; version?: string };

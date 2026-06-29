@@ -5,6 +5,17 @@ import { BegetCloudService, BegetVps } from './beget.types';
 // Beget is Russia-based and bills in rubles; no money field carries a currency code (verified live).
 export const BEGET_CURRENCY = 'RUB';
 
+// Beget bills every assigned IPv4 — including the VPS's primary one — separately, at a flat monthly
+export const BEGET_IP_MONTHLY_RUB = 150;
+
+/** Count of distinct assigned IPv4s (primary ∪ additional). A VPS with no IP returns 0. */
+export function begetIpCount(v: BegetVps): number {
+  const ips = new Set<string>();
+  if (v.ip_address) ips.add(v.ip_address);
+  for (const ip of v.additional_ip_address ?? []) if (ip) ips.add(ip);
+  return ips.size;
+}
+
 /**
  * Region id ("ru1", "kz1") → ISO2 country. Prefers the authoritative /v1/vps/region map; falls
  * back to the 2-letter region prefix (ru1→RU), which holds for Beget's region ids.
@@ -31,17 +42,24 @@ export function begetCloudType(type: string | undefined): string {
 
 /**
  * Map a Beget VPS (GET /v1/vps/server/list) to our domain Service. `configuration.price_month` is
- * the monthly price in RUB. The API exposes no next-billing/expiry date (only date_create), so
+ * the VPS tariff in RUB; each assigned IPv4 is billed on top (see BEGET_IP_MONTHLY_RUB), so the
+ * service cost is tariff + IPs. The API exposes no next-billing/expiry date (only date_create), so
  * `nextBilling` is left unset for the owner to fill.
  */
 export function mapBegetVps(v: BegetVps, regions: Map<string, string>): ServiceData {
   const cfg = v.configuration ?? {};
+  const ipCount = begetIpCount(v);
+  // Tariff + per-IP surcharge. Leave cost unset only when the tariff price is missing (custom plans).
+  const cost =
+    cfg.price_month != null
+      ? new Decimal(cfg.price_month).add(new Decimal(BEGET_IP_MONTHLY_RUB).mul(ipCount))
+      : undefined;
   return {
     externalId: `vps:${v.id}`,
     name: v.display_name || v.slug || v.hostname || `vps-${v.id}`,
     type: 'vps',
     countryCode: regionCountry(v.region, regions),
-    cost: cfg.price_month != null ? new Decimal(cfg.price_month) : undefined,
+    cost,
     currency: BEGET_CURRENCY,
     period: 'monthly',
     meta: {
@@ -50,6 +68,7 @@ export function mapBegetVps(v: BegetVps, regions: Map<string, string>): ServiceD
       status: v.status,
       region: v.region,
       ip: v.ip_address,
+      ipCount,
       configuration: cfg.name,
       group: cfg.group,
       cpu: cfg.cpu_count,
