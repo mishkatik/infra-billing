@@ -19,7 +19,7 @@ import { useEnums } from '@/constants';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { formatDate } from '@/utils/format';
 import { notifyError, notifySuccess } from '@/utils/notify';
-import { BalanceHistoryModal } from './BalanceHistoryModal';
+import { ProviderDetailModal } from './ProviderDetailModal';
 import { ProviderFormModal } from './ProviderFormModal';
 import { ProvidersTable } from './ProvidersTable';
 import {
@@ -39,19 +39,19 @@ export function ProvidersPage() {
   const sync = useSyncProvider();
   const syncAll = useSyncAllProviders();
   const { data: settings } = useSettings();
-  const [opened, { open, close }] = useDisclosure(false);
-  const [editing, setEditing] = useState<Provider | null>(null);
-  const [historyFor, setHistoryFor] = useState<Provider | null>(null);
+  // The detail modal reads the provider from the query cache by uuid, so counters/balance/sync
+  // status stay live while the modal is open (e.g. after "Sync now").
+  const [detailUuid, setDetailUuid] = useState<string | null>(null);
+  const selected = providers?.find((p) => p.uuid === detailUuid) ?? null;
+  const [createOpened, { open: openCreateModal, close: closeCreateModal }] = useDisclosure(false);
 
   const form = useForm<FormValues>({ defaultValues: EMPTY_FORM, mode: 'onSubmit' });
 
   const openCreate = () => {
-    setEditing(null);
     form.reset({ ...EMPTY_FORM });
-    open();
+    openCreateModal();
   };
-  const openEdit = (p: Provider) => {
-    setEditing(p);
+  const openDetail = (p: Provider) => {
     form.reset({
       ...EMPTY_FORM,
       name: p.name,
@@ -65,7 +65,7 @@ export function ProvidersPage() {
       panelId: p.panelId ?? '',
       isPostpaid: p.isPostpaid,
     });
-    open();
+    setDetailUuid(p.uuid);
   };
 
   const doSync = async (uuid: string) => {
@@ -80,7 +80,7 @@ export function ProvidersPage() {
   };
 
   const submit = form.handleSubmit(async (v) => {
-    if (!editing) {
+    if (!selected) {
       const err = validateProviderCredentials(v, t);
       if (err) {
         notifyError(err);
@@ -90,9 +90,9 @@ export function ProvidersPage() {
     const creds = buildCredentials(v);
     try {
       let saved: Provider;
-      if (editing) {
+      if (selected) {
         saved = await update.mutateAsync({
-          uuid: editing.uuid,
+          uuid: selected.uuid,
           dto: {
             name: v.name,
             loginUrl: v.loginUrl || undefined,
@@ -100,6 +100,7 @@ export function ProvidersPage() {
             ...creds,
           },
         });
+        setDetailUuid(null);
       } else {
         saved = await create.mutateAsync({
           name: v.name,
@@ -108,9 +109,9 @@ export function ProvidersPage() {
           isPostpaid: v.isPostpaid,
           ...creds,
         });
+        closeCreateModal();
       }
-      close();
-      notifySuccess(editing ? t('providers.updated') : t('providers.created'));
+      notifySuccess(selected ? t('providers.updated') : t('providers.created'));
       // Auto-sync syncable providers so credential/token changes take effect right away.
       if (saved.kind !== 'manual') void doSync(saved.uuid);
     } catch (e) {
@@ -132,6 +133,7 @@ export function ProvidersPage() {
     if (!window.confirm(t('providers.confirmDelete', { name: p.name }))) return;
     try {
       await del.mutateAsync(p.uuid);
+      setDetailUuid(null);
       notifySuccess(t('common.deleted'));
     } catch (e) {
       notifyError(apiErrorMessage(e));
@@ -173,23 +175,30 @@ export function ProvidersPage() {
         isLoading={isLoading}
         syncingUuid={sync.isPending ? sync.variables : undefined}
         kindLabel={enums.providerKindLabel}
-        onSync={doSync}
-        onHistory={setHistoryFor}
-        onEdit={openEdit}
-        onDelete={doDelete}
+        onRowClick={openDetail}
       />
 
       <ProviderFormModal
-        opened={opened}
-        editing={!!editing}
+        opened={createOpened}
         form={form}
         kindOptions={enums.providerKindOptions}
-        isPending={create.isPending || update.isPending}
+        isPending={create.isPending}
         onSubmit={submit}
-        onClose={close}
+        onClose={closeCreateModal}
       />
 
-      <BalanceHistoryModal provider={historyFor} onClose={() => setHistoryFor(null)} />
+      <ProviderDetailModal
+        provider={selected}
+        form={form}
+        kindOptions={enums.providerKindOptions}
+        kindLabel={enums.providerKindLabel}
+        isSaving={update.isPending}
+        isSyncing={sync.isPending && sync.variables === selected?.uuid}
+        onSubmit={submit}
+        onSync={doSync}
+        onDelete={doDelete}
+        onClose={() => setDetailUuid(null)}
+      />
     </div>
   );
 }

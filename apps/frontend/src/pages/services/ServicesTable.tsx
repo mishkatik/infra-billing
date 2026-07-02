@@ -1,9 +1,7 @@
 import type { Project, Provider, Service } from '@infra/shared';
-import { IconBraces, IconEdit, IconReceipt2, IconTrash } from '@tabler/icons-react';
 import { useTranslation } from 'react-i18next';
 import { EntityLabel } from '@/components/EntityLabel';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import {
   Table,
@@ -28,10 +26,7 @@ interface ServicesTableProps {
   projectOf: (uuid: string) => Project | undefined;
   serviceTypeLabel: (type: string) => string;
   periodLabel: (period: string) => string;
-  onPayments: (s: Service) => void;
-  onMeta: (s: Service) => void;
-  onEdit: (s: Service) => void;
-  onDelete: (s: Service) => void;
+  onRowClick: (s: Service) => void;
 }
 
 export function ServicesTable({
@@ -41,16 +36,13 @@ export function ServicesTable({
   projectOf,
   serviceTypeLabel,
   periodLabel,
-  onPayments,
-  onMeta,
-  onEdit,
-  onDelete,
+  onRowClick,
 }: ServicesTableProps) {
   const { t } = useTranslation();
   return (
     <Card className="overflow-hidden py-0">
       <div className="overflow-x-auto">
-        <Table className="min-w-[820px]">
+        <Table className="min-w-[740px]">
           <TableHeader>
             <TableRow>
               <TableHead className="text-muted-foreground">{t('services.colName')}</TableHead>
@@ -63,7 +55,6 @@ export function ServicesTable({
                 {t('services.colNextBilling')}
               </TableHead>
               <TableHead className="text-muted-foreground">{t('services.colSource')}</TableHead>
-              <TableHead />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -71,7 +62,22 @@ export function ServicesTable({
               const provider = providerOf(s.providerUuid);
               const project = projectOf(s.projectUuid);
               return (
-                <TableRow key={s.uuid} className={cn(!s.isActive && 'opacity-50')}>
+                <TableRow
+                  key={s.uuid}
+                  tabIndex={0}
+                  onClick={() => onRowClick(s)}
+                  onKeyDown={(e) => {
+                    // Keyboard access: rows act as buttons opening the detail modal.
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      onRowClick(s);
+                    }
+                  }}
+                  className={cn(
+                    'cursor-pointer focus-visible:bg-muted/50 focus-visible:outline-none',
+                    !s.isActive && 'opacity-50',
+                  )}
+                >
                   <TableCell className="py-3">
                     <div className="flex items-center gap-1.5">
                       {LOCATED_TYPES.has(s.type) ? (
@@ -125,67 +131,12 @@ export function ServicesTable({
                       {s.isManaged ? t('services.sourceManaged') : t('services.sourceManual')}
                     </Badge>
                   </TableCell>
-                  <TableCell>
-                    <div className="flex flex-nowrap items-center justify-end gap-1">
-                      {(s.paymentsCount ?? 0) > 0 && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon-sm"
-                              aria-label={t('services.paymentsTooltip', {
-                                count: s.paymentsCount ?? 0,
-                              })}
-                              onClick={() => onPayments(s)}
-                            >
-                              <IconReceipt2 className="size-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {t('services.paymentsTooltip', { count: s.paymentsCount ?? 0 })}
-                          </TooltipContent>
-                        </Tooltip>
-                      )}
-                      {Object.keys(s.meta ?? {}).length > 0 && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon-sm"
-                              aria-label={t('services.metaTooltip')}
-                              onClick={() => onMeta(s)}
-                            >
-                              <IconBraces className="size-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>{t('services.metaTooltip')}</TooltipContent>
-                        </Tooltip>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label={t('common.edit')}
-                        onClick={() => onEdit(s)}
-                      >
-                        <IconEdit className="size-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label={t('common.delete')}
-                        className="text-destructive hover:text-destructive"
-                        onClick={() => onDelete(s)}
-                      >
-                        <IconTrash className="size-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
                 </TableRow>
               );
             })}
             {!isLoading && services?.length === 0 && (
               <TableRow>
-                <TableCell colSpan={9}>
+                <TableCell colSpan={8}>
                   <p className="py-4 text-center text-muted-foreground">{t('services.empty')}</p>
                 </TableCell>
               </TableRow>

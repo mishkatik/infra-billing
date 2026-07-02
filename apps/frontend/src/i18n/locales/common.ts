@@ -15,6 +15,7 @@ export const common = {
       optional: 'optional',
       copy: 'Copy',
       copied: 'Copied',
+      moreActions: 'More actions',
     },
     app: {
       brand: 'Infra Billing',
@@ -144,6 +145,7 @@ export const common = {
       optional: 'необязательно',
       copy: 'Копировать',
       copied: 'Скопировано',
+      moreActions: 'Другие действия',
     },
     app: {
       brand: 'Infra Billing',

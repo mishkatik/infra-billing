@@ -22,9 +22,8 @@ import { useCountryOptions } from '@/utils/countries';
 import { trimMoney } from '@/utils/format';
 import { notifyError, notifySuccess } from '@/utils/notify';
 import { type SForm, toIso } from './serviceForm';
+import { ServiceDetailModal } from './ServiceDetailModal';
 import { ServiceFormModal } from './ServiceFormModal';
-import { ServiceMetaModal } from './ServiceMetaModal';
-import { ServicePaymentsModal } from './ServicePaymentsModal';
 import { ServicesFilters } from './ServicesFilters';
 import { ServicesTable } from './ServicesTable';
 
@@ -39,10 +38,10 @@ export function ServicesPage() {
   const create = useCreateService();
   const update = useUpdateService();
   const del = useDeleteService();
-  const [opened, { open, close }] = useDisclosure(false);
-  const [editing, setEditing] = useState<Service | null>(null);
-  const [paymentsFor, setPaymentsFor] = useState<Service | null>(null);
-  const [metaFor, setMetaFor] = useState<Service | null>(null);
+  const [createOpened, { open: openCreateModal, close: closeCreateModal }] = useDisclosure(false);
+  const [detailUuid, setDetailUuid] = useState<string | null>(null);
+  // Derived from the query so the detail modal always reflects the freshest list data.
+  const selected = services?.find((s) => s.uuid === detailUuid) ?? null;
 
   const providerOptions = (providers ?? []).map((p) => ({ value: p.uuid, label: p.name }));
   const providerOf = (uuid: string) => providers?.find((p) => p.uuid === uuid);
@@ -63,13 +62,11 @@ export function ServicesPage() {
       period: 'monthly',
       countryCode: '',
       nextBillingAt: '',
-      isActive: true,
     },
     mode: 'onSubmit',
   });
 
   const openCreate = () => {
-    setEditing(null);
     form.reset({
       providerUuid: providerOptions[0]?.value ?? '',
       projectUuid: defaultProjectUuid,
@@ -80,13 +77,11 @@ export function ServicesPage() {
       period: 'monthly',
       countryCode: '',
       nextBillingAt: '',
-      isActive: true,
     });
-    open();
+    openCreateModal();
   };
 
-  const openEdit = (s: Service) => {
-    setEditing(s);
+  const openDetail = (s: Service) => {
     form.reset({
       providerUuid: s.providerUuid,
       projectUuid: s.projectUuid,
@@ -97,16 +92,15 @@ export function ServicesPage() {
       period: s.period,
       countryCode: s.countryCode ?? '',
       nextBillingAt: s.nextBillingAt ? dayjs(s.nextBillingAt).format('YYYY-MM-DD') : '',
-      isActive: s.isActive,
     });
-    open();
+    setDetailUuid(s.uuid);
   };
 
   const submit = form.handleSubmit(async (v) => {
     try {
-      if (editing) {
+      if (selected) {
         await update.mutateAsync({
-          uuid: editing.uuid,
+          uuid: selected.uuid,
           dto: {
             providerUuid: v.providerUuid,
             projectUuid: v.projectUuid,
@@ -117,9 +111,10 @@ export function ServicesPage() {
             period: v.period as Period,
             countryCode: v.countryCode || null,
             nextBillingAt: toIso(v.nextBillingAt) ?? null,
-            isActive: v.isActive,
           },
         });
+        setDetailUuid(null);
+        notifySuccess(t('services.updatedToast'));
       } else {
         await create.mutateAsync({
           providerUuid: v.providerUuid,
@@ -131,11 +126,11 @@ export function ServicesPage() {
           period: v.period as Period,
           countryCode: v.countryCode || undefined,
           nextBillingAt: toIso(v.nextBillingAt),
-          isActive: v.isActive,
+          isActive: true,
         });
+        closeCreateModal();
+        notifySuccess(t('services.createdToast'));
       }
-      close();
-      notifySuccess(editing ? t('services.updatedToast') : t('services.createdToast'));
     } catch (e) {
       notifyError(apiErrorMessage(e));
     }
@@ -145,9 +140,25 @@ export function ServicesPage() {
     if (!window.confirm(t('services.confirmDelete', { name: s.name }))) return;
     try {
       await del.mutateAsync(s.uuid);
+      setDetailUuid(null);
       notifySuccess(t('common.deleted'));
     } catch (e) {
       notifyError(apiErrorMessage(e));
+    }
+  };
+
+  // Instant enable/disable from the detail modal footer; the form deliberately does not
+  // carry isActive, so a later Save can't revert this switch.
+  const [togglingActive, setTogglingActive] = useState(false);
+  const toggleActive = async (s: Service) => {
+    setTogglingActive(true);
+    try {
+      await update.mutateAsync({ uuid: s.uuid, dto: { isActive: !s.isActive } });
+      notifySuccess(t(s.isActive ? 'services.disabledToast' : 'services.enabledToast'));
+    } catch (e) {
+      notifyError(apiErrorMessage(e));
+    } finally {
+      setTogglingActive(false);
     }
   };
 
@@ -179,17 +190,13 @@ export function ServicesPage() {
         projectOf={projectOf}
         serviceTypeLabel={enums.serviceTypeLabel}
         periodLabel={enums.periodLabel}
-        onPayments={setPaymentsFor}
-        onMeta={setMetaFor}
-        onEdit={openEdit}
-        onDelete={doDelete}
+        onRowClick={openDetail}
       />
 
       <ServiceFormModal
-        opened={opened}
-        editing={editing}
+        opened={createOpened}
         form={form}
-        isPending={create.isPending || update.isPending}
+        isPending={create.isPending}
         providerOptions={providerOptions}
         projectOptions={projectOptions}
         typeOptions={enums.serviceTypeOptions}
@@ -197,11 +204,25 @@ export function ServicesPage() {
         currencyOptions={enums.currencyOptions}
         countryOptions={countryOptions}
         onSubmit={submit}
-        onClose={close}
+        onClose={closeCreateModal}
       />
 
-      <ServicePaymentsModal service={paymentsFor} onClose={() => setPaymentsFor(null)} />
-      <ServiceMetaModal service={metaFor} onClose={() => setMetaFor(null)} />
+      <ServiceDetailModal
+        service={selected}
+        form={form}
+        providerOptions={providerOptions}
+        projectOptions={projectOptions}
+        typeOptions={enums.serviceTypeOptions}
+        periodOptions={enums.periodOptions}
+        currencyOptions={enums.currencyOptions}
+        countryOptions={countryOptions}
+        isSaving={update.isPending && !togglingActive}
+        isToggling={togglingActive}
+        onSubmit={submit}
+        onToggleActive={toggleActive}
+        onDelete={doDelete}
+        onClose={() => setDetailUuid(null)}
+      />
     </div>
   );
 }

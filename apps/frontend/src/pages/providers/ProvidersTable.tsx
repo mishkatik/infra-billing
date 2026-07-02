@@ -1,12 +1,5 @@
 import type { Provider } from '@infra/shared';
-import {
-  IconChartLine,
-  IconEdit,
-  IconExternalLink,
-  IconLoader2,
-  IconRefresh,
-  IconTrash,
-} from '@tabler/icons-react';
+import { IconExternalLink, IconLoader2 } from '@tabler/icons-react';
 import { useTranslation } from 'react-i18next';
 import { ProviderIcon } from '@/components/ProviderIcon';
 import { Badge } from '@/components/ui/badge';
@@ -29,10 +22,7 @@ interface ProvidersTableProps {
   isLoading: boolean;
   syncingUuid: string | undefined;
   kindLabel: (kind: string) => string;
-  onSync: (uuid: string) => void;
-  onHistory: (p: Provider) => void;
-  onEdit: (p: Provider) => void;
-  onDelete: (p: Provider) => void;
+  onRowClick: (p: Provider) => void;
 }
 
 export function ProvidersTable({
@@ -40,16 +30,13 @@ export function ProvidersTable({
   isLoading,
   syncingUuid,
   kindLabel,
-  onSync,
-  onHistory,
-  onEdit,
-  onDelete,
+  onRowClick,
 }: ProvidersTableProps) {
   const { t } = useTranslation();
   return (
     <Card className="overflow-hidden py-0">
       <div className="overflow-x-auto">
-        <Table className="min-w-[760px]">
+        <Table className="min-w-[660px]">
           <TableHeader>
             <TableRow>
               <TableHead className="text-muted-foreground">{t('providers.th.name')}</TableHead>
@@ -58,12 +45,22 @@ export function ProvidersTable({
               <TableHead className="text-muted-foreground">{t('providers.th.services')}</TableHead>
               <TableHead className="text-muted-foreground">{t('providers.th.payments')}</TableHead>
               <TableHead className="text-muted-foreground">{t('providers.th.sync')}</TableHead>
-              <TableHead />
             </TableRow>
           </TableHeader>
           <TableBody>
             {providers?.map((p) => (
-              <TableRow key={p.uuid}>
+              <TableRow
+                key={p.uuid}
+                tabIndex={0}
+                className="cursor-pointer focus-visible:bg-muted/50 focus-visible:outline-none"
+                onClick={() => onRowClick(p)}
+                onKeyDown={(e) => {
+                  if (e.key !== 'Enter' && e.key !== ' ') return;
+                  // Space scrolls the page by default; Enter doesn't.
+                  if (e.key === ' ') e.preventDefault();
+                  onRowClick(p);
+                }}
+              >
                 <TableCell className="py-3">
                   <div className="flex items-center gap-2">
                     <ProviderIcon name={p.name} src={providerFavicon(p)} />
@@ -80,6 +77,9 @@ export function ProvidersTable({
                           target="_blank"
                           rel="noreferrer"
                           aria-label={p.loginUrl}
+                          onClick={(e) => e.stopPropagation()}
+                          // Keyboard too: Enter on the focused anchor must not also open the row modal.
+                          onKeyDown={(e) => e.stopPropagation()}
                         >
                           <IconExternalLink className="size-3.5" />
                         </a>
@@ -96,7 +96,9 @@ export function ProvidersTable({
                 <TableCell>{p.servicesCount ?? 0}</TableCell>
                 <TableCell>{p.paymentsCount ?? 0}</TableCell>
                 <TableCell>
-                  {p.lastSyncError ? (
+                  {syncingUuid === p.uuid ? (
+                    <IconLoader2 className="size-4 animate-spin text-muted-foreground" />
+                  ) : p.lastSyncError ? (
                     <Tooltip>
                       <TooltipTrigger asChild>
                         {/* Soft fill: a solid destructive badge is too harsh here. */}
@@ -116,69 +118,11 @@ export function ProvidersTable({
                     </span>
                   )}
                 </TableCell>
-                <TableCell>
-                  <div className="flex flex-nowrap items-center justify-end gap-1">
-                    {p.kind !== 'manual' && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              aria-label={t('common.refresh')}
-                              disabled={syncingUuid === p.uuid}
-                              onClick={() => onSync(p.uuid)}
-                            >
-                              {syncingUuid === p.uuid ? (
-                                <IconLoader2 className="size-4 animate-spin" />
-                              ) : (
-                                <IconRefresh className="size-4" />
-                              )}
-                            </Button>
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent>{t('common.refresh')}</TooltipContent>
-                      </Tooltip>
-                    )}
-                    {p.balance != null && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            aria-label={t('providers.balanceHistory.tooltip')}
-                            onClick={() => onHistory(p)}
-                          >
-                            <IconChartLine className="size-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>{t('providers.balanceHistory.tooltip')}</TooltipContent>
-                      </Tooltip>
-                    )}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      aria-label={t('common.edit')}
-                      onClick={() => onEdit(p)}
-                    >
-                      <IconEdit className="size-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-destructive hover:text-destructive"
-                      aria-label={t('common.delete')}
-                      onClick={() => onDelete(p)}
-                    >
-                      <IconTrash className="size-4" />
-                    </Button>
-                  </div>
-                </TableCell>
               </TableRow>
             ))}
             {!isLoading && providers?.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7}>
+                <TableCell colSpan={6}>
                   <p className="py-4 text-center text-muted-foreground">{t('providers.empty')}</p>
                 </TableCell>
               </TableRow>
