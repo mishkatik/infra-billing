@@ -113,9 +113,7 @@ export function ProvidersTable({
                       </TooltipContent>
                     </Tooltip>
                   ) : (
-                    <span className="text-sm text-muted-foreground">
-                      {formatDate(p.lastSyncAt)}
-                    </span>
+                    <span className="text-muted-foreground">{formatDate(p.lastSyncAt)}</span>
                   )}
                 </TableCell>
               </TableRow>

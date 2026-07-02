@@ -5,16 +5,16 @@ import { ProviderIcon } from '@/components/ProviderIcon';
 export function EntityLabel({
   name,
   src,
-  size = 18,
+  size = 22,
 }: {
   name: string;
   src: string | null;
   size?: number;
 }) {
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="flex items-center gap-2">
       <ProviderIcon name={name} src={src} size={size} />
-      <span className="text-sm">{name}</span>
+      <span>{name}</span>
     </div>
   );
 }

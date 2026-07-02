@@ -31,23 +31,23 @@ export function ProviderIcon({
   const favicon = loaded && loaded.src === src && loaded.ok ? src : null;
   const initial = (name.trim().charAt(0) || '?').toUpperCase();
 
-  if (favicon) {
-    return (
-      <img
-        src={favicon}
-        alt=""
-        className="shrink-0 rounded-sm object-cover"
-        style={{ width: size, height: size }}
-      />
-    );
-  }
-
+  // Favicon and initial share one framed tile, so rows never mix icon footprints
+  // (transparent favicons used to render frameless and read as a different size).
   return (
     <div
-      className="flex shrink-0 items-center justify-center rounded-sm border border-border bg-secondary font-semibold text-secondary-foreground select-none"
-      style={{ width: size, height: size, fontSize: Math.max(10, Math.round(size * 0.5)) }}
+      className="flex shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-secondary select-none"
+      style={{ width: size, height: size }}
     >
-      {initial}
+      {favicon ? (
+        <img src={favicon} alt="" className="size-full object-cover" />
+      ) : (
+        <span
+          className="font-semibold text-secondary-foreground"
+          style={{ fontSize: Math.max(10, Math.round(size * 0.5)) }}
+        >
+          {initial}
+        </span>
+      )}
     </div>
   );
 }

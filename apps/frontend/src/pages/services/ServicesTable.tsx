@@ -42,7 +42,7 @@ export function ServicesTable({
   return (
     <Card className="overflow-hidden py-0">
       <div className="overflow-x-auto">
-        <Table className="min-w-[740px]">
+        <Table className="min-w-[760px]">
           <TableHeader>
             <TableRow>
               <TableHead className="text-muted-foreground">{t('services.colName')}</TableHead>

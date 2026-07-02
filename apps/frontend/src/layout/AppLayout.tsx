@@ -90,10 +90,10 @@ function NavGroups() {
                     <SidebarMenuButton
                       asChild
                       isActive={active}
-                      className="data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground data-[active=true]:font-semibold"
+                      className="h-10 gap-2.5 px-3 text-[15px] data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground data-[active=true]:font-semibold"
                     >
                       <RouterNavLink to={it.to} end={it.end} onClick={() => setOpenMobile(false)}>
-                        <ItemIcon className="size-[18px]" stroke={1.5} />
+                        <ItemIcon className="size-5" stroke={1.5} />
                         <span>{t(it.labelKey)}</span>
                       </RouterNavLink>
                     </SidebarMenuButton>

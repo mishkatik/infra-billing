@@ -72,7 +72,7 @@ export function PaymentsTable({
                   <TableCell className="font-semibold">
                     {formatMoney(p.amount, p.currency)}
                   </TableCell>
-                  <TableCell className="whitespace-normal text-sm text-muted-foreground">
+                  <TableCell className="whitespace-normal text-muted-foreground">
                     {p.description ?? t('common.none')}
                   </TableCell>
                   <TableCell>
