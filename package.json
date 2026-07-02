@@ -1,6 +1,6 @@
 {
   "name": "infra-billing",
-  "version": "0.19.0",
+  "version": "0.20.0",
   "private": true,
   "description": "Personal self-hosted infra billing panel (NestJS + React/TS/Mantine, PostgreSQL via Prisma)",
   "workspaces": [
