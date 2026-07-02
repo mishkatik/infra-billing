@@ -49,6 +49,7 @@ export const providers = {
       apiTokenDescCloudflare:
         'Cloudflare → My Profile → API Tokens → create a token with Account · Domain Configuration: Read and Account · Billing: Read',
       cloudflareAccountIdDesc: 'Cloudflare account ID (dashboard URL or GET /accounts)',
+      apiTokenDescStormwall: 'StormWall personal cabinet → API key, sent as the x-api-key header',
       refreshToken: 'Refresh token (OAuth2)',
       refreshTokenDescNetcup:
         'Use “Authorize via netcup” above, or paste an offline refresh token manually',
@@ -79,6 +80,7 @@ export const providers = {
       linodeToken: 'Enter the Linode API token',
       aezaToken: 'Enter the Aeza API key',
       cloudflareCreds: 'Enter the Cloudflare account ID and API token',
+      stormwallToken: 'Enter the StormWall API key',
     },
     netcup: {
       authorize: 'Authorize via netcup',
@@ -150,6 +152,8 @@ export const providers = {
       apiTokenDescCloudflare:
         'Cloudflare → My Profile → API Tokens → создать токен с правами Account · Domain Configuration: Read и Account · Billing: Read',
       cloudflareAccountIdDesc: 'Account ID аккаунта Cloudflare (из URL дашборда или GET /accounts)',
+      apiTokenDescStormwall:
+        'Личный кабинет StormWall → API-ключ (передаётся в заголовке x-api-key)',
       refreshToken: 'Refresh-токен (OAuth2)',
       refreshTokenDescNetcup:
         'Нажмите «Авторизоваться через netcup» выше или вставьте offline refresh-токен вручную',
@@ -180,6 +184,7 @@ export const providers = {
       linodeToken: 'Укажите API-токен Linode',
       aezaToken: 'Укажите API-ключ Aeza',
       cloudflareCreds: 'Укажите account ID и API-токен Cloudflare',
+      stormwallToken: 'Укажите API-ключ StormWall',
     },
     netcup: {
       authorize: 'Авторизоваться через netcup',

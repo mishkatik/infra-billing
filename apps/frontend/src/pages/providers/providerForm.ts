@@ -52,6 +52,7 @@ export function validateProviderCredentials(v: FormValues, t: TFunction): string
   if (v.kind === 'aeza' && !v.token) return t('providers.err.aezaToken');
   if (v.kind === 'cloudflare' && !(v.accountId && v.token))
     return t('providers.err.cloudflareCreds');
+  if (v.kind === 'stormwall' && !v.token) return t('providers.err.stormwallToken');
   return null;
 }
 

@@ -131,6 +131,13 @@ export function ProviderCredentialFields({ form, editing }: ProviderCredentialFi
       placeholder={editing ? t('providers.keepEmpty') : ''}
       {...form.getInputProps('token')}
     />
+  ) : form.values.kind === 'stormwall' ? (
+    <TextInput
+      label={t('providers.field.apiToken')}
+      description={t('providers.field.apiTokenDescStormwall')}
+      placeholder={editing ? t('providers.keepEmpty') : ''}
+      {...form.getInputProps('token')}
+    />
   ) : form.values.kind === 'beget' ? (
     <>
       <TextInput

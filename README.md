@@ -10,7 +10,7 @@
 ## Возможности
 
 - **Провайдеры с API:** Timeweb Cloud, Hetzner Cloud, netcup, HostBill, ISPsystem BILLmanager,
-  Selectel, 4VPS.SU, Netlen, Beget Cloud, Porkbun, Vultr, Linode, Aeza, Cloudflare. Плюс **Manual** — провайдеры без API ведутся руками.
+  Selectel, 4VPS.SU, Netlen, Beget Cloud, Porkbun, Vultr, Linode, Aeza, Cloudflare, StormWall. Плюс **Manual** — провайдеры без API ведутся руками.
 - **Автосинк** (по расписанию + кнопкой): баланс + валюта аккаунта, список серверов/услуг, даты
   следующих списаний; история баланса по дням (снапшоты).
 - **Импорт платежей** там, где API отдаёт реестр (BILLmanager — пополнения и списания, HostBill —
@@ -190,6 +190,9 @@ curl -H "Authorization: Bearer ib_…" https://infra-billing/api/providers
   Регистратор доменов: тянет домены (`type=domain`, годовой период, дата продления = дата истечения;
   цены в API нет → вводятся вручную) и историю биллинга (пополнения/списания, USD). Баланса в API нет
   (постоплата через Stripe); Billing API устарел, поэтому импорт платежей best-effort.
+- **StormWall** — API-ключ (личный кабинет → API-ключ). DDoS-защита/WAF: баланса, цен и платежей
+  в API нет вообще (услуги вводятся с ценой вручную) — тянет только список услуг (`/v3/services`),
+  для защищённых доменов — их реальное имя.
 - **Manual** — без API, всё вводится руками.
 
 ## Telegram-уведомления

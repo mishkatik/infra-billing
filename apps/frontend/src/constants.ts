@@ -32,6 +32,7 @@ const PROVIDER_KINDS: ProviderKind[] = [
   'linode',
   'aeza',
   'cloudflare',
+  'stormwall',
   'manual',
 ];
 

@@ -121,6 +121,7 @@ export const common = {
         linode: 'Linode',
         aeza: 'Aeza',
         cloudflare: 'Cloudflare',
+        stormwall: 'StormWall',
         manual: 'Manual',
       },
       rateSource: {
@@ -249,6 +250,7 @@ export const common = {
         linode: 'Linode',
         aeza: 'Aeza',
         cloudflare: 'Cloudflare',
+        stormwall: 'StormWall',
         manual: 'Ручной',
       },
       rateSource: {

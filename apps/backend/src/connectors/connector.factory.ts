@@ -19,6 +19,7 @@ import { PorkbunConnector } from './porkbun/porkbun.connector';
 import type { PorkbunCredentials } from './porkbun/porkbun.types';
 import { SelectelConnector } from './selectel/selectel.connector';
 import type { SelectelCredentials } from './selectel/selectel.types';
+import { StormwallConnector } from './stormwall/stormwall.connector';
 import { TimewebConnector } from './timeweb/timeweb.connector';
 import { VultrConnector } from './vultr/vultr.connector';
 
@@ -70,6 +71,9 @@ export class ConnectorFactory {
       case 'cloudflare':
         // Cloudflare secret is JSON: { accountId, apiToken } (account-scoped registrar + billing).
         return new CloudflareConnector(JSON.parse(token) as CloudflareCredentials);
+      case 'stormwall':
+        // StormWall secret is the raw API key (single string, sent as the x-api-key header).
+        return new StormwallConnector(token);
       default:
         throw new Error(`Connector for kind="${kind}" is not supported`);
     }
