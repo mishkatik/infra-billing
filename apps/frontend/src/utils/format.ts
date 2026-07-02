@@ -10,6 +10,11 @@ export function formatMoney(value: string | null | undefined, currency?: string 
   return currency ? `${formatted} ${currency}` : formatted;
 }
 
+/** Axis tick money: no forced ",00" — keeps Y-axis labels short (fractions shown when present). */
+export function formatMoneyTick(value: number): string {
+  return value.toLocaleString('ru-RU', { maximumFractionDigits: 2 });
+}
+
 /** Service cost: zero means "price not set" (the connector didn't report one) → dash. */
 export function formatCost(value: string | null | undefined, currency?: string | null): string {
   if (value != null && Number(value) === 0) return '—';

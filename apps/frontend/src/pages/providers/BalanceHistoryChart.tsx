@@ -8,7 +8,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from '@/components/ui/chart';
-import { formatDate, formatDateShort, formatMoney } from '@/utils/format';
+import { formatDate, formatDateShort, formatMoney, formatMoneyTick } from '@/utils/format';
 
 // The default recharts Y-axis starts at 0, so a near-flat balance line (e.g. a steady 36)
 // gets glued to the top of the chart with everything below it empty. Pad the axis around the actual
@@ -63,12 +63,14 @@ export function BalanceHistoryChart({
           <LineChart data={historyData} margin={{ top: 8, right: 8 }}>
             <CartesianGrid vertical={false} />
             <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} />
+            {/* width="auto" — дефолтные 60px обрезают длинные суммы («100 000»). */}
             <YAxis
               domain={balanceAxis?.domain}
               ticks={balanceAxis?.ticks}
-              tickFormatter={(v: number) => formatMoney(String(v))}
+              tickFormatter={formatMoneyTick}
               tickLine={false}
               axisLine={false}
+              width="auto"
             />
             <ChartTooltip
               content={

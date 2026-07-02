@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { formatMoney } from '@/utils/format';
+import { formatMoney, formatMoneyTick } from '@/utils/format';
 
 interface ForecastCardProps {
   forecast: ForecastPoint[] | undefined;
@@ -35,10 +35,12 @@ export function ForecastCard({ forecast, base }: ForecastCardProps) {
             <BarChart data={forecastData}>
               <CartesianGrid vertical={false} strokeDasharray="3 3" />
               <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} />
+              {/* width="auto" — дефолтные 60px обрезают длинные суммы («100 000»). */}
               <YAxis
+                width="auto"
                 tickLine={false}
                 axisLine={false}
-                tickFormatter={(v: number) => formatMoney(String(v))}
+                tickFormatter={formatMoneyTick}
               />
               <ChartTooltip
                 content={
