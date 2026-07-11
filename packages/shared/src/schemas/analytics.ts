@@ -82,6 +82,19 @@ export const upcomingBillingSchema = z.object({
   severity: billingSeveritySchema.describe('Billing severity level'),
 });
 
+/** A dated charge already in the past — needs payment or a billing-date refresh. */
+export const overdueBillingSchema = z.object({
+  serviceUuid: uuidSchema.describe('Service UUID'),
+  name: z.string().describe('Service name'),
+  providerName: z.string().describe('Provider name'),
+  providerLoginUrl: z.string().describe('Provider cabinet link').nullable(),
+  nextBillingAt: isoDateSchema.describe('Missed billing date'),
+  cost: moneySchema.describe('Cost in service currency'),
+  currency: currencySchema.describe('Service currency'),
+  costBase: moneySchema.describe('Cost in base currency'),
+  daysOverdue: z.number().int().nonnegative().describe('Whole days past due (0 = earlier today)'),
+});
+
 /**
  * Estimated balance depletion for a prepaid provider that has no upcoming dated charge.
  * Burn rate is inferred from balance-snapshot decline (or, with too little history, the sum of
@@ -114,6 +127,9 @@ export const analyticsSummarySchema = z.object({
   byType: z.array(byTypeSchema).describe('Breakdown by service type'),
   byCurrency: z.array(byCurrencySchema).describe('Breakdown by currency'),
   upcomingBillings: z.array(upcomingBillingSchema).describe('Upcoming billings'),
+  overdueBillings: z
+    .array(overdueBillingSchema)
+    .describe('Billings already past due, most overdue first'),
   // Prepaid providers (no dated charge) whose balance is estimated to run out soon.
   balanceRunway: z.array(balanceRunwaySchema).describe('Estimated balance runway'),
 });

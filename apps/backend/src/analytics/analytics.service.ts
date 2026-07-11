@@ -9,6 +9,7 @@ import { ProvidersRepository } from '@repositories/providers/providers.repositor
 import { ServicesRepository } from '@repositories/services/services.repository';
 import { CurrencyService } from '../currency/currency.service';
 import { monthlyCost } from '@common/money';
+import { overdueDays } from '@common/overdue';
 import { burnFromMonthlyCost, burnFromSnapshots, daysOfRunway } from '@common/runway';
 
 const ZERO = () => new Decimal(0);
@@ -163,6 +164,28 @@ export class AnalyticsService {
       };
     });
 
+    // Dated charges already in the past: pay-or-fix reminders, most overdue first.
+    const overdueBillings: AnalyticsSummary['overdueBillings'] = [];
+    for (const s of services) {
+      const daysOverdue = overdueDays(s.nextBillingAt, now);
+      if (daysOverdue == null) continue;
+      const provider = providerByUuid.get(s.providerUuid);
+      overdueBillings.push({
+        serviceUuid: s.uuid,
+        name: s.name,
+        providerName: providerName.get(s.providerUuid) ?? '',
+        providerLoginUrl: provider?.loginUrl ?? null,
+        nextBillingAt: s.nextBillingAt!.toISOString(),
+        cost: new Decimal(s.cost.toString()).toFixed(2),
+        currency: s.currency,
+        costBase: this.currency
+          .convert(new Decimal(s.cost.toString()), s.currency, baseCurrency, rates)
+          .toFixed(2),
+        daysOverdue,
+      });
+    }
+    overdueBillings.sort((a, b) => b.daysOverdue - a.daysOverdue);
+
     // Balance runway: prepaid providers with a draining balance but no upcoming dated charge.
     // Estimate days-left from snapshot decline (fallback: monthly service cost), and reuse the
     // charge-coverage severity model. A provider with any dated service is governed by the dated
@@ -274,6 +297,7 @@ export class AnalyticsService {
         servicesCount: v.count,
       })),
       upcomingBillings,
+      overdueBillings,
       balanceRunway,
     };
   }

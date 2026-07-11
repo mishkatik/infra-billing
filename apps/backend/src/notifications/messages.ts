@@ -1,6 +1,7 @@
 import type { AnalyticsSummary } from '@infra/shared';
 
 type UpcomingBilling = AnalyticsSummary['upcomingBillings'][number];
+type OverdueBilling = AnalyticsSummary['overdueBillings'][number];
 type BalanceRunway = AnalyticsSummary['balanceRunway'][number];
 
 export const EMOJI = {
@@ -60,6 +61,12 @@ function runwayLabel(days: number): string {
   return `~${days} ${ruDays(days)}`;
 }
 
+function agoLabelRu(daysOverdue: number): string {
+  if (daysOverdue <= 0) return 'сегодня';
+  if (daysOverdue === 1) return 'вчера';
+  return `${daysOverdue} ${ruDays(daysOverdue)} назад`;
+}
+
 /** Low balance: an imminent charge the provider balance won't cover. */
 export function lowBalanceMessage(ub: UpcomingBilling): string {
   return (
@@ -78,6 +85,17 @@ export function lowRunwayMessage(r: BalanceRunway): string {
     `${EMOJI.provider} ${providerLink(r.providerName, r.providerLoginUrl)}\n\n` +
     `${EMOJI.clock} Баланса хватит ещё на ${runwayLabel(r.daysLeft)} (трата ≈<code>${esc(r.burnPerDay)} ${esc(r.currency)}</code>/день).\n` +
     `${EMOJI.balance} Баланс: <code>${esc(r.balance)} ${esc(r.currency)}</code>`
+  );
+}
+
+/** Overdue: the billing date already passed — pay or fix the date. */
+export function overdueBillingMessage(ob: OverdueBilling): string {
+  return (
+    `${EMOJI.lowBalance} <b>Просроченное списание</b>\n\n` +
+    `${EMOJI.provider} ${providerLink(ob.providerName, ob.providerLoginUrl)}\n` +
+    `${EMOJI.service} ${esc(ob.name)}\n\n` +
+    `${EMOJI.date} Дата: <code>${esc(ob.nextBillingAt.slice(0, 10))}</code> (${agoLabelRu(ob.daysOverdue)})\n` +
+    `${EMOJI.amount} Сумма: <code>${esc(ob.cost)} ${esc(ob.currency)}</code>`
   );
 }
 
@@ -127,6 +145,18 @@ export function sampleMessages(): string[] {
     covered: false,
     severity: 'critical',
   };
+  const fiveDaysAgo = new Date(Date.now() - 5 * 86_400_000).toISOString().slice(0, 10);
+  const sampleOverdue: OverdueBilling = {
+    serviceUuid: '00000000-0000-0000-0000-000000000000',
+    name: 'demo-vps',
+    providerName: 'Тестовый провайдер',
+    providerLoginUrl: 'https://example.com',
+    nextBillingAt: `${fiveDaysAgo}T00:00:00.000Z`,
+    cost: '500.00',
+    currency: 'RUB',
+    costBase: '500.00',
+    daysOverdue: 5,
+  };
   const sampleRunway: BalanceRunway = {
     providerUuid: '00000000-0000-0000-0000-000000000000',
     providerName: 'Тестовый провайдер',
@@ -141,6 +171,7 @@ export function sampleMessages(): string[] {
   };
   return [
     `${EMOJI.samples} <b>Проверка уведомлений</b> — примеры всех типов ниже:`,
+    overdueBillingMessage(sampleOverdue),
     lowBalanceMessage(sample),
     lowRunwayMessage(sampleRunway),
     upcomingBillingMessage(sample, inTwoDays),

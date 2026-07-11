@@ -14,6 +14,10 @@ export const dashboard = {
       charge: 'charge {{when}} of {{amount}}',
       balance: ' · balance {{amount}}',
     },
+    overdue: {
+      title: 'Overdue: billing date has passed',
+      charge: 'billing {{when}} ({{date}}), {{amount}}',
+    },
     runway: {
       criticalTitle: 'Critical: balance running out',
       title: 'Balance runway',
@@ -61,6 +65,11 @@ export const dashboard = {
       tomorrow: 'tomorrow',
       inDays: 'in {{n}} days',
     },
+    ago: {
+      today: 'today',
+      yesterday: 'yesterday',
+      daysAgo: '{{n}} days ago',
+    },
   },
   ru: {
     title: 'Дашборд',
@@ -75,6 +84,10 @@ export const dashboard = {
       title: 'Критично: не хватит на списание',
       charge: 'списание {{when}} на {{amount}}',
       balance: ' · баланс {{amount}}',
+    },
+    overdue: {
+      title: 'Просрочено: дата списания прошла',
+      charge: 'списание {{when}} ({{date}}) на {{amount}}',
     },
     runway: {
       criticalTitle: 'Критично: баланс заканчивается',
@@ -122,6 +135,11 @@ export const dashboard = {
       today: 'сегодня',
       tomorrow: 'завтра',
       inDays: 'через {{n}} дн.',
+    },
+    ago: {
+      today: 'сегодня',
+      yesterday: 'вчера',
+      daysAgo: '{{n}} дн. назад',
     },
   },
 };

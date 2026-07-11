@@ -8,6 +8,7 @@ import { AnalyticsService } from '../analytics/analytics.service';
 import {
   lowBalanceMessage,
   lowRunwayMessage,
+  overdueBillingMessage,
   sampleMessages,
   syncErrorMessage,
   upcomingBillingMessage,
@@ -52,6 +53,13 @@ export class NotificationsService {
       if (r.severity !== 'critical') continue;
       const html = lowRunwayMessage(r);
       if (await this.maybeSend(`runway:${r.providerUuid}`, html)) sent += 1;
+    }
+
+    // 1c) Overdue: the billing date already passed. Dedup key has no date part, so like the
+    //     low-balance alert it repeats daily (24h throttle) until paid or the date moves forward.
+    for (const ob of summary.overdueBillings) {
+      const html = overdueBillingMessage(ob);
+      if (await this.maybeSend(`overdue:${ob.serviceUuid}`, html)) sent += 1;
     }
 
     // 2) Upcoming billings within N days.

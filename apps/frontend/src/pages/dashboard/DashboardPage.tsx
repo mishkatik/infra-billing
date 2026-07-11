@@ -56,6 +56,7 @@ export function DashboardPage() {
       )}
 
       <DashboardAlerts
+        overdue={summary?.overdueBillings ?? []}
         upcoming={summary?.upcomingBillings ?? []}
         runway={summary?.balanceRunway ?? []}
       />

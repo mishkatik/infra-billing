@@ -31,3 +31,10 @@ export const dayLabel = (t: TFunction, n: number) =>
     : n === 1
       ? t('dashboard.due.tomorrow')
       : t('dashboard.due.inDays', { n });
+
+export const agoLabel = (t: TFunction, n: number) =>
+  n <= 0
+    ? t('dashboard.ago.today')
+    : n === 1
+      ? t('dashboard.ago.yesterday')
+      : t('dashboard.ago.daysAgo', { n });
