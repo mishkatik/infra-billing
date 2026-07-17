@@ -19,9 +19,13 @@ import { ConnectorFactory } from '@connectors/connector.factory';
 import { PaymentData, ServiceData } from '@connectors/connector.interface';
 import { mapSyncRun } from '@common/mappers';
 
-const SYNC_TIMEOUT_MS = 30_000;
+const SYNC_TIMEOUT_MS = 120_000;
 const SYNC_INTERVAL_NAME = 'provider-sync';
 const DEFAULT_SYNC_INTERVAL_HOURS = 6; // fallback only, until the Settings row exists
+const FETCH_ATTEMPTS = 2; // total tries per phase (1 retry)
+const FETCH_RETRY_DELAY_MS = 2_000;
+
+const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 @Injectable()
 export class SyncService implements OnModuleInit {
@@ -121,7 +125,11 @@ export class SyncService implements OnModuleInit {
       const token = this.crypto.decrypt(provider.credentialsEnc);
       const connector = this.connectors.create(provider.kind, token);
 
-      const account = await connector.fetchAccount(controller.signal);
+      const account = await this.withRetry(
+        `fetchAccount "${provider.name}"`,
+        controller.signal,
+        () => connector.fetchAccount(controller.signal),
+      );
       // Some providers (e.g. Hetzner) expose no account balance → skip balance/snapshot.
       if (account.balance !== null) {
         const balance = account.balance.toFixed(2);
@@ -129,14 +137,23 @@ export class SyncService implements OnModuleInit {
         await this.snapshots.record(uuid, balance, account.currency);
       }
 
-      const fetched = await connector.fetchServices(controller.signal);
+      const fetched = await this.withRetry(
+        `fetchServices "${provider.name}"`,
+        controller.signal,
+        () => connector.fetchServices(controller.signal),
+      );
       const servicesFound = await this.upsertServices(uuid, fetched, account.currency);
 
       // Import the payment/expense ledger for connectors that expose one (e.g. BILLmanager).
       // Non-fatal: a ledger failure must not lose the services/balance sync.
       if (connector.fetchPayments) {
         try {
-          const payments = await connector.fetchPayments(controller.signal);
+          const payments = await this.withRetry(
+            `fetchPayments "${provider.name}"`,
+            controller.signal,
+            // The narrowing from the `if` guard above does not survive into the closure.
+            () => connector.fetchPayments!(controller.signal),
+          );
           const imported = await this.upsertPayments(uuid, payments);
           if (imported) {
             this.logger.log(`Sync "${provider.name}" (${uuid}): imported ${imported} payment(s)`);
@@ -153,13 +170,35 @@ export class SyncService implements OnModuleInit {
       this.logger.log(`Sync "${provider.name}" (${uuid}): ok, ${servicesFound} service(s)`);
       return mapSyncRun(done);
     } catch (e) {
-      const message = e instanceof Error ? e.message : String(e);
+      // On a sync-wide abort axios reports just "canceled" — name the real reason for lastSyncError.
+      const message = controller.signal.aborted
+        ? `Sync timed out after ${SYNC_TIMEOUT_MS / 1000}s`
+        : e instanceof Error
+          ? e.message
+          : String(e);
       await this.providers.recordSyncError(uuid, message);
       const failed = await this.syncRuns.markError(run.id, message);
       this.logger.warn(`Sync "${provider.name}" (${uuid}): error — ${message}`);
       return mapSyncRun(failed);
     } finally {
       clearTimeout(timer);
+    }
+  }
+
+  // Provider APIs are read-only for us, so repeating a failed fetch is always safe. One retry
+  // absorbs transient network hiccups; once the sync budget is spent a retry would only be
+  // aborted again, so it is skipped.
+  private async withRetry<T>(label: string, signal: AbortSignal, fn: () => Promise<T>): Promise<T> {
+    for (let attempt = 1; ; attempt += 1) {
+      try {
+        return await fn();
+      } catch (e) {
+        if (attempt >= FETCH_ATTEMPTS || signal.aborted) throw e;
+        this.logger.warn(
+          `${label} failed (attempt ${attempt}/${FETCH_ATTEMPTS}), retrying in ${FETCH_RETRY_DELAY_MS / 1000}s: ${e instanceof Error ? e.message : String(e)}`,
+        );
+        await delay(FETCH_RETRY_DELAY_MS);
+      }
     }
   }
 
