@@ -41,6 +41,56 @@ const TOTP_FAILED_MESSAGE =
   'BILLmanager: failed to confirm login via OTP — check the TOTP secret (the same one as in your authenticator app) ' +
   'and the server clock synchronization.';
 
+// Some panels sit behind Cloudflare (senko), which rejects Node's TLS fingerprint outright: no header set
+// gets through (verified — curl passes from the same IP, axios and node:https do not), so there is nothing
+// to work around on our side and the request never reaches BILLmanager. Say that, and name the Ray ID —
+// it is the first thing the hoster's support asks for.
+const CF_BLOCKED_MESSAGE =
+  'BILLmanager: the request was blocked by Cloudflare in front of the panel and never reached BILLmanager. ' +
+  'Ask the hoster to allow API access for this server (a WAF skip rule for /billmgr, or an IP allowlist).';
+
+/**
+ * Cloudflare serves its own HTML instead of the panel's JSON when it blocks: bot protection renders
+ * "Just a moment...", a WAF rule renders "Attention Required!", IP/rate blocks render an "Error 10xx" page.
+ * Match those markers on a block status only — Cloudflare brands origin error pages too (521/522/524), and
+ * those mean the panel is down, not that we were blocked; a bare "cloudflare" match would send the owner to
+ * open a WAF ticket for an outage. The slice bounds the regex against a multi-KB page; the page itself is
+ * never echoed (it would land in the DB, a UI tooltip and a Telegram message).
+ */
+export function isCloudflareBlock(status: number | undefined, body: unknown): boolean {
+  if (status !== 403 && status !== 429 && status !== 503) return false;
+  if (typeof body !== 'string') return false;
+  return /just a moment|attention required|error 10\d{2}|cf-error-details/i.test(
+    body.slice(0, 4096),
+  );
+}
+
+/**
+ * BILLmanager reports its own failures as doc.error at HTTP 200, so a non-2xx never comes from the API —
+ * it comes from whatever fronts the panel (its web server: 404 on a wrong baseUrl, 5xx when the CGI is down;
+ * or a CDN/WAF). Such bodies carry no useful message, so report the status and let the Cloudflare case speak
+ * for itself. Never build the message out of the AxiosError itself: its config holds the func=auth body (the
+ * plaintext password) and the `auth` session id, and sync errors are persisted to lastSyncError, logged and
+ * pushed to Telegram. Only the status, the block markers, the cf-ray header and the func name are safe.
+ */
+export function billmgrHttpError(e: unknown): Error {
+  // Sync-wide aborts (AbortController) must stay recognizable as cancellations.
+  if (axios.isCancel(e)) return e instanceof Error ? e : new Error('canceled');
+  if (!axios.isAxiosError(e)) return e instanceof Error ? e : new Error(String(e));
+  const status = e.response?.status;
+  if (isCloudflareBlock(status, e.response?.data)) {
+    const ray = e.response?.headers?.['cf-ray'];
+    return new Error(CF_BLOCKED_MESSAGE + (typeof ray === 'string' ? ` (Ray ID ${ray})` : ''));
+  }
+  const func = typeof e.config?.params?.func === 'string' ? ` (${e.config.params.func})` : '';
+  // No response → transport failure (DNS/refused/timeout); axios's own message is safe and specific.
+  return new Error(
+    status
+      ? `BILLmanager${func}: panel returned HTTP ${status}`
+      : `BILLmanager${func}: ${e.message}`,
+  );
+}
+
 /**
  * ISPsystem BILLmanager (https://docs.ispsystem.com/billmanager). CGI API at
  * `{base}/billmgr?func=...&out=json`, responses wrapped in `doc`, scalars as {"$":...}. No npm SDK.
@@ -62,6 +112,11 @@ export class BillmgrConnector implements Connector {
     this.http = axios.create({
       baseURL: creds.baseUrl.replace(/\/+$/, ''),
       timeout: REQUEST_TIMEOUT_MS,
+    });
+    // A non-2xx is never BILLmanager itself — turn it into a message that names the real reason
+    // instead of leaving axios's bare "Request failed with status code 403" in lastSyncError.
+    this.http.interceptors.response.use(undefined, (e) => {
+      throw billmgrHttpError(e);
     });
   }
 
