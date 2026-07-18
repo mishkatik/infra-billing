@@ -24,6 +24,8 @@ import { TimewebConnector } from './timeweb/timeweb.connector';
 import { VdsinaConnector } from './vdsina/vdsina.connector';
 import type { VdsinaCredentials } from './vdsina/vdsina.types';
 import { VultrConnector } from './vultr/vultr.connector';
+import { YandexConnector } from './yandex/yandex.connector';
+import type { YandexCredentials } from './yandex/yandex.types';
 
 @Injectable()
 export class ConnectorFactory {
@@ -79,6 +81,10 @@ export class ConnectorFactory {
       case 'stormwall':
         // StormWall secret is the raw API key (single string, sent as the x-api-key header).
         return new StormwallConnector(token);
+      case 'yandex':
+        // Yandex Cloud secret is JSON: { keyId, serviceAccountId, privateKey, folderId?,
+        // billingAccountId? }, normalized from the service-account authorized key.
+        return new YandexConnector(JSON.parse(token) as YandexCredentials);
       default:
         throw new Error(`Connector for kind="${kind}" is not supported`);
     }

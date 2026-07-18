@@ -1,0 +1,85 @@
+syntax = "proto3";
+
+// Trimmed, self-contained slice of Yandex Cloud's Billing Usage API
+// (yandex.cloud.billing.usage_records.v1). Only the fields the connector reads are kept, but
+// field numbers match the upstream protos so the wire format stays compatible. The upstream
+// service is gRPC-only (no REST), which is why we ship a proto instead of using axios.
+// Upstream: github.com/yandex-cloud/cloudapi/tree/master/yandex/cloud/billing/usage_records/v1
+package yandex.cloud.billing.usage_records.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// Decimal values are carried as strings to avoid float precision loss.
+message StringDecimal {
+  string value = 1;
+}
+
+enum TimeGrouping {
+  TIME_GROUPING_UNSPECIFIED = 0;
+  DAY = 1;
+  WEEK = 2;
+  MONTH = 3;
+  QUARTER = 4;
+  YEAR = 5;
+}
+
+enum Currency {
+  CURRENCY_UNSPECIFIED = 0;
+  RUB = 1;
+  USD = 2;
+  KZT = 3;
+  EUR = 4;
+}
+
+message CreditDetails {
+  StringDecimal credit = 1;
+  StringDecimal monetary_grant_credit = 2;
+  StringDecimal volume_incentive_credit = 3;
+  StringDecimal cud_credit = 4;
+  StringDecimal free_credit = 5;
+}
+
+message BillingAccount {
+  string id = 1;
+  string name = 2;
+}
+
+message UsageReportRequest {
+  string billing_account_id = 1;
+  google.protobuf.Timestamp start_date = 2;
+  google.protobuf.Timestamp end_date = 3;
+  repeated string cloud_ids = 4;
+  repeated string folder_ids = 5;
+  repeated string service_ids = 6;
+  repeated string sku_ids = 7;
+  repeated string resource_ids = 9;
+  TimeGrouping aggregation_period = 10;
+}
+
+// One aggregation period (a single day when aggregation_period = DAY).
+message UsageReportPeriodicData {
+  StringDecimal cost = 1;
+  CreditDetails credit_details = 2;
+  StringDecimal expense = 3;
+  google.protobuf.Timestamp timestamp = 4;
+}
+
+message BillingAccountUsageReportEntityData {
+  StringDecimal cost = 1;
+  CreditDetails credit_details = 2;
+  StringDecimal expense = 3;
+  BillingAccount billing_account = 4;
+  repeated UsageReportPeriodicData periodic = 5;
+}
+
+message BillingAccountUsageReportResponse {
+  Currency currency = 1;
+  StringDecimal cost = 2;
+  CreditDetails credit_details = 3;
+  StringDecimal expense = 4;
+  repeated BillingAccountUsageReportEntityData entities_data = 5;
+}
+
+service ConsumptionCoreService {
+  rpc GetBillingAccountUsageReport(UsageReportRequest) returns (BillingAccountUsageReportResponse);
+}

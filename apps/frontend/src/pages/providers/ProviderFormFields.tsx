@@ -19,10 +19,17 @@ interface ProviderFormFieldsProps {
   form: UseFormReturn<FormValues>;
   editing: boolean;
   kindOptions: { value: string; label: string }[];
+  // Passed in edit mode so Yandex discovery can reuse the stored key.
+  providerUuid?: string;
 }
 
 // The provider form body, shared by the create modal and the detail modal (editing mode).
-export function ProviderFormFields({ form, editing, kindOptions }: ProviderFormFieldsProps) {
+export function ProviderFormFields({
+  form,
+  editing,
+  kindOptions,
+  providerUuid,
+}: ProviderFormFieldsProps) {
   const { t } = useTranslation();
   const nameError = form.formState.errors.name;
   const kind = form.watch('kind');
@@ -125,7 +132,7 @@ export function ProviderFormFields({ form, editing, kindOptions }: ProviderFormF
       {/* Manual providers have no credentials — skip the empty section shell. */}
       {kind !== 'manual' && (
         <FormSection icon={IconKey} title={t('providers.section.credentials')}>
-          <ProviderCredentialFields form={form} editing={editing} />
+          <ProviderCredentialFields form={form} editing={editing} providerUuid={providerUuid} />
         </FormSection>
       )}
     </>

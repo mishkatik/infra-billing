@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
+import { faviconRootFallback } from '@/utils/favicon';
 
 // Neutral initial avatar, swapped for the favicon only once it loads. Google's "no favicon"
-// placeholder is a ~16px globe, so reject anything that small to avoid the blurry globe.
+// placeholder is a ~16px globe, so reject anything that small to avoid the blurry globe. When the
+// primary favicon 404s or is too small (some dashboard subdomains have none), fall back to the
+// registrable domain's icon before settling on the initial.
 export function ProviderIcon({
   name,
   src,
@@ -11,24 +14,45 @@ export function ProviderIcon({
   src: string | null;
   size?: number;
 }) {
-  // Keyed by the src it was loaded for: when src changes, the derived favicon below falls back
-  // to the initial immediately during render — no reset effect, no flash of the previous icon.
-  const [loaded, setLoaded] = useState<{ src: string; ok: boolean } | null>(null);
+  const fallback = faviconRootFallback(src);
+  const key = `${src ?? ''}|${fallback ?? ''}`;
+  // Keyed by the candidates it was resolved for: when they change, the favicon below falls back to
+  // the initial immediately during render — no reset effect, no flash of the previous icon.
+  const [resolved, setResolved] = useState<{ key: string; src: string | null }>({
+    key: '',
+    src: null,
+  });
 
   useEffect(() => {
-    if (!src) return;
-    const img = new Image();
-    img.onload = () => {
-      setLoaded({ src, ok: img.naturalWidth > 16 });
+    const candidates = [src, fallback].filter((c): c is string => !!c);
+    if (candidates.length === 0) {
+      setResolved({ key, src: null });
+      return;
+    }
+    let cancelled = false;
+    const tryAt = (i: number) => {
+      if (i >= candidates.length) {
+        if (!cancelled) setResolved({ key, src: null });
+        return;
+      }
+      const img = new Image();
+      img.onload = () => {
+        if (cancelled) return;
+        if (img.naturalWidth > 16) setResolved({ key, src: candidates[i] });
+        else tryAt(i + 1);
+      };
+      img.onerror = () => {
+        if (!cancelled) tryAt(i + 1);
+      };
+      img.src = candidates[i];
     };
-    img.src = src;
+    tryAt(0);
     return () => {
-      // A stale onload must not clobber the state that belongs to the current src.
-      img.onload = null;
+      cancelled = true;
     };
-  }, [src]);
+  }, [key, src, fallback]);
 
-  const favicon = loaded && loaded.src === src && loaded.ok ? src : null;
+  const favicon = resolved.key === key ? resolved.src : null;
   const initial = (name.trim().charAt(0) || '?').toUpperCase();
 
   // Favicon and initial share one framed tile, so rows never mix icon footprints

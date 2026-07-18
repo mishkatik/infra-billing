@@ -88,7 +88,12 @@ export function ProviderDetailModal({
         <div className="-mr-1 overflow-y-auto pr-1">
           <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_280px]">
             <form id="provider-detail-form" onSubmit={onSubmit} className="space-y-4">
-              <ProviderFormFields form={form} editing kindOptions={kindOptions} />
+              <ProviderFormFields
+                form={form}
+                editing
+                kindOptions={kindOptions}
+                providerUuid={shown.uuid}
+              />
             </form>
 
             <div className="space-y-4">

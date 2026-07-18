@@ -71,6 +71,25 @@ export const providers = {
         'Cloudflare → My Profile → API Tokens → create a token with Registrar: Domains:Read and Billing:Read',
       cloudflareAccountIdDesc: 'Cloudflare account ID (dashboard URL or GET /accounts)',
       apiTokenDescStormwall: 'StormWall personal cabinet → API key, sent as the x-api-key header',
+      yandexKey: 'Authorized key (JSON)',
+      yandexKeySetup: 'Setup:',
+      yandexKeyStep1:
+        'Go to center.yandex.cloud and open "All services" → "Monitoring & Resources" → "Identity and Access Management" → "Service accounts".',
+      yandexKeyStep2:
+        'Click "Create service account", enter any name, then "Roles in the folder" → "Add role" → "viewer", and finish with "Create".',
+      yandexKeyStep3:
+        'Open the service account you just created from the table, choose "Create new key" → "Create authorized key" → "Create" → "Download file with keys", and paste the downloaded key below.',
+      yandexKeyStep4:
+        'Back on center.yandex.cloud, open "Billing" → "Access management" → "Assign roles". In "Who to grant access to" pick this service account, in "Roles" choose "billing.accounts.viewer", and finish with "Save" (this also enables balance and consumption history).',
+      yandexScope: 'Detected scope',
+      yandexScopeDesc:
+        'Resolved automatically from the key: the folders scanned for servers and the billing account used for balance and consumption.',
+      yandexScopeFolders: 'Folder',
+      yandexScopeBilling: 'Billing account',
+      yandexScopeNone: 'Nothing found - check the service account roles.',
+      yandexScopeRefresh: 'Refresh',
+      yandexScopeLoading: 'Resolving...',
+      yandexScopePending: 'Paste the authorized key to detect the scope.',
       refreshToken: 'Refresh token (OAuth2)',
       refreshTokenDescNetcup:
         'Use “Authorize via netcup” above, or paste an offline refresh token manually',
@@ -104,6 +123,7 @@ export const providers = {
       vdsinaToken: 'Enter the VDSina API token',
       cloudflareCreds: 'Enter the Cloudflare account ID and API token',
       stormwallToken: 'Enter the StormWall API key',
+      yandexKey: 'Paste the Yandex Cloud service account authorized key (JSON)',
     },
     netcup: {
       authorize: 'Authorize via netcup',
@@ -198,6 +218,25 @@ export const providers = {
       cloudflareAccountIdDesc: 'Account ID аккаунта Cloudflare (из URL дашборда или GET /accounts)',
       apiTokenDescStormwall:
         'Личный кабинет StormWall → API-ключ (передаётся в заголовке x-api-key)',
+      yandexKey: 'Авторизованный ключ (JSON)',
+      yandexKeySetup: 'Настройка:',
+      yandexKeyStep1:
+        'Зайдите на center.yandex.cloud и выберите "All services" → "Monitoring & Resources" → "Identity and Access Management" → "Service accounts".',
+      yandexKeyStep2:
+        'Нажмите "Create service account", введите любое имя, затем "Roles in the folder" → "Add role" → "viewer" и завершите через "Create".',
+      yandexKeyStep3:
+        'Откройте созданный сервисный аккаунт в таблице, выберите "Create new key" → "Create authorized key" → "Create" → "Download file with keys" и вставьте полученный ключ ниже.',
+      yandexKeyStep4:
+        'Вернитесь на center.yandex.cloud, выберите "Billing" → "Access management" → "Assign roles". В поле "Who to grant access to" выберите этот сервисный аккаунт, в поле "Roles" выберите "billing.accounts.viewer", и завершите через "Save" (это же включает баланс и историю расходов).',
+      yandexScope: 'Определённая область',
+      yandexScopeDesc:
+        'Определяется автоматически по ключу: каталоги, из которых берутся серверы, и платёжный аккаунт для баланса и расходов.',
+      yandexScopeFolders: 'Каталог',
+      yandexScopeBilling: 'Платёжный аккаунт',
+      yandexScopeNone: 'Ничего не найдено - проверьте роли сервисного аккаунта.',
+      yandexScopeRefresh: 'Обновить',
+      yandexScopeLoading: 'Определяем...',
+      yandexScopePending: 'Вставьте авторизованный ключ, чтобы определить область.',
       refreshToken: 'Refresh-токен (OAuth2)',
       refreshTokenDescNetcup:
         'Нажмите «Авторизоваться через netcup» выше или вставьте offline refresh-токен вручную',
@@ -231,6 +270,7 @@ export const providers = {
       vdsinaToken: 'Укажите API-токен VDSina',
       cloudflareCreds: 'Укажите account ID и API-токен Cloudflare',
       stormwallToken: 'Укажите API-ключ StormWall',
+      yandexKey: 'Вставьте авторизованный ключ сервисного аккаунта Yandex Cloud (JSON)',
     },
     netcup: {
       authorize: 'Авторизоваться через netcup',

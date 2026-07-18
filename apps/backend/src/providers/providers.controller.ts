@@ -20,6 +20,8 @@ import {
   ProviderDto,
   ProviderWithServicesDto,
   UpdateProviderDto,
+  YandexDiscoverDto,
+  YandexDiscoverResultDto,
 } from './dto/provider.dto';
 import {
   ApiBearerAuth,
@@ -68,6 +70,15 @@ export class ProvidersController {
   @ApiOkResponse({ type: NetcupDevicePollResultDto })
   netcupDevicePoll(@Body() dto: NetcupDevicePollDto) {
     return this.netcupDevice.poll(dto.deviceCode);
+  }
+
+  // Yandex folder / billing-account discovery for the form dropdowns. Static path, before `:uuid`.
+  @Post(API_SUB.PROVIDER_YANDEX_DISCOVER)
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Discover Yandex folders and billing accounts' })
+  @ApiOkResponse({ type: YandexDiscoverResultDto })
+  yandexDiscover(@Body() dto: YandexDiscoverDto) {
+    return this.providers.discoverYandex(dto);
   }
 
   @Get(API_SUB.BY_ID)

@@ -1,11 +1,20 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@generated/prisma/client';
-import { Provider as ProviderDto, Service as ServiceDto } from '@infra/shared';
+import {
+  Provider as ProviderDto,
+  Service as ServiceDto,
+  YandexDiscoverResult,
+} from '@infra/shared';
 import { ProvidersRepository } from '@repositories/providers/providers.repository';
 import { VDSINA_BASE_URLS } from '@connectors/vdsina/vdsina.types';
+import { YandexConnector } from '../connectors/yandex/yandex.connector';
+import type { YandexCredentials } from '../connectors/yandex/yandex.types';
 import { CryptoService } from '../crypto/crypto.service';
 import { mapProvider, mapService } from '@common/mappers';
-import { CreateProviderDto, UpdateProviderDto } from './dto/provider.dto';
+import { CreateProviderDto, UpdateProviderDto, YandexDiscoverDto } from './dto/provider.dto';
+
+// Cap the discovery call so a hanging Yandex API request can't wedge the request handler.
+const DISCOVER_TIMEOUT_MS = 20_000;
 
 @Injectable()
 export class ProvidersService {
@@ -217,8 +226,91 @@ export class ProvidersService {
       }
       return this.crypto.encrypt(JSON.stringify({ apiKey, secretApiKey }));
     }
+    if (kind === 'yandex') {
+      // `token` carries the service-account authorized key (JSON); parse it into { keyId,
+      // serviceAccountId, privateKey }. Scope (folders, billing account) is auto-resolved, never
+      // stored. Nothing to merge — an edit without a new key leaves the stored one intact.
+      if (!dto.token) return null;
+      const key = this.parseYandexKey(dto.token);
+      if (!key.keyId || !key.serviceAccountId || !key.privateKey) {
+        throw new BadRequestException(
+          'Provide the Yandex Cloud service account authorized key (JSON)',
+        );
+      }
+      return this.crypto.encrypt(JSON.stringify(key));
+    }
     if (kind !== 'manual' && dto.token) return this.crypto.encrypt(dto.token);
     return null;
+  }
+
+  /**
+   * Resolve the Yandex scope (folders scanned for servers + billing account) for the form badges,
+   * using either the just-entered authorized key (create flow) or the stored credentials of an
+   * existing provider (edit flow).
+   */
+  async discoverYandex(dto: YandexDiscoverDto): Promise<YandexDiscoverResult> {
+    const creds = await this.yandexCredsFor(dto);
+    const connector = new YandexConnector(creds);
+    try {
+      return await connector.discover(AbortSignal.timeout(DISCOVER_TIMEOUT_MS));
+    } catch (e) {
+      throw new BadRequestException(
+        e instanceof Error ? e.message : 'Yandex Cloud discovery failed',
+      );
+    }
+  }
+
+  /** Resolve the auth part of the Yandex credentials from a raw key or a stored provider. */
+  private async yandexCredsFor(dto: YandexDiscoverDto): Promise<YandexCredentials> {
+    if (dto.token) {
+      const key = this.parseYandexKey(dto.token);
+      if (!key.keyId || !key.serviceAccountId || !key.privateKey) {
+        throw new BadRequestException(
+          'Provide the Yandex Cloud service account authorized key (JSON)',
+        );
+      }
+      return {
+        keyId: key.keyId,
+        serviceAccountId: key.serviceAccountId,
+        privateKey: key.privateKey,
+      };
+    }
+    if (dto.providerUuid) {
+      const existing = await this.providers.findCredentials(dto.providerUuid);
+      if (existing?.kind !== 'yandex') {
+        throw new NotFoundException('Yandex provider not found');
+      }
+      const c = this.decodeCredentials(existing.credentialsEnc);
+      if (!c.keyId || !c.serviceAccountId || !c.privateKey) {
+        throw new BadRequestException('Stored Yandex credentials are incomplete');
+      }
+      return {
+        keyId: c.keyId,
+        serviceAccountId: c.serviceAccountId,
+        privateKey: c.privateKey,
+      };
+    }
+    throw new BadRequestException('Provide the authorized key or an existing provider');
+  }
+
+  /** Parse a Yandex Cloud authorized-key JSON into the fields we sign the JWT with. */
+  private parseYandexKey(raw: string): {
+    keyId?: string;
+    serviceAccountId?: string;
+    privateKey?: string;
+  } {
+    let obj: { id?: string; service_account_id?: string; private_key?: string };
+    try {
+      obj = JSON.parse(raw);
+    } catch {
+      throw new BadRequestException('Yandex Cloud authorized key must be the JSON key file');
+    }
+    if (!obj.id || !obj.service_account_id || !obj.private_key) {
+      throw new BadRequestException(
+        'Yandex Cloud authorized key is missing id, service_account_id or private_key',
+      );
+    }
+    return { keyId: obj.id, serviceAccountId: obj.service_account_id, privateKey: obj.private_key };
   }
 
   /** Decrypt the stored JSON credentials (hostbill/billmgr), or {} if none/unparseable. */

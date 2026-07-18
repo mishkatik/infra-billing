@@ -34,6 +34,7 @@ const PROVIDER_KINDS: ProviderKind[] = [
   'vdsina',
   'cloudflare',
   'stormwall',
+  'yandex',
   'manual',
 ];
 
