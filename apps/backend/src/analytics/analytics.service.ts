@@ -71,10 +71,14 @@ export class AnalyticsService {
     let currentMonthPayments = ZERO();
     let totalSpent = ZERO();
     const spentByProvider = new Map<string, Decimal>();
+    // Providers that expose top-ups (BILLmanager, Timeweb…): their spend is the top-ups, and their
+    // `charge` rows are just per-service detail. Consumption-only providers (Yandex, Selectel) have
+    // no top-ups, so their charges ARE the spend and can be counted without double-counting.
+    const providersWithTopups = new Set(
+      payments.filter((p) => p.type !== 'charge').map((p) => p.providerUuid),
+    );
     for (const p of payments) {
-      // `charge` rows are per-service expense detail; counting them alongside top-ups would
-      // double the spend, so the paid-out totals use top-ups + manual payments only.
-      if (p.type === 'charge') continue;
+      if (p.type === 'charge' && providersWithTopups.has(p.providerUuid)) continue;
       const base = this.currency.convert(
         new Decimal(p.amount.toString()),
         p.currency,
@@ -377,10 +381,16 @@ export class AnalyticsService {
       projBuckets.set(key, ZERO());
     }
 
-    // Actuals: top-ups + manual payments (real money paid out), same definition as
-    // currentMonthPayments/totalSpent in summary() — keeps "Actual" consistent with the KPI card.
-    const payments = await this.paymentsRepo.listNonChargesSince(windowStart.toDate());
+    // Actuals: top-ups + manual payments, plus charges for consumption-only providers (no top-ups).
+    // Same definition as currentMonthPayments/totalSpent in summary() — keeps "Actual" consistent
+    // with the KPI card.
+    const [payments, topupProviderUuids] = await Promise.all([
+      this.paymentsRepo.listSince(windowStart.toDate()),
+      this.paymentsRepo.providerUuidsWithTopups(),
+    ]);
+    const providersWithTopups = new Set(topupProviderUuids);
     for (const p of payments) {
+      if (p.type === 'charge' && providersWithTopups.has(p.providerUuid)) continue;
       const key = dayjs(p.paymentDate).format('YYYY-MM');
       if (!actualBuckets.has(key) || key > currentKey) continue; // future-dated payments ignored
       const base = this.currency.convert(

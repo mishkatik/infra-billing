@@ -27,11 +27,23 @@ export class PaymentsRepository {
     return this.prisma.payment.findMany();
   }
 
-  /** Top-ups + manual payments since `from` — real money paid out; `charge` rows excluded. */
-  listNonChargesSince(from: Date) {
-    return this.prisma.payment.findMany({
-      where: { type: { not: 'charge' }, paymentDate: { gte: from } },
+  /** All payments since `from` (any type); the caller decides which count as spend. */
+  listSince(from: Date) {
+    return this.prisma.payment.findMany({ where: { paymentDate: { gte: from } } });
+  }
+
+  /**
+   * Provider uuids that have at least one top-up / manual payment (type != `charge`). Used to tell
+   * consumption-only providers (Yandex, Selectel — charges but no top-ups) apart from providers
+   * where top-ups already represent the spend, so charges aren't double-counted.
+   */
+  async providerUuidsWithTopups(): Promise<string[]> {
+    const rows = await this.prisma.payment.findMany({
+      where: { type: { not: 'charge' } },
+      distinct: ['providerUuid'],
+      select: { providerUuid: true },
     });
+    return rows.map((r) => r.providerUuid);
   }
 
   async listPaginated(
