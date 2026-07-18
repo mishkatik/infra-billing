@@ -1,5 +1,6 @@
 import {
   type Icon,
+  IconCircles,
   IconExternalLink,
   IconGridDots,
   IconKey,
@@ -161,6 +162,55 @@ function renderYaStep(text: string): ReactNode {
   }
   if (last < text.length) {
     parts.push(<Fragment key={key++}>{linkifyCenter(text.slice(last))}</Fragment>);
+  }
+  return parts;
+}
+
+// Timeweb Cloud panel labels (RU/EN). Sidebar section vs primary action buttons.
+const TW_SECTION = new Set(['API и Terraform', 'API and Terraform']);
+const TW_PRIMARY = new Set(['Добавить токен', 'Выпустить', 'Add token', 'Issue']);
+const TW_ICON: Record<string, Icon> = {
+  'API и Terraform': IconCircles,
+  'API and Terraform': IconCircles,
+};
+
+function twTokenClass(label: string): string {
+  if (TW_PRIMARY.has(label)) return 'rounded-full bg-[#5c5de0] text-white';
+  if (TW_SECTION.has(label)) return 'rounded-md bg-[#282e38] text-white';
+  return 'rounded-md bg-white/[0.07] text-foreground ring-1 ring-white/10 ring-inset';
+}
+
+function TwToken({ label }: { label: string }) {
+  const LabelIcon = TW_ICON[label];
+  return (
+    <span
+      className={cn(
+        'mx-0.5 inline-flex items-center gap-1 px-1.5 py-0.5 align-middle text-[0.8em] font-medium leading-none whitespace-nowrap',
+        twTokenClass(label),
+      )}
+    >
+      {LabelIcon && <LabelIcon className="size-3 shrink-0" />}
+      {label}
+    </span>
+  );
+}
+
+function renderTwStep(text: string): ReactNode {
+  const parts: ReactNode[] = [];
+  const re = /"([^"]+)"/g;
+  let last = 0;
+  let key = 0;
+  let m: RegExpExecArray | null = re.exec(text);
+  while (m !== null) {
+    if (m.index > last) {
+      parts.push(<Fragment key={key++}>{text.slice(last, m.index)}</Fragment>);
+    }
+    parts.push(<TwToken key={key++} label={m[1]} />);
+    last = m.index + m[0].length;
+    m = re.exec(text);
+  }
+  if (last < text.length) {
+    parts.push(<Fragment key={key++}>{text.slice(last)}</Fragment>);
   }
   return parts;
 }
@@ -622,14 +672,35 @@ export function ProviderCredentialFields({
     );
   }
 
+  if (kind === 'timeweb') {
+    return (
+      <Field
+        id="cred-token"
+        label={t('providers.field.apiToken')}
+        description={
+          <div className="leading-7">
+            <p>{renderTwStep(t('providers.field.apiTokenDescTimeweb'))}</p>
+            <a
+              href="https://timeweb.cloud/my/api-keys"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-0.5 text-brand underline-offset-4 hover:underline"
+            >
+              timeweb.cloud/my/api-keys
+              <IconExternalLink className="size-3" />
+            </a>
+          </div>
+        }
+      >
+        <Input id="cred-token" placeholder={keepEmpty} {...form.register('token')} />
+      </Field>
+    );
+  }
+
   if (kind === 'manual') return null;
 
   return (
-    <Field
-      id="cred-token"
-      label={t('providers.field.apiToken')}
-      link={kind === 'timeweb' ? 'https://timeweb.cloud/my/api-keys' : undefined}
-    >
+    <Field id="cred-token" label={t('providers.field.apiToken')}>
       <Input id="cred-token" placeholder={keepEmpty} {...form.register('token')} />
     </Field>
   );

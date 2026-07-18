@@ -63,6 +63,8 @@ export const providers = {
       apiTokenDescLinode:
         'Linode → Account → API Tokens → create a Personal Access Token (read access to Account and Linodes)',
       apiTokenDescAeza: 'Aeza panel → API Keys → create an API key',
+      apiTokenDescTimeweb:
+        'Go to "API and Terraform" → "Add token", enter any name, then "Issue".',
       apiTokenDescVdsina:
         'VDSina control panel → user list → permanent API token, sent as the Authorization header',
       apiBaseUrlDescVdsina:
@@ -211,6 +213,8 @@ export const providers = {
       apiTokenDescLinode:
         'Linode → Account → API Tokens → создать Personal Access Token (доступ на чтение к Account и Linodes)',
       apiTokenDescAeza: 'Панель Aeza → API Keys → создать API-ключ',
+      apiTokenDescTimeweb:
+        'Перейдите в "API и Terraform" → "Добавить токен", введите любое имя, затем "Выпустить".',
       apiTokenDescVdsina:
         'Личный кабинет VDSina → список пользователей → постоянный API-токен (заголовок Authorization)',
       apiBaseUrlDescVdsina:
