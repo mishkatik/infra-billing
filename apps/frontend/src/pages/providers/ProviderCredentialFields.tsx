@@ -1,6 +1,7 @@
 import {
   type Icon,
   IconCircles,
+  IconCrown,
   IconExternalLink,
   IconGridDots,
   IconKey,
@@ -211,6 +212,78 @@ function renderTwStep(text: string): ReactNode {
   }
   if (last < text.length) {
     parts.push(<Fragment key={key++}>{text.slice(last)}</Fragment>);
+  }
+  return parts;
+}
+
+// Hetzner Cloud console labels (EN/RU). Active tabs (red + underline), sidebar rows, primary buttons.
+const HZ_TAB = new Set(['Projects', 'API Tokens', 'Проекты', 'API-токены']);
+const HZ_NAV = new Set(['Default', 'Security', 'Безопасность']);
+const HZ_PRIMARY = new Set(['Generate API Token', 'Создать API-токен']);
+const HZ_ICON: Record<string, Icon> = {
+  Default: IconCrown,
+  Security: IconKey,
+  Безопасность: IconKey,
+};
+
+function linkifyHetzner(text: string): ReactNode {
+  const marker = 'console.hetzner.com';
+  const idx = text.indexOf(marker);
+  if (idx === -1) return text;
+  return (
+    <>
+      {text.slice(0, idx)}
+      <a
+        href="https://console.hetzner.com"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-brand underline underline-offset-4 hover:no-underline"
+      >
+        {marker}
+      </a>
+      {text.slice(idx + marker.length)}
+    </>
+  );
+}
+
+function hzTokenClass(label: string): string {
+  if (HZ_PRIMARY.has(label)) return 'rounded-md bg-[#a01f2a] text-white';
+  if (HZ_TAB.has(label)) return 'rounded-md bg-[#1a1a1a] text-[#ff5a68]';
+  if (HZ_NAV.has(label)) return 'rounded-md bg-[#252525] text-white';
+  return 'rounded-md bg-white/[0.07] text-foreground ring-1 ring-white/10 ring-inset';
+}
+
+function HzToken({ label }: { label: string }) {
+  const LabelIcon = HZ_ICON[label];
+  return (
+    <span
+      className={cn(
+        'mx-0.5 inline-flex items-center gap-1 px-1.5 py-0.5 align-middle text-[0.8em] font-medium leading-none whitespace-nowrap',
+        hzTokenClass(label),
+      )}
+    >
+      {LabelIcon && <LabelIcon className="size-3 shrink-0" />}
+      {label}
+    </span>
+  );
+}
+
+function renderHzStep(text: string): ReactNode {
+  const parts: ReactNode[] = [];
+  const re = /"([^"]+)"/g;
+  let last = 0;
+  let key = 0;
+  let m: RegExpExecArray | null = re.exec(text);
+  while (m !== null) {
+    if (m.index > last) {
+      parts.push(<Fragment key={key++}>{linkifyHetzner(text.slice(last, m.index))}</Fragment>);
+    }
+    parts.push(<HzToken key={key++} label={m[1]} />);
+    last = m.index + m[0].length;
+    m = re.exec(text);
+  }
+  if (last < text.length) {
+    parts.push(<Fragment key={key++}>{linkifyHetzner(text.slice(last))}</Fragment>);
   }
   return parts;
 }
@@ -587,7 +660,7 @@ export function ProviderCredentialFields({
           description={
             <>
               <span className="font-medium">{t('providers.field.yandexKeySetup')}</span>
-              <ol className="mt-1 list-decimal space-y-1.5 pl-4 leading-7">
+              <ol className="mt-1 list-decimal space-y-1.5 pl-4 text-sm leading-7">
                 <li>{renderYaStep(t('providers.field.yandexKeyStep1'))}</li>
                 <li>{renderYaStep(t('providers.field.yandexKeyStep2'))}</li>
                 <li>{renderYaStep(t('providers.field.yandexKeyStep3'))}</li>
@@ -669,6 +742,22 @@ export function ProviderCredentialFields({
           )}
         </div>
       </>
+    );
+  }
+
+  if (kind === 'hetzner') {
+    return (
+      <Field
+        id="cred-token"
+        label={t('providers.field.apiToken')}
+        description={
+          <div className="text-sm leading-7">
+            {renderHzStep(t('providers.field.apiTokenDescHetzner'))}
+          </div>
+        }
+      >
+        <Input id="cred-token" placeholder={keepEmpty} {...form.register('token')} />
+      </Field>
     );
   }
 
