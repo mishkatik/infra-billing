@@ -37,6 +37,7 @@ export const DEFAULT_LOGIN_URLS: Record<string, string> = {
   vdsina: 'https://cp.vdsina.ru',
   cloudflare: 'https://dash.cloudflare.com',
   porkbun: 'https://porkbun.com/account',
+  yandex: 'https://console.yandex.cloud',
 };
 
 export const EMPTY_FORM: FormValues = {
@@ -74,6 +75,7 @@ export function validateProviderCredentials(v: FormValues, t: TFunction): string
   if (v.kind === 'cloudflare' && !(v.accountId && v.token))
     return t('providers.err.cloudflareCreds');
   if (v.kind === 'stormwall' && !v.token) return t('providers.err.stormwallToken');
+  if (v.kind === 'yandex' && !v.token) return t('providers.err.yandexKey');
   return null;
 }
 

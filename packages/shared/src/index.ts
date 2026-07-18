@@ -4,6 +4,7 @@ export * from './controllers-info';
 export * from './schemas/common';
 export * from './schemas/provider';
 export * from './schemas/netcup';
+export * from './schemas/yandex';
 export * from './schemas/project';
 export * from './schemas/service';
 export * from './schemas/payment';

@@ -51,6 +51,8 @@ export const API_SUB = {
   // netcup OAuth2 device flow (in-panel token acquisition).
   PROVIDER_NETCUP_DEVICE_START: 'netcup/device/start',
   PROVIDER_NETCUP_DEVICE_POLL: 'netcup/device/poll',
+  // Yandex Cloud folder / billing-account discovery for the form dropdowns.
+  PROVIDER_YANDEX_DISCOVER: 'yandex/discover',
   ANALYTICS_SUMMARY: 'summary',
   ANALYTICS_FORECAST: 'forecast',
   RATES_REFRESH: 'refresh',
@@ -90,6 +92,7 @@ export const API_PATH = {
       pathId(API.PROVIDERS, API_SUB.PROVIDER_BALANCE_HISTORY, uuid),
     NETCUP_DEVICE_START: path(API.PROVIDERS, API_SUB.PROVIDER_NETCUP_DEVICE_START),
     NETCUP_DEVICE_POLL: path(API.PROVIDERS, API_SUB.PROVIDER_NETCUP_DEVICE_POLL),
+    YANDEX_DISCOVER: path(API.PROVIDERS, API_SUB.PROVIDER_YANDEX_DISCOVER),
   },
   PROJECTS: {
     ROOT: path(API.PROJECTS),
