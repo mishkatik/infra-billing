@@ -65,6 +65,29 @@ export function isCloudflareBlock(status: number | undefined, body: unknown): bo
   );
 }
 
+// Some hosters gate the panel with their own anti-bot front instead of Cloudflare's edge: h2.nexus
+// answers HTTP 200 with a CAPTCHA page (Cloudflare Turnstile widget) on every path, /billmgr
+// included, so the non-2xx classification below never sees it and auth died with a cryptic
+// "session was not obtained". Like the Cloudflare case, there is nothing to work around on our
+// side — the challenge needs a browser and a human.
+const CHALLENGE_BLOCKED_MESSAGE =
+  'BILLmanager: an anti-bot check in front of the panel answered with a CAPTCHA page instead of JSON — ' +
+  'the request never reached BILLmanager. Ask the hoster to allow API access for this server ' +
+  '(a security-check exemption for /billmgr, or an IP allowlist).';
+
+/**
+ * A challenge page can't be confused with the panel: out=json answers arrive parsed into `doc`,
+ * so a string body carrying challenge markers (Turnstile widget, Cloudflare interstitials,
+ * DDoS-Guard) is always the gate speaking, whatever the status. The slice bounds the regex
+ * against a multi-KB page; the page itself is never echoed (DB / UI tooltip / Telegram).
+ */
+export function isChallengePage(body: unknown): boolean {
+  if (typeof body !== 'string') return false;
+  return /turnstile|challenges\.cloudflare\.com|just a moment|attention required|security check|verify you.re human|ddos-?guard/i.test(
+    body.slice(0, 4096),
+  );
+}
+
 /**
  * BILLmanager reports its own failures as doc.error at HTTP 200, so a non-2xx never comes from the API —
  * it comes from whatever fronts the panel (its web server: 404 on a wrong baseUrl, 5xx when the CGI is down;
@@ -115,9 +138,22 @@ export class BillmgrConnector implements Connector {
     });
     // A non-2xx is never BILLmanager itself — turn it into a message that names the real reason
     // instead of leaving axios's bare "Request failed with status code 403" in lastSyncError.
-    this.http.interceptors.response.use(undefined, (e) => {
-      throw billmgrHttpError(e);
-    });
+    // A 2xx can still be an anti-bot gate answering with a CAPTCHA page (h2.nexus) — same
+    // etiquette as billmgrHttpError: only the request id may enter the message, never the page.
+    this.http.interceptors.response.use(
+      (r) => {
+        if (isChallengePage(r.data)) {
+          const id = r.headers?.['cf-ray'] ?? r.headers?.['x-request'];
+          throw new Error(
+            CHALLENGE_BLOCKED_MESSAGE + (typeof id === 'string' ? ` (request id ${id})` : ''),
+          );
+        }
+        return r;
+      },
+      (e) => {
+        throw billmgrHttpError(e);
+      },
+    );
   }
 
   kind(): string {
@@ -138,7 +174,15 @@ export class BillmgrConnector implements Connector {
     });
     if (data?.doc?.error) throw new Error(`BILLmanager: ${billmgrError(data.doc.error)}`);
     const id = data?.doc?.auth?.$id ?? data?.doc?.session?.$id;
-    if (!id) throw new Error('BILLmanager: session was not obtained');
+    // A 200 that isn't a doc and isn't a challenge (the interceptor caught those) is almost
+    // always a base URL pointing at a web page instead of the /billmgr CGI endpoint.
+    if (!id) {
+      throw new Error(
+        typeof data === 'string'
+          ? 'BILLmanager: the panel answered with a web page instead of JSON — check that the base URL points at the /billmgr endpoint'
+          : 'BILLmanager: session was not obtained',
+      );
+    }
 
     // The session id alone doesn't prove the session is usable: with 2FA enabled, func=auth
     // returns an id but the session is unconfirmed, and whoami (like every data func) comes
