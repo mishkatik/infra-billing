@@ -44,15 +44,15 @@ export class ServicesService {
     if (!existing) throw new NotFoundException('Service not found');
 
     const data: Prisma.ServiceUpdateInput = {};
-    if (dto.name !== undefined) {
+    // The form submits every field, so compare with the stored value: only a real
+    // manual edit sets the overridden flag (sync must not overwrite such fields).
+    if (dto.name !== undefined && dto.name !== existing.name) {
       data.name = dto.name;
-      // Manual name edit. Sync must not overwrite it.
       data.nameOverridden = true;
     }
     if (dto.type !== undefined) data.type = dto.type;
-    if (dto.cost !== undefined) {
+    if (dto.cost !== undefined && !existing.cost.equals(dto.cost)) {
       data.cost = dto.cost;
-      // Manual price edit. Sync must not overwrite it.
       data.costOverridden = true;
     }
     if (dto.currency !== undefined) data.currency = dto.currency;
