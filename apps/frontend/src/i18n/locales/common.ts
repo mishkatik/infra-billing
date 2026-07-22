@@ -16,6 +16,8 @@ export const common = {
       copy: 'Copy',
       copied: 'Copied',
       moreActions: 'More actions',
+      searchPlaceholder: 'Search…',
+      nothingFound: 'Nothing found',
     },
     app: {
       brand: 'Infra Billing',
@@ -156,6 +158,8 @@ export const common = {
       copy: 'Копировать',
       copied: 'Скопировано',
       moreActions: 'Другие действия',
+      searchPlaceholder: 'Поиск…',
+      nothingFound: 'Ничего не найдено',
     },
     app: {
       brand: 'Infra Billing',

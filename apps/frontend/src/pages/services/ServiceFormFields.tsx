@@ -1,7 +1,8 @@
 import type { Service } from '@infra/shared';
-import { IconCalendarDollar, IconMapPin, IconStack2 } from '@tabler/icons-react';
+import { IconCalendarDollar, IconStack2 } from '@tabler/icons-react';
 import { Controller, type UseFormReturn } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
+import { CountryCombobox } from '@/components/CountryCombobox';
 import { DateField } from '@/components/DateField';
 import { FormSection } from '@/components/FormSection';
 import { Input } from '@/components/ui/input';
@@ -15,9 +16,6 @@ import {
 } from '@/components/ui/select';
 import { trimMoney } from '@/utils/format';
 import type { SForm } from './serviceForm';
-
-// SelectItem forbids value="" — sentinel for the cleared country pick.
-const NO_COUNTRY = 'none';
 
 interface ServiceFormFieldsProps {
   form: UseFormReturn<SForm>;
@@ -215,23 +213,13 @@ export function ServiceFormFields({
               control={control}
               name="countryCode"
               render={({ field }) => (
-                <Select
-                  value={field.value || NO_COUNTRY}
-                  onValueChange={(v) => field.onChange(v === NO_COUNTRY ? '' : v)}
-                >
-                  <SelectTrigger id="service-country" className="w-full">
-                    <IconMapPin className="size-4 shrink-0 opacity-60" />
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={NO_COUNTRY}>{t('services.countryPlaceholder')}</SelectItem>
-                    {countryOptions.map((o) => (
-                      <SelectItem key={o.value} value={o.value}>
-                        {o.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <CountryCombobox
+                  id="service-country"
+                  value={field.value}
+                  onChange={field.onChange}
+                  options={countryOptions}
+                  placeholder={t('services.countryPlaceholder')}
+                />
               )}
             />
           </div>
