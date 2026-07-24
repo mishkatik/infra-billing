@@ -31,6 +31,7 @@ export class PaymentsService {
       currency: dto.currency,
       description: dto.description ?? null,
       paymentDate: new Date(dto.paymentDate),
+      type: dto.type ?? 'topup',
     });
     return mapPayment(p);
   }

@@ -37,7 +37,11 @@ export function useCreatePayment() {
   return useMutation({
     mutationFn: async (dto: CreatePayment) =>
       (await api.post<Payment>(API_PATH.PAYMENTS.ROOT, dto)).data,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['payments'] }),
+    // ['services'] too: paymentsCount on the services list depends on payments.
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['payments'] });
+      qc.invalidateQueries({ queryKey: ['services'] });
+    },
   });
 }
 
@@ -47,6 +51,9 @@ export function useDeletePayment() {
     mutationFn: async (uuid: string) => {
       await api.delete(API_PATH.PAYMENTS.BY_ID(uuid));
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['payments'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['payments'] });
+      qc.invalidateQueries({ queryKey: ['services'] });
+    },
   });
 }

@@ -34,5 +34,6 @@ export const createPaymentSchema = z.object({
   currency: currencySchema.describe('Currency code'),
   description: z.string().describe('Payment description').optional(),
   paymentDate: isoDateSchema.describe('Payment date'),
+  type: paymentTypeSchema.describe('Payment type').optional(),
 });
 export type CreatePayment = z.infer<typeof createPaymentSchema>;

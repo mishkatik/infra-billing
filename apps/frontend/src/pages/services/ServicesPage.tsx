@@ -1,10 +1,11 @@
 import { DEFAULT_PROJECT_UUID, type Period, type Service, type ServiceType } from '@infra/shared';
 import { IconPlus } from '@tabler/icons-react';
-import dayjs from 'dayjs';
+import dayjs, { type ManipulateType } from 'dayjs';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { apiErrorMessage } from '@/api/client';
+import { useCreatePayment } from '@/api/payments';
 import { useProjects } from '@/api/projects';
 import { useProviders } from '@/api/providers';
 import { useRates } from '@/api/rates';
@@ -25,12 +26,29 @@ import { useCountryOptions } from '@/utils/countries';
 import { trimMoney } from '@/utils/format';
 import { buildRubMap } from '@/utils/money';
 import { notifyError, notifySuccess } from '@/utils/notify';
+import { BumpNextBillingDialog } from './BumpNextBillingDialog';
 import { type SForm, toIso } from './serviceForm';
 import { ServiceDetailModal } from './ServiceDetailModal';
 import { ServiceFormModal } from './ServiceFormModal';
 import { ServicesFilters } from './ServicesFilters';
 import { SERVICE_SORT_KEYS, serviceSortAccessors } from './servicesSort';
 import { ServicesTable } from './ServicesTable';
+
+// Quick-bump advances by one full billing period; hourly/onetime fall back to a month.
+const PERIOD_STEP: Partial<Record<Period, [number, ManipulateType]>> = {
+  monthly: [1, 'month'],
+  quarterly: [3, 'month'],
+  yearly: [1, 'year'],
+  daily: [1, 'day'],
+};
+
+const bumpedDate = (s: Service): string | undefined => {
+  if (!s.nextBillingAt) return undefined;
+  const [n, unit] = PERIOD_STEP[s.period] ?? [1, 'month'];
+  // Slice the UTC date part before the math: dayjs(iso) parses in local time,
+  // which shifts midnight-UTC dates by a day in negative-offset timezones.
+  return toIso(dayjs(s.nextBillingAt.slice(0, 10)).add(n, unit).format('YYYY-MM-DD'));
+};
 
 export function ServicesPage() {
   const { t, i18n } = useTranslation();
@@ -183,22 +201,32 @@ export function ServicesPage() {
     }
   };
 
-  const bumpNextBilling = async (s: Service) => {
-    if (!s.nextBillingAt) return;
+  const [bumpTarget, setBumpTarget] = useState<Service | null>(null);
+  const createPayment = useCreatePayment();
+  const doBump = async (withPayment: boolean) => {
+    const s = bumpTarget;
+    if (!s?.nextBillingAt) return;
     try {
-      await update.mutateAsync({
-        uuid: s.uuid,
-        // Slice the UTC date part before month math: dayjs(iso) parses in local time,
-        // which shifts midnight-UTC dates by a day in negative-offset timezones.
-        dto: {
-          nextBillingAt: toIso(
-            dayjs(s.nextBillingAt.slice(0, 10)).add(1, 'month').format('YYYY-MM-DD'),
-          ),
-        },
-      });
-      notifySuccess(t('services.updatedToast'));
+      // Payment first: if it fails nothing has changed, and if the date update then
+      // fails, re-clicking with "bump only" completes the operation without a duplicate.
+      if (withPayment) {
+        await createPayment.mutateAsync({
+          providerUuid: s.providerUuid,
+          serviceUuid: s.uuid,
+          amount: s.cost,
+          currency: s.currency,
+          // Stored in the DB, so it is fixed in the UI language active at creation time.
+          description: t('services.bumpDescription'),
+          paymentDate: toIso(dayjs().format('YYYY-MM-DD'))!,
+          type: 'charge',
+        });
+      }
+      await update.mutateAsync({ uuid: s.uuid, dto: { nextBillingAt: bumpedDate(s) } });
+      notifySuccess(t(withPayment ? 'services.bumpChargedToast' : 'services.updatedToast'));
     } catch (e) {
       notifyError(apiErrorMessage(e));
+    } finally {
+      setBumpTarget(null);
     }
   };
 
@@ -233,7 +261,7 @@ export function ServicesPage() {
         sort={sort}
         onToggleSort={toggleSort}
         onRowClick={openDetail}
-        onBumpNextBilling={bumpNextBilling}
+        onBumpNextBilling={setBumpTarget}
       />
 
       <ServiceFormModal
@@ -265,6 +293,14 @@ export function ServicesPage() {
         onToggleActive={toggleActive}
         onDelete={doDelete}
         onClose={() => setDetailUuid(null)}
+      />
+
+      <BumpNextBillingDialog
+        service={bumpTarget}
+        nextDate={bumpTarget ? bumpedDate(bumpTarget) : undefined}
+        isPending={createPayment.isPending || update.isPending}
+        onConfirm={doBump}
+        onClose={() => setBumpTarget(null)}
       />
     </div>
   );
