@@ -142,7 +142,10 @@ export function ProviderFormFields({
       {/* Manual providers have no credentials — skip the empty section shell. */}
       {kind !== 'manual' && (
         <FormSection icon={IconKey} title={t('providers.section.credentials')}>
+          {/* Keyed by provider: switching rows remounts the inputs, so a reveal still in flight
+              for the previous provider can never resolve into this one's form. */}
           <ProviderCredentialFields
+            key={providerUuid ?? 'new'}
             form={form}
             providerUuid={providerUuid}
             storedSecrets={storedSecrets}

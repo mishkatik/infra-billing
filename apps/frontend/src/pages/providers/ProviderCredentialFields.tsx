@@ -17,11 +17,7 @@ import type { ProviderCredentialsReveal, YandexDiscover } from '@infra/shared';
 import { Controller, type UseFormReturn } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { apiErrorMessage } from '@/api/client';
-import {
-  revealProviderCredentials,
-  type SecretField,
-  useYandexDiscover,
-} from '@/api/providers';
+import { revealProviderCredentials, type SecretField, useYandexDiscover } from '@/api/providers';
 import { NetcupAuthorizeButton } from '@/components/NetcupAuthorizeButton';
 import { SecretInput } from '@/components/SecretInput';
 import { Badge } from '@/components/ui/badge';
@@ -29,6 +25,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import { notifyError } from '@/utils/notify';
 import type { StoredSecretFlags } from './ProviderFormFields';
 import type { FormValues } from './providerForm';
 
@@ -432,10 +429,15 @@ export function ProviderCredentialFields({
     async (field: SecretField) => {
       if (!providerUuid) return '';
       if (!revealCache.current || revealCache.current.uuid !== providerUuid) {
-        revealCache.current = {
-          uuid: providerUuid,
-          data: await revealProviderCredentials(providerUuid),
-        };
+        try {
+          revealCache.current = {
+            uuid: providerUuid,
+            data: await revealProviderCredentials(providerUuid),
+          };
+        } catch (e) {
+          notifyError(apiErrorMessage(e));
+          throw e;
+        }
       }
       return revealCache.current.data[field] ?? '';
     },

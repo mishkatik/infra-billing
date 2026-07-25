@@ -33,11 +33,16 @@ export function SecretInput({
   const [visible, setVisible] = useState(false);
   const [revealing, setRevealing] = useState(false);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Fixed-length mask whenever a stored secret is hidden (never mirror real length).
-  const showMask = Boolean(hasStored && !visible);
+  const alive = useRef(true);
+  // Fixed-length mask only while the stored secret is still untouched (never mirror real length).
+  // Once a value has been revealed or typed the field stays editable — otherwise the auto-hide
+  // would flip it back to read-only mid-edit and silently swallow the rest of the keystrokes.
+  const showMask = Boolean(hasStored && !visible && !value);
 
   useEffect(() => {
+    alive.current = true;
     return () => {
+      alive.current = false;
       if (hideTimer.current) clearTimeout(hideTimer.current);
     };
   }, []);
@@ -49,21 +54,23 @@ export function SecretInput({
 
   const toggle = async () => {
     if (showMask) {
-      if (!value) {
-        if (!onReveal || revealing) return;
-        setRevealing(true);
-        try {
-          const secret = await onReveal();
-          onChange?.(secret);
-          setVisible(true);
-          scheduleHide();
-        } finally {
-          setRevealing(false);
-        }
-        return;
+      if (!onReveal || revealing) return;
+      setRevealing(true);
+      try {
+        const secret = await onReveal();
+        // The modal may have closed (or moved to another provider) while the request was in
+        // flight — writing now would drop this secret into whichever form is live by then.
+        if (!alive.current) return;
+        onChange?.(secret);
+        setVisible(true);
+        scheduleHide();
+      } catch {
+        // The reveal failed and the caller reported it; unlock the field so the owner can still
+        // type a replacement instead of being stuck behind an unopenable mask.
+        if (alive.current) setVisible(true);
+      } finally {
+        if (alive.current) setRevealing(false);
       }
-      setVisible(true);
-      scheduleHide();
       return;
     }
     setVisible((v) => {
@@ -78,7 +85,7 @@ export function SecretInput({
     <button
       type="button"
       tabIndex={-1}
-      disabled={disabled || revealing || (showMask && !value && !onReveal)}
+      disabled={disabled || revealing || (showMask && !onReveal)}
       aria-label={visible ? 'hide secret' : 'show secret'}
       className={cn(
         'absolute right-0 flex w-9 items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-50',
