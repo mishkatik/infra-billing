@@ -10,6 +10,7 @@ import {
   Post,
 } from '@nestjs/common';
 import { API, API_SUB, CONTROLLERS_INFO, ID_PARAM } from '@infra/shared';
+import { SessionOnly } from '../auth/session-only.decorator';
 import { NetcupDeviceFlowService } from '../connectors/netcup/netcup.device-flow';
 import { ProvidersService } from './providers.service';
 import {
@@ -82,8 +83,11 @@ export class ProvidersController {
     return this.providers.discoverYandex(dto);
   }
 
+  // Returns decrypted secrets, so it stays off-limits to API tokens: those are unscoped and live in
+  // scripts, and a leaked one must not be able to drain every hoster password and TOTP seed.
+  @SessionOnly()
   @Get(API_SUB.PROVIDER_CREDENTIALS_REVEAL)
-  @ApiOperation({ summary: 'Reveal stored provider credentials (explicit reveal)' })
+  @ApiOperation({ summary: 'Reveal stored provider credentials (explicit reveal, session only)' })
   @ApiOkResponse({ type: ProviderCredentialsRevealDto })
   revealCredentials(@Param(ID_PARAM, ParseUUIDPipe) uuid: string) {
     return this.providers.revealCredentials(uuid);
