@@ -17,6 +17,7 @@ import {
   NetcupDevicePollDto,
   NetcupDevicePollResultDto,
   NetcupDeviceStartDto,
+  ProviderCredentialsRevealDto,
   ProviderDto,
   ProviderWithServicesDto,
   UpdateProviderDto,
@@ -79,6 +80,13 @@ export class ProvidersController {
   @ApiOkResponse({ type: YandexDiscoverResultDto })
   yandexDiscover(@Body() dto: YandexDiscoverDto) {
     return this.providers.discoverYandex(dto);
+  }
+
+  @Get(API_SUB.PROVIDER_CREDENTIALS_REVEAL)
+  @ApiOperation({ summary: 'Reveal stored provider credentials (explicit reveal)' })
+  @ApiOkResponse({ type: ProviderCredentialsRevealDto })
+  revealCredentials(@Param(ID_PARAM, ParseUUIDPipe) uuid: string) {
+    return this.providers.revealCredentials(uuid);
   }
 
   @Get(API_SUB.BY_ID)

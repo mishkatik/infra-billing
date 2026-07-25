@@ -19,16 +19,31 @@ export const providerSchema = z.object({
   servicesCount: z.number().int().nonnegative().describe('Number of services').optional(),
   paymentsCount: z.number().int().nonnegative().describe('Number of payments').optional(),
   // Non-secret credential hints (hostbill/billmgr/selectel/4vps) so the edit form can prefill them.
-  // The password, totpSecret and token are NEVER returned.
+  // Plaintext secrets are NEVER returned here — only presence flags for the edit form mask.
   baseUrl: z.string().describe('API base URL').nullable().optional(),
   username: z.string().describe('Account username').nullable().optional(),
   accountId: z.string().describe('Selectel account number').nullable().optional(),
   projectName: z.string().describe('Cloud project name').nullable().optional(),
   panelId: z.string().describe('Billing panel id').nullable().optional(),
+  hasToken: z.boolean().describe('Stored API token / key present').optional(),
+  hasPassword: z.boolean().describe('Stored account password present').optional(),
+  hasTotpSecret: z.boolean().describe('Stored TOTP secret present').optional(),
+  hasApiPassword: z.boolean().describe('Stored API password present').optional(),
+  hasSecretKey: z.boolean().describe('Stored secret API key present').optional(),
   createdAt: isoDateSchema.describe('Creation time'),
   updatedAt: isoDateSchema.describe('Last update time'),
 });
 export type Provider = z.infer<typeof providerSchema>;
+
+/** Plaintext secrets from an explicit reveal. Not included in list/detail responses. */
+export const providerCredentialsRevealSchema = z.object({
+  token: z.string().optional(),
+  password: z.string().optional(),
+  totpSecret: z.string().optional(),
+  apiPassword: z.string().optional(),
+  secretKey: z.string().optional(),
+});
+export type ProviderCredentialsReveal = z.infer<typeof providerCredentialsRevealSchema>;
 
 // Bearer/API-token providers (timeweb, hetzner, vdsina) use `token`. HostBill/BILLmanager use
 // `baseUrl` + `username` (email) + `password`. BILLmanager with OTP 2FA additionally

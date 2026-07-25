@@ -12,27 +12,66 @@ import {
   IconRobot,
   IconUser,
 } from '@tabler/icons-react';
-import { Fragment, type ReactNode } from 'react';
-import type { YandexDiscover } from '@infra/shared';
-import type { UseFormReturn } from 'react-hook-form';
+import { Fragment, type ReactNode, useCallback, useRef } from 'react';
+import type { ProviderCredentialsReveal, YandexDiscover } from '@infra/shared';
+import { Controller, type UseFormReturn } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { apiErrorMessage } from '@/api/client';
-import { useYandexDiscover } from '@/api/providers';
+import {
+  revealProviderCredentials,
+  type SecretField,
+  useYandexDiscover,
+} from '@/api/providers';
 import { NetcupAuthorizeButton } from '@/components/NetcupAuthorizeButton';
-import { PasswordInput } from '@/components/PasswordInput';
+import { SecretInput } from '@/components/SecretInput';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+import type { StoredSecretFlags } from './ProviderFormFields';
 import type { FormValues } from './providerForm';
 
 interface ProviderCredentialFieldsProps {
   form: UseFormReturn<FormValues>;
-  editing: boolean;
-  // Set in the edit modal so Yandex discovery can reuse the stored key without re-pasting it.
   providerUuid?: string;
+  storedSecrets?: StoredSecretFlags;
+}
+
+function SecretFormField({
+  form,
+  name,
+  id,
+  hasStored,
+  reveal,
+  placeholder,
+  multiline,
+}: {
+  form: UseFormReturn<FormValues>;
+  name: SecretField;
+  id: string;
+  hasStored?: boolean;
+  reveal: (field: SecretField) => Promise<string>;
+  placeholder?: string;
+  multiline?: boolean;
+}) {
+  return (
+    <Controller
+      control={form.control}
+      name={name}
+      render={({ field }) => (
+        <SecretInput
+          id={id}
+          value={field.value}
+          onChange={field.onChange}
+          hasStored={hasStored}
+          onReveal={hasStored ? () => reveal(name) : undefined}
+          placeholder={placeholder}
+          multiline={multiline}
+        />
+      )}
+    />
+  );
 }
 
 /** Field wrapper: label plus an optional description and credential deep link above the input. */
@@ -380,22 +419,29 @@ function isCompleteYandexKey(raw: string): boolean {
   }
 }
 
-// The per-connector credential inputs, switched on the selected kind. Secret inputs use the
-// "keep empty to keep unchanged" placeholder when editing.
 export function ProviderCredentialFields({
   form,
-  editing,
   providerUuid,
+  storedSecrets,
 }: ProviderCredentialFieldsProps) {
   const { t } = useTranslation();
   const kind = form.watch('kind');
-  const keepEmpty = editing ? t('providers.keepEmpty') : '';
-  const keepEmptyOrOptional = editing ? t('providers.keepEmpty') : t('common.optional');
+  const optionalPh = t('common.optional');
+  const revealCache = useRef<{ uuid: string; data: ProviderCredentialsReveal } | null>(null);
+  const reveal = useCallback(
+    async (field: SecretField) => {
+      if (!providerUuid) return '';
+      if (!revealCache.current || revealCache.current.uuid !== providerUuid) {
+        revealCache.current = {
+          uuid: providerUuid,
+          data: await revealProviderCredentials(providerUuid),
+        };
+      }
+      return revealCache.current.data[field] ?? '';
+    },
+    [providerUuid],
+  );
 
-  // Yandex scope badges: the connector auto-resolves the folders it scans for servers and the
-  // billing account it reads, so we just surface them read-only. Resolved from the entered key
-  // (create) or the stored provider (edit, empty field = keep the key unchanged). A keyed query so
-  // the result is cached per input and survives StrictMode's double mount.
   const yandexToken = form.watch('token');
   const yandexBody: YandexDiscover | null =
     kind !== 'yandex'
@@ -426,10 +472,12 @@ export function ProviderCredentialFields({
           <Input id="cred-username" {...form.register('username')} />
         </Field>
         <Field id="cred-password" label={t('providers.field.password')}>
-          <PasswordInput
+          <SecretFormField
+            form={form}
+            name="password"
             id="cred-password"
-            placeholder={keepEmpty}
-            {...form.register('password')}
+            hasStored={storedSecrets?.hasPassword}
+            reveal={reveal}
           />
         </Field>
         <Field
@@ -458,7 +506,13 @@ export function ProviderCredentialFields({
           label={t('providers.field.apiToken')}
           description={t('providers.field.apiTokenDescCloudflare')}
         >
-          <PasswordInput id="cred-token" placeholder={keepEmpty} {...form.register('token')} />
+          <SecretFormField
+            form={form}
+            name="token"
+            id="cred-token"
+            hasStored={storedSecrets?.hasToken}
+            reveal={reveal}
+          />
         </Field>
       </>
     );
@@ -480,10 +534,12 @@ export function ProviderCredentialFields({
           <Input id="cred-username" {...form.register('username')} />
         </Field>
         <Field id="cred-password" label={t('providers.field.password')}>
-          <PasswordInput
+          <SecretFormField
+            form={form}
+            name="password"
             id="cred-password"
-            placeholder={keepEmpty}
-            {...form.register('password')}
+            hasStored={storedSecrets?.hasPassword}
+            reveal={reveal}
           />
         </Field>
         {kind === 'billmgr' && (
@@ -492,10 +548,13 @@ export function ProviderCredentialFields({
             label={t('providers.field.totpSecret')}
             description={t('providers.field.totpSecretDesc')}
           >
-            <PasswordInput
+            <SecretFormField
+              form={form}
+              name="totpSecret"
               id="cred-totp"
-              placeholder={keepEmptyOrOptional}
-              {...form.register('totpSecret')}
+              hasStored={storedSecrets?.hasTotpSecret}
+              reveal={reveal}
+              placeholder={storedSecrets?.hasTotpSecret ? undefined : optionalPh}
             />
           </Field>
         )}
@@ -512,7 +571,13 @@ export function ProviderCredentialFields({
           description={t('providers.field.apiTokenDesc4vps')}
           link="https://4vps.su/dashboard/api"
         >
-          <Input id="cred-token" placeholder={keepEmpty} {...form.register('token')} />
+          <SecretFormField
+            form={form}
+            name="token"
+            id="cred-token"
+            hasStored={storedSecrets?.hasToken}
+            reveal={reveal}
+          />
         </Field>
         <Field
           id="cred-panel-id"
@@ -536,7 +601,13 @@ export function ProviderCredentialFields({
           label={t('providers.field.refreshToken')}
           description={t('providers.field.refreshTokenDescNetcup')}
         >
-          <Input id="cred-token" placeholder={keepEmpty} {...form.register('token')} />
+          <SecretFormField
+            form={form}
+            name="token"
+            id="cred-token"
+            hasStored={storedSecrets?.hasToken}
+            reveal={reveal}
+          />
         </Field>
       </>
     );
@@ -550,7 +621,13 @@ export function ProviderCredentialFields({
         description={t('providers.field.apiTokenDescNetlen')}
         link="https://www.netlen.com.tr/panel/api"
       >
-        <Input id="cred-token" placeholder={keepEmpty} {...form.register('token')} />
+        <SecretFormField
+          form={form}
+          name="token"
+          id="cred-token"
+          hasStored={storedSecrets?.hasToken}
+          reveal={reveal}
+        />
       </Field>
     );
   }
@@ -563,7 +640,13 @@ export function ProviderCredentialFields({
         description={t('providers.field.apiTokenDescVultr')}
         link="https://console.vultr.com/user/apiaccess/"
       >
-        <Input id="cred-token" placeholder={keepEmpty} {...form.register('token')} />
+        <SecretFormField
+          form={form}
+          name="token"
+          id="cred-token"
+          hasStored={storedSecrets?.hasToken}
+          reveal={reveal}
+        />
       </Field>
     );
   }
@@ -576,7 +659,13 @@ export function ProviderCredentialFields({
         description={t('providers.field.apiTokenDescLinode')}
         link="https://cloud.linode.com/profile/tokens"
       >
-        <Input id="cred-token" placeholder={keepEmpty} {...form.register('token')} />
+        <SecretFormField
+          form={form}
+          name="token"
+          id="cred-token"
+          hasStored={storedSecrets?.hasToken}
+          reveal={reveal}
+        />
       </Field>
     );
   }
@@ -589,7 +678,13 @@ export function ProviderCredentialFields({
         description={t('providers.field.apiTokenDescAeza')}
         link="https://my.aeza.net/settings/apikeys"
       >
-        <Input id="cred-token" placeholder={keepEmpty} {...form.register('token')} />
+        <SecretFormField
+          form={form}
+          name="token"
+          id="cred-token"
+          hasStored={storedSecrets?.hasToken}
+          reveal={reveal}
+        />
       </Field>
     );
   }
@@ -602,7 +697,13 @@ export function ProviderCredentialFields({
         description={t('providers.field.apiTokenDescStormwall')}
         link="https://users.stormwall.pro/tokens"
       >
-        <Input id="cred-token" placeholder={keepEmpty} {...form.register('token')} />
+        <SecretFormField
+          form={form}
+          name="token"
+          id="cred-token"
+          hasStored={storedSecrets?.hasToken}
+          reveal={reveal}
+        />
       </Field>
     );
   }
@@ -616,7 +717,13 @@ export function ProviderCredentialFields({
           description={t('providers.field.apiTokenDescVdsina')}
           link="https://cp.vdsina.ru/user/list"
         >
-          <Input id="cred-token" placeholder={keepEmpty} {...form.register('token')} />
+          <SecretFormField
+            form={form}
+            name="token"
+            id="cred-token"
+            hasStored={storedSecrets?.hasToken}
+            reveal={reveal}
+          />
         </Field>
         <Field
           id="cred-base-url"
@@ -644,10 +751,12 @@ export function ProviderCredentialFields({
           <Input id="cred-username" {...form.register('username')} />
         </Field>
         <Field id="cred-password" label={t('providers.field.password')}>
-          <PasswordInput
+          <SecretFormField
+            form={form}
+            name="password"
             id="cred-password"
-            placeholder={keepEmpty}
-            {...form.register('password')}
+            hasStored={storedSecrets?.hasPassword}
+            reveal={reveal}
           />
         </Field>
         <Field
@@ -655,10 +764,13 @@ export function ProviderCredentialFields({
           label={t('providers.field.totpSecret')}
           description={t('providers.field.totpSecretDesc')}
         >
-          <PasswordInput
+          <SecretFormField
+            form={form}
+            name="totpSecret"
             id="cred-totp"
-            placeholder={keepEmptyOrOptional}
-            {...form.register('totpSecret')}
+            hasStored={storedSecrets?.hasTotpSecret}
+            reveal={reveal}
+            placeholder={storedSecrets?.hasTotpSecret ? undefined : optionalPh}
           />
         </Field>
         <Field
@@ -667,10 +779,13 @@ export function ProviderCredentialFields({
           description={t('providers.field.begetApiPasswordDesc')}
           link="https://cp.beget.com/settings/security/api"
         >
-          <PasswordInput
+          <SecretFormField
+            form={form}
+            name="apiPassword"
             id="cred-api-password"
-            placeholder={keepEmptyOrOptional}
-            {...form.register('apiPassword')}
+            hasStored={storedSecrets?.hasApiPassword}
+            reveal={reveal}
+            placeholder={storedSecrets?.hasApiPassword ? undefined : optionalPh}
           />
         </Field>
       </>
@@ -693,10 +808,12 @@ export function ProviderCredentialFields({
           <Input id="cred-username" {...form.register('username')} />
         </Field>
         <Field id="cred-password" label={t('providers.field.password')}>
-          <PasswordInput
+          <SecretFormField
+            form={form}
+            name="password"
             id="cred-password"
-            placeholder={keepEmpty}
-            {...form.register('password')}
+            hasStored={storedSecrets?.hasPassword}
+            reveal={reveal}
           />
         </Field>
         <Field
@@ -708,10 +825,13 @@ export function ProviderCredentialFields({
             </div>
           }
         >
-          <PasswordInput
+          <SecretFormField
+            form={form}
+            name="totpSecret"
             id="cred-totp"
-            placeholder={keepEmptyOrOptional}
-            {...form.register('totpSecret')}
+            hasStored={storedSecrets?.hasTotpSecret}
+            reveal={reveal}
+            placeholder={storedSecrets?.hasTotpSecret ? undefined : optionalPh}
           />
         </Field>
       </>
@@ -727,13 +847,21 @@ export function ProviderCredentialFields({
           description={t('providers.field.porkbunApiKeyDesc')}
           link="https://porkbun.com/account/api"
         >
-          <Input id="cred-token" placeholder={keepEmpty} {...form.register('token')} />
+          <SecretFormField
+            form={form}
+            name="token"
+            id="cred-token"
+            hasStored={storedSecrets?.hasToken}
+            reveal={reveal}
+          />
         </Field>
         <Field id="cred-secret-key" label={t('providers.field.porkbunSecretKey')}>
-          <PasswordInput
+          <SecretFormField
+            form={form}
+            name="secretKey"
             id="cred-secret-key"
-            placeholder={keepEmpty}
-            {...form.register('secretKey')}
+            hasStored={storedSecrets?.hasSecretKey}
+            reveal={reveal}
           />
         </Field>
       </>
@@ -758,16 +886,18 @@ export function ProviderCredentialFields({
             </>
           }
         >
-          <Textarea
+          <SecretFormField
+            form={form}
+            name="token"
             id="cred-token"
-            rows={7}
-            className="font-mono text-xs"
+            hasStored={storedSecrets?.hasToken}
+            reveal={reveal}
+            multiline
             placeholder={
-              editing
-                ? t('providers.keepEmpty')
+              storedSecrets?.hasToken
+                ? undefined
                 : '{\n  "id": "...",\n  "service_account_id": "...",\n  "key_algorithm": "...",\n  "public_key": "...",\n  "private_key": "..."\n}'
             }
-            {...form.register('token')}
           />
         </Field>
         <div className="space-y-2">
@@ -845,7 +975,13 @@ export function ProviderCredentialFields({
           </div>
         }
       >
-        <Input id="cred-token" placeholder={keepEmpty} {...form.register('token')} />
+        <SecretFormField
+          form={form}
+          name="token"
+          id="cred-token"
+          hasStored={storedSecrets?.hasToken}
+          reveal={reveal}
+        />
       </Field>
     );
   }
@@ -870,7 +1006,13 @@ export function ProviderCredentialFields({
           </div>
         }
       >
-        <Input id="cred-token" placeholder={keepEmpty} {...form.register('token')} />
+        <SecretFormField
+          form={form}
+          name="token"
+          id="cred-token"
+          hasStored={storedSecrets?.hasToken}
+          reveal={reveal}
+        />
       </Field>
     );
   }
@@ -879,7 +1021,13 @@ export function ProviderCredentialFields({
 
   return (
     <Field id="cred-token" label={t('providers.field.apiToken')}>
-      <Input id="cred-token" placeholder={keepEmpty} {...form.register('token')} />
+      <SecretFormField
+        form={form}
+        name="token"
+        id="cred-token"
+        hasStored={storedSecrets?.hasToken}
+        reveal={reveal}
+      />
     </Field>
   );
 }

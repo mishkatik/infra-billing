@@ -93,6 +93,13 @@ export function ProviderDetailModal({
                 editing
                 kindOptions={kindOptions}
                 providerUuid={shown.uuid}
+                storedSecrets={{
+                  hasToken: shown.hasToken,
+                  hasPassword: shown.hasPassword,
+                  hasTotpSecret: shown.hasTotpSecret,
+                  hasApiPassword: shown.hasApiPassword,
+                  hasSecretKey: shown.hasSecretKey,
+                }}
               />
             </form>
 

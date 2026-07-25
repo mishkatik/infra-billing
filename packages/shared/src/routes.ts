@@ -48,6 +48,7 @@ export const API_SUB = {
   PROVIDER_SYNC: `${ID}/sync`,
   PROVIDER_SYNC_RUNS: `${ID}/sync-runs`,
   PROVIDER_BALANCE_HISTORY: `${ID}/balance-history`,
+  PROVIDER_CREDENTIALS_REVEAL: `${ID}/credentials/reveal`,
   // netcup OAuth2 device flow (in-panel token acquisition).
   PROVIDER_NETCUP_DEVICE_START: 'netcup/device/start',
   PROVIDER_NETCUP_DEVICE_POLL: 'netcup/device/poll',
@@ -90,6 +91,8 @@ export const API_PATH = {
     SYNC_RUNS: (uuid: string) => pathId(API.PROVIDERS, API_SUB.PROVIDER_SYNC_RUNS, uuid),
     BALANCE_HISTORY: (uuid: string) =>
       pathId(API.PROVIDERS, API_SUB.PROVIDER_BALANCE_HISTORY, uuid),
+    CREDENTIALS_REVEAL: (uuid: string) =>
+      pathId(API.PROVIDERS, API_SUB.PROVIDER_CREDENTIALS_REVEAL, uuid),
     NETCUP_DEVICE_START: path(API.PROVIDERS, API_SUB.PROVIDER_NETCUP_DEVICE_START),
     NETCUP_DEVICE_POLL: path(API.PROVIDERS, API_SUB.PROVIDER_NETCUP_DEVICE_POLL),
     YANDEX_DISCOVER: path(API.PROVIDERS, API_SUB.PROVIDER_YANDEX_DISCOVER),

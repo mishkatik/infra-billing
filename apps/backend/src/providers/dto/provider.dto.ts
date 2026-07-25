@@ -4,6 +4,7 @@ import {
   netcupDevicePollResultSchema,
   netcupDevicePollSchema,
   netcupDeviceStartSchema,
+  providerCredentialsRevealSchema,
   providerSchema,
   serviceSchema,
   updateProviderSchema,
@@ -22,5 +23,6 @@ export class ProviderDto extends createZodDto(providerSchema) {}
 export class ProviderWithServicesDto extends createZodDto(
   providerSchema.extend({ services: z.array(serviceSchema) }),
 ) {}
+export class ProviderCredentialsRevealDto extends createZodDto(providerCredentialsRevealSchema) {}
 export class NetcupDeviceStartDto extends createZodDto(netcupDeviceStartSchema) {}
 export class NetcupDevicePollResultDto extends createZodDto(netcupDevicePollResultSchema) {}

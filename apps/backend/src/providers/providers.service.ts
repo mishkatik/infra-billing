@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { Prisma } from '@generated/prisma/client';
 import {
   Provider as ProviderDto,
+  ProviderCredentialsReveal,
   Service as ServiceDto,
   YandexDiscoverResult,
 } from '@infra/shared';
@@ -35,42 +36,172 @@ export class ProvidersService {
     return { ...dto, services: p.services.map(mapService) };
   }
 
-  /** Expose non-secret credential fields (baseUrl/username/accountId) for the edit form. */
+  /** Expose non-secret hints + secret-presence flags for the edit form (never plaintext). */
   private withCredentialHints(dto: ProviderDto, kind: string, enc: Uint8Array | null): ProviderDto {
+    return {
+      ...dto,
+      ...this.nonSecretHints(kind, enc),
+      ...this.secretPresence(kind, enc),
+    };
+  }
+
+  private nonSecretHints(
+    kind: string,
+    enc: Uint8Array | null,
+  ): Partial<ProviderDto> {
     if (kind === 'selectel') {
       const c = this.decodeCredentials(enc);
-      // Never expose the password.
       return {
-        ...dto,
         accountId: c.accountId ?? null,
         username: c.username ?? null,
         projectName: c.projectName ?? null,
       };
     }
     if (kind === '4vps') {
-      // Never expose the token; panelId is a non-secret hint.
       const c = this.decodeCredentials(enc);
-      return { ...dto, panelId: c.panelId ?? null };
+      return { panelId: c.panelId ?? null };
     }
     if (kind === 'vdsina') {
-      // Never expose the token; the branch base URL is a non-secret hint.
       const c = this.decodeCredentials(enc);
-      return { ...dto, baseUrl: c.baseUrl ?? null };
+      return { baseUrl: c.baseUrl ?? null };
     }
     if (kind === 'beget' || kind === 'doubleservers') {
-      // Only the login/email is a non-secret hint; never expose password/totpSecret/apiPassword.
       const c = this.decodeCredentials(enc);
-      return { ...dto, username: c.username ?? null };
+      return { username: c.username ?? null };
     }
     if (kind === 'cloudflare') {
-      // accountId is a non-secret hint; never expose the apiToken.
       const c = this.decodeCredentials(enc);
-      return { ...dto, accountId: c.accountId ?? null };
+      return { accountId: c.accountId ?? null };
     }
-    if (kind !== 'hostbill' && kind !== 'billmgr') return dto;
+    if (kind === 'hostbill' || kind === 'billmgr') {
+      const c = this.decodeCredentials(enc);
+      return { baseUrl: c.baseUrl ?? null, username: c.username ?? null };
+    }
+    return {};
+  }
+
+  private secretPresence(kind: string, enc: Uint8Array | null): Partial<ProviderDto> {
+    if (kind === 'manual' || !enc) {
+      return {
+        hasToken: false,
+        hasPassword: false,
+        hasTotpSecret: false,
+        hasApiPassword: false,
+        hasSecretKey: false,
+      };
+    }
+    if (
+      kind === 'timeweb' ||
+      kind === 'hetzner' ||
+      kind === 'netcup' ||
+      kind === 'netlen' ||
+      kind === 'vultr' ||
+      kind === 'linode' ||
+      kind === 'aeza' ||
+      kind === 'stormwall'
+    ) {
+      return { hasToken: true };
+    }
     const c = this.decodeCredentials(enc);
-    // Never expose password/totpSecret.
-    return { ...dto, baseUrl: c.baseUrl ?? null, username: c.username ?? null };
+    if (kind === '4vps' || kind === 'vdsina') return { hasToken: Boolean(c.token) };
+    if (kind === 'cloudflare') return { hasToken: Boolean(c.apiToken) };
+    if (kind === 'porkbun') {
+      return { hasToken: Boolean(c.apiKey), hasSecretKey: Boolean(c.secretApiKey) };
+    }
+    if (kind === 'yandex') {
+      return { hasToken: Boolean(c.keyId && c.serviceAccountId && c.privateKey) };
+    }
+    if (kind === 'selectel' || kind === 'hostbill') {
+      return { hasPassword: Boolean(c.password) };
+    }
+    if (kind === 'billmgr') {
+      return { hasPassword: Boolean(c.password), hasTotpSecret: Boolean(c.totpSecret) };
+    }
+    if (kind === 'beget') {
+      return {
+        hasPassword: Boolean(c.password),
+        hasTotpSecret: Boolean(c.totpSecret),
+        hasApiPassword: Boolean(c.apiPassword),
+      };
+    }
+    if (kind === 'doubleservers') {
+      return { hasPassword: Boolean(c.password), hasTotpSecret: Boolean(c.totpSecret) };
+    }
+    return { hasToken: true };
+  }
+
+  /** Decrypt stored secrets for an explicit reveal (edit form eye toggle). */
+  async revealCredentials(uuid: string): Promise<ProviderCredentialsReveal> {
+    const existing = await this.providers.findCredentials(uuid);
+    if (!existing) throw new NotFoundException('Provider not found');
+    const { kind, credentialsEnc: enc } = existing;
+    if (!enc || kind === 'manual') return {};
+
+    if (
+      kind === 'timeweb' ||
+      kind === 'hetzner' ||
+      kind === 'netcup' ||
+      kind === 'netlen' ||
+      kind === 'vultr' ||
+      kind === 'linode' ||
+      kind === 'aeza' ||
+      kind === 'stormwall'
+    ) {
+      const token = this.decryptRaw(enc);
+      return token ? { token } : {};
+    }
+
+    const c = this.decodeCredentials(enc);
+    if (kind === '4vps' || kind === 'vdsina') {
+      return c.token ? { token: c.token } : {};
+    }
+    if (kind === 'cloudflare') {
+      return c.apiToken ? { token: c.apiToken } : {};
+    }
+    if (kind === 'porkbun') {
+      const out: ProviderCredentialsReveal = {};
+      if (c.apiKey) out.token = c.apiKey;
+      if (c.secretApiKey) out.secretKey = c.secretApiKey;
+      return out;
+    }
+    if (kind === 'yandex') {
+      if (!c.keyId || !c.serviceAccountId || !c.privateKey) return {};
+      return {
+        token: JSON.stringify(
+          {
+            id: c.keyId,
+            service_account_id: c.serviceAccountId,
+            private_key: c.privateKey,
+          },
+          null,
+          2,
+        ),
+      };
+    }
+    if (kind === 'selectel' || kind === 'hostbill') {
+      return c.password ? { password: c.password } : {};
+    }
+    if (kind === 'billmgr') {
+      const out: ProviderCredentialsReveal = {};
+      if (c.password) out.password = c.password;
+      if (c.totpSecret) out.totpSecret = c.totpSecret;
+      return out;
+    }
+    if (kind === 'beget') {
+      const out: ProviderCredentialsReveal = {};
+      if (c.password) out.password = c.password;
+      if (c.totpSecret) out.totpSecret = c.totpSecret;
+      if (c.apiPassword) out.apiPassword = c.apiPassword;
+      return out;
+    }
+    if (kind === 'doubleservers') {
+      const out: ProviderCredentialsReveal = {};
+      if (c.password) out.password = c.password;
+      if (c.totpSecret) out.totpSecret = c.totpSecret;
+      return out;
+    }
+    const token = this.decryptRaw(enc);
+    return token ? { token } : {};
   }
 
   async create(dto: CreateProviderDto): Promise<ProviderDto> {
@@ -335,6 +466,15 @@ export class ProvidersService {
       return JSON.parse(this.crypto.decrypt(enc)) as Record<string, string>;
     } catch {
       return {};
+    }
+  }
+
+  private decryptRaw(enc: Uint8Array): string | null {
+    try {
+      const raw = this.crypto.decrypt(enc);
+      return raw || null;
+    } catch {
+      return null;
     }
   }
 

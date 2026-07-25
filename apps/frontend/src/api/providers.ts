@@ -4,6 +4,7 @@ import type {
   NetcupDevicePollResult,
   NetcupDeviceStart,
   Provider,
+  ProviderCredentialsReveal,
   SyncRun,
   UpdateProvider,
   YandexDiscover,
@@ -13,6 +14,15 @@ import { api } from './client';
 import { API_PATH } from '@infra/shared';
 
 const KEY = ['providers'];
+
+export type SecretField = keyof ProviderCredentialsReveal;
+
+export async function revealProviderCredentials(
+  uuid: string,
+): Promise<ProviderCredentialsReveal> {
+  return (await api.get<ProviderCredentialsReveal>(API_PATH.PROVIDERS.CREDENTIALS_REVEAL(uuid)))
+    .data;
+}
 
 export function useProviders() {
   return useQuery({
