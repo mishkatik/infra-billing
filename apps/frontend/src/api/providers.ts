@@ -17,9 +17,7 @@ const KEY = ['providers'];
 
 export type SecretField = keyof ProviderCredentialsReveal;
 
-export async function revealProviderCredentials(
-  uuid: string,
-): Promise<ProviderCredentialsReveal> {
+export async function revealProviderCredentials(uuid: string): Promise<ProviderCredentialsReveal> {
   return (await api.get<ProviderCredentialsReveal>(API_PATH.PROVIDERS.CREDENTIALS_REVEAL(uuid)))
     .data;
 }

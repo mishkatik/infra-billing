@@ -45,10 +45,7 @@ export class ProvidersService {
     };
   }
 
-  private nonSecretHints(
-    kind: string,
-    enc: Uint8Array | null,
-  ): Partial<ProviderDto> {
+  private nonSecretHints(kind: string, enc: Uint8Array | null): Partial<ProviderDto> {
     if (kind === 'selectel') {
       const c = this.decodeCredentials(enc);
       return {

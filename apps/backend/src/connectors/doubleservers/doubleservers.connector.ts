@@ -124,7 +124,8 @@ export class DoubleServersConnector implements Connector {
     if (res.status >= 400) throw new Error(loginErrorMessage(data));
     if (data.totp_required) return data;
     const token = extractAccessToken(res.headers['set-cookie']);
-    if (!token) throw new Error('Double Servers: login succeeded but no access_token cookie was set');
+    if (!token)
+      throw new Error('Double Servers: login succeeded but no access_token cookie was set');
     this.token = token;
     return data;
   }
