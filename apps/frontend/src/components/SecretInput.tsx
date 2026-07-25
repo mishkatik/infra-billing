@@ -33,7 +33,8 @@ export function SecretInput({
   const [visible, setVisible] = useState(false);
   const [revealing, setRevealing] = useState(false);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const masked = Boolean(hasStored && !value);
+  // Fixed-length mask whenever a stored secret is hidden (never mirror real length).
+  const showMask = Boolean(hasStored && !visible);
 
   useEffect(() => {
     return () => {
@@ -47,17 +48,22 @@ export function SecretInput({
   };
 
   const toggle = async () => {
-    if (masked) {
-      if (!onReveal || revealing) return;
-      setRevealing(true);
-      try {
-        const secret = await onReveal();
-        onChange?.(secret);
-        setVisible(true);
-        scheduleHide();
-      } finally {
-        setRevealing(false);
+    if (showMask) {
+      if (!value) {
+        if (!onReveal || revealing) return;
+        setRevealing(true);
+        try {
+          const secret = await onReveal();
+          onChange?.(secret);
+          setVisible(true);
+          scheduleHide();
+        } finally {
+          setRevealing(false);
+        }
+        return;
       }
+      setVisible(true);
+      scheduleHide();
       return;
     }
     setVisible((v) => {
@@ -72,9 +78,12 @@ export function SecretInput({
     <button
       type="button"
       tabIndex={-1}
-      disabled={disabled || revealing || (masked && !onReveal)}
+      disabled={disabled || revealing || (showMask && !value && !onReveal)}
       aria-label={visible ? 'hide secret' : 'show secret'}
-      className="absolute inset-y-0 right-0 flex w-9 items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-50"
+      className={cn(
+        'absolute right-0 flex w-9 items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-50',
+        multiline && value && visible ? 'top-0 h-9' : 'inset-y-0',
+      )}
       onClick={() => void toggle()}
     >
       {revealing ? (
@@ -93,7 +102,12 @@ export function SecretInput({
         <Textarea
           id={inputId}
           rows={7}
-          className={cn('pr-9 font-mono text-xs', className)}
+          wrap="off"
+          spellCheck={false}
+          className={cn(
+            'overflow-x-auto pr-9 font-mono text-xs whitespace-pre [field-sizing:fixed]',
+            className,
+          )}
           value={value}
           disabled={disabled}
           autoComplete="off"
@@ -108,14 +122,14 @@ export function SecretInput({
     <div className="relative">
       <Input
         id={inputId}
-        type={masked ? 'text' : visible ? 'text' : 'password'}
+        type={showMask ? 'text' : visible ? 'text' : 'password'}
         className={cn('pr-9', multiline && 'font-mono text-xs', className)}
-        value={masked ? MASK : value}
-        readOnly={masked}
+        value={showMask ? MASK : value}
+        readOnly={showMask}
         disabled={disabled}
-        placeholder={masked ? undefined : placeholder}
+        placeholder={showMask ? undefined : placeholder}
         autoComplete="off"
-        onChange={masked ? undefined : (e) => onChange?.(e.target.value)}
+        onChange={showMask ? undefined : (e) => onChange?.(e.target.value)}
         {...rest}
       />
       {eye}
