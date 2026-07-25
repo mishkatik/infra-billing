@@ -473,6 +473,39 @@ export function ProviderCredentialFields({
     );
   }
 
+  if (kind === 'doubleservers') {
+    return (
+      <>
+        <Field
+          id="cred-username"
+          label={t('providers.field.loginEmail')}
+          description={t('providers.field.doubleserversEmailDesc')}
+          link="https://doubleservers.com/login"
+        >
+          <Input id="cred-username" type="email" {...form.register('username')} />
+        </Field>
+        <Field id="cred-password" label={t('providers.field.password')}>
+          <PasswordInput
+            id="cred-password"
+            placeholder={keepEmpty}
+            {...form.register('password')}
+          />
+        </Field>
+        <Field
+          id="cred-totp"
+          label={t('providers.field.totpSecret')}
+          description={t('providers.field.totpSecretDesc')}
+        >
+          <PasswordInput
+            id="cred-totp"
+            placeholder={keepEmptyOrOptional}
+            {...form.register('totpSecret')}
+          />
+        </Field>
+      </>
+    );
+  }
+
   if (kind === 'porkbun') {
     return (
       <>

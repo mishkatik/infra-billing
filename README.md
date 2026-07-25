@@ -211,6 +211,10 @@ curl -H "Authorization: Bearer ib_…" https://infra-billing/api/providers
 - **StormWall** — API-ключ (личный кабинет → API-ключ). DDoS-защита/WAF: баланса, цен и платежей
   в API нет вообще (услуги вводятся с ценой вручную) — тянет только список услуг (`/v3/services`),
   для защищённых доменов — их реальное имя.
+- **Double Servers** — email + пароль от ЛК (`doubleservers.com/login`). Опц. TOTP-секрет, если
+  включена 2FA по приложению. Тянет баланс (EUR), VPS (цена, дата продления `expires_at`) и
+  историю: пополнения (`/api/billing/history`) + списания по серверам (`/api/servers/{id}/history`).
+  Публичного API-токена нет — синк логинится в панель.
 - **Manual** — без API, всё вводится руками.
 
 ## Telegram-уведомления

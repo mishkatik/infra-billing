@@ -35,6 +35,7 @@ const PROVIDER_KINDS: ProviderKind[] = [
   'cloudflare',
   'stormwall',
   'yandex',
+  'doubleservers',
   'manual',
 ];
 

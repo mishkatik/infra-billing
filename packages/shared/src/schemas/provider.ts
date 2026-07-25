@@ -35,6 +35,7 @@ export type Provider = z.infer<typeof providerSchema>;
 // takes `totpSecret` (the base32 seed) so the backend can generate one-time codes.
 // Beget uses `username` (account login) + `password` (Cloud API), plus optional `totpSecret`
 // (OTP 2FA) and `apiPassword` (the separate panel API password, enables the balance lookup).
+// Double Servers uses `username` (email) + `password`, plus optional `totpSecret` (OTP 2FA).
 // None are ever echoed back.
 const credentialFields = {
   token: z.string().min(1).describe('API token').optional(),

@@ -57,8 +57,8 @@ export class ProvidersService {
       const c = this.decodeCredentials(enc);
       return { ...dto, baseUrl: c.baseUrl ?? null };
     }
-    if (kind === 'beget') {
-      // Only the login is a non-secret hint; never expose password/totpSecret/apiPassword.
+    if (kind === 'beget' || kind === 'doubleservers') {
+      // Only the login/email is a non-secret hint; never expose password/totpSecret/apiPassword.
       const c = this.decodeCredentials(enc);
       return { ...dto, username: c.username ?? null };
     }
@@ -202,6 +202,21 @@ export class ProvidersService {
       if (totpSecret) creds.totpSecret = totpSecret;
       const apiPassword = dto.apiPassword ?? base.apiPassword;
       if (apiPassword) creds.apiPassword = apiPassword;
+      return this.crypto.encrypt(JSON.stringify(creds));
+    }
+    if (kind === 'doubleservers') {
+      // JSON { username (email), password, totpSecret? }; merge so a partial edit works.
+      const supplied = dto.username || dto.password || dto.totpSecret;
+      if (!supplied) return null;
+      const base = this.decodeCredentials(existingEnc);
+      const username = dto.username ?? base.username;
+      const password = dto.password ?? base.password;
+      if (!username || !password) {
+        throw new BadRequestException('Provide the Double Servers email and password together');
+      }
+      const creds: Record<string, string> = { username, password };
+      const totpSecret = dto.totpSecret ?? base.totpSecret;
+      if (totpSecret) creds.totpSecret = totpSecret;
       return this.crypto.encrypt(JSON.stringify(creds));
     }
     if (kind === 'cloudflare') {

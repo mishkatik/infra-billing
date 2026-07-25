@@ -38,6 +38,7 @@ export const DEFAULT_LOGIN_URLS: Record<string, string> = {
   cloudflare: 'https://dash.cloudflare.com',
   porkbun: 'https://porkbun.com/account',
   yandex: 'https://console.yandex.cloud',
+  doubleservers: 'https://doubleservers.com/dashboard',
 };
 
 export const EMPTY_FORM: FormValues = {
@@ -67,6 +68,8 @@ export function validateProviderCredentials(v: FormValues, t: TFunction): string
   if (v.kind === '4vps' && !v.token) return t('providers.err.vps4Token');
   if (v.kind === 'netcup' && !v.token) return t('providers.err.netcupToken');
   if (v.kind === 'beget' && !(v.username && v.password)) return t('providers.err.begetCreds');
+  if (v.kind === 'doubleservers' && !(v.username && v.password))
+    return t('providers.err.doubleserversCreds');
   if (v.kind === 'vultr' && !v.token) return t('providers.err.vultrToken');
   if (v.kind === 'porkbun' && !(v.token && v.secretKey)) return t('providers.err.porkbunCreds');
   if (v.kind === 'linode' && !v.token) return t('providers.err.linodeToken');

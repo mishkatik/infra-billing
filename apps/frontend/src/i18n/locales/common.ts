@@ -135,6 +135,7 @@ export const common = {
         vdsina: 'VDSina',
         cloudflare: 'Cloudflare',
         stormwall: 'StormWall',
+        doubleservers: 'Double Servers',
         manual: 'Manual',
       },
       rateSource: {
@@ -277,6 +278,7 @@ export const common = {
         vdsina: 'VDSina',
         cloudflare: 'Cloudflare',
         stormwall: 'StormWall',
+        doubleservers: 'Double Servers',
         manual: 'Ручной',
       },
       rateSource: {

@@ -100,6 +100,7 @@ export const providers = {
       begetApiPassword: 'API password (optional, for balance)',
       begetApiPasswordDesc:
         'Separate "Beget API" password from the panel (Account → Security → Beget API) — enables balance sync',
+      doubleserversEmailDesc: 'Email used to sign in at doubleservers.com/login',
       porkbunApiKey: 'API key',
       porkbunApiKeyDesc: 'Porkbun → Account → API Access → create an API key',
       porkbunSecretKey: 'Secret API key',
@@ -116,6 +117,7 @@ export const providers = {
       vps4Token: 'Enter the 4VPS API token',
       netcupToken: 'Authorize via netcup or paste a refresh token',
       begetCreds: 'Enter the Beget login and password',
+      doubleserversCreds: 'Enter the Double Servers email and password',
       vultrToken: 'Enter the Vultr API key',
       porkbunCreds: 'Enter the Porkbun API key and secret key',
       linodeToken: 'Enter the Linode API token',
@@ -247,6 +249,7 @@ export const providers = {
       begetApiPassword: 'API-пароль (необязательно, для баланса)',
       begetApiPasswordDesc:
         'Отдельный пароль «Beget API» из панели (Аккаунт → Безопасность → Beget API) — включает синк баланса',
+      doubleserversEmailDesc: 'Email для входа на doubleservers.com/login',
       porkbunApiKey: 'API-ключ',
       porkbunApiKeyDesc: 'Porkbun → Account → API Access → создать API-ключ',
       porkbunSecretKey: 'Секретный API-ключ',
@@ -263,6 +266,7 @@ export const providers = {
       vps4Token: 'Укажите API-токен 4VPS',
       netcupToken: 'Авторизуйтесь через netcup или вставьте refresh-токен',
       begetCreds: 'Укажите логин и пароль Beget',
+      doubleserversCreds: 'Укажите email и пароль Double Servers',
       vultrToken: 'Укажите API-ключ Vultr',
       porkbunCreds: 'Укажите API-ключ и секретный ключ Porkbun',
       linodeToken: 'Укажите API-токен Linode',
