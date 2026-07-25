@@ -15,12 +15,21 @@ import {
 import { ProviderCredentialFields } from './ProviderCredentialFields';
 import { DEFAULT_LOGIN_URLS, type FormValues } from './providerForm';
 
+export type StoredSecretFlags = {
+  hasToken?: boolean;
+  hasPassword?: boolean;
+  hasTotpSecret?: boolean;
+  hasApiPassword?: boolean;
+  hasSecretKey?: boolean;
+};
+
 interface ProviderFormFieldsProps {
   form: UseFormReturn<FormValues>;
   editing: boolean;
   kindOptions: { value: string; label: string }[];
   // Passed in edit mode so Yandex discovery can reuse the stored key.
   providerUuid?: string;
+  storedSecrets?: StoredSecretFlags;
 }
 
 // The provider form body, shared by the create modal and the detail modal (editing mode).
@@ -29,6 +38,7 @@ export function ProviderFormFields({
   editing,
   kindOptions,
   providerUuid,
+  storedSecrets,
 }: ProviderFormFieldsProps) {
   const { t } = useTranslation();
   const nameError = form.formState.errors.name;
@@ -132,7 +142,11 @@ export function ProviderFormFields({
       {/* Manual providers have no credentials — skip the empty section shell. */}
       {kind !== 'manual' && (
         <FormSection icon={IconKey} title={t('providers.section.credentials')}>
-          <ProviderCredentialFields form={form} editing={editing} providerUuid={providerUuid} />
+          <ProviderCredentialFields
+            form={form}
+            providerUuid={providerUuid}
+            storedSecrets={storedSecrets}
+          />
         </FormSection>
       )}
     </>

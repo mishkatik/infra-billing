@@ -9,6 +9,8 @@ import type { BillmgrCredentials } from './billmgr/billmgr.types';
 import { CloudflareConnector } from './cloudflare/cloudflare.connector';
 import type { CloudflareCredentials } from './cloudflare/cloudflare.types';
 import { Connector } from './connector.interface';
+import { DoubleServersConnector } from './doubleservers/doubleservers.connector';
+import type { DoubleServersCredentials } from './doubleservers/doubleservers.types';
 import { HetznerConnector } from './hetzner/hetzner.connector';
 import { HostbillConnector } from './hostbill/hostbill.connector';
 import type { HostbillCredentials } from './hostbill/hostbill.types';
@@ -85,6 +87,9 @@ export class ConnectorFactory {
         // Yandex Cloud secret is JSON: { keyId, serviceAccountId, privateKey, folderId?,
         // billingAccountId? }, normalized from the service-account authorized key.
         return new YandexConnector(JSON.parse(token) as YandexCredentials);
+      case 'doubleservers':
+        // Double Servers secret is JSON: { username (email), password, totpSecret? }.
+        return new DoubleServersConnector(JSON.parse(token) as DoubleServersCredentials);
       default:
         throw new Error(`Connector for kind="${kind}" is not supported`);
     }

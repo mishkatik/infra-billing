@@ -70,7 +70,7 @@ export function ProvidersPage() {
       name: p.name,
       kind: p.kind,
       loginUrl: p.loginUrl ?? '',
-      // Non-secret fields are prefilled; password/totpSecret stay blank ("keep unchanged").
+      // Non-secret fields are prefilled; secrets stay blank until reveal-on-demand.
       baseUrl: p.baseUrl ?? '',
       username: p.username ?? '',
       accountId: p.accountId ?? '',
