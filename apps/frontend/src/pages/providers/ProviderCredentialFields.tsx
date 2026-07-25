@@ -2,12 +2,15 @@ import {
   type Icon,
   IconCircles,
   IconCrown,
+  IconDeviceMobile,
   IconExternalLink,
   IconGridDots,
   IconKey,
+  IconMail,
   IconPlus,
   IconRefresh,
   IconRobot,
+  IconUser,
 } from '@tabler/icons-react';
 import { Fragment, type ReactNode } from 'react';
 import type { YandexDiscover } from '@infra/shared';
@@ -284,6 +287,84 @@ function renderHzStep(text: string): ReactNode {
   }
   if (last < text.length) {
     parts.push(<Fragment key={key++}>{linkifyHetzner(text.slice(last))}</Fragment>);
+  }
+  return parts;
+}
+
+const DS_NAV = new Set(['Profile', 'Authenticator app']);
+const DS_SECTION = new Set(['BACKUP LOGIN VIA EMAIL']);
+const DS_PRIMARY = new Set(['Attach email', 'Confirm']);
+const DS_OUTLINE = new Set(['Connect']);
+const DS_ICON: Record<string, Icon> = {
+  Profile: IconUser,
+  'BACKUP LOGIN VIA EMAIL': IconMail,
+  'Authenticator app': IconDeviceMobile,
+};
+
+function linkifyDoubleServers(text: string): ReactNode {
+  const marker = 'doubleservers.com';
+  const idx = text.indexOf(marker);
+  if (idx === -1) return text;
+  return (
+    <>
+      {text.slice(0, idx)}
+      <a
+        href="https://doubleservers.com/dashboard/profile"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-brand underline underline-offset-4 hover:no-underline"
+      >
+        {marker}
+      </a>
+      {text.slice(idx + marker.length)}
+    </>
+  );
+}
+
+function dsTokenClass(label: string): string {
+  if (DS_PRIMARY.has(label)) return 'rounded-full bg-white text-black';
+  if (DS_OUTLINE.has(label))
+    return 'rounded-full bg-[#141414] text-[#c8c8c8] ring-1 ring-[#3a3a3a] ring-inset';
+  if (DS_SECTION.has(label))
+    return 'rounded-md bg-[#141414] text-[#c8c8c8] ring-1 ring-[#3a3a3a] ring-inset';
+  if (DS_NAV.has(label))
+    return 'rounded-md bg-[#141414] text-white ring-1 ring-[#3a3a3a] ring-inset';
+  return 'rounded-md bg-white/[0.07] text-foreground ring-1 ring-white/10 ring-inset';
+}
+
+function DsToken({ label }: { label: string }) {
+  const LabelIcon = DS_ICON[label];
+  return (
+    <span
+      className={cn(
+        'mx-0.5 inline-flex items-center gap-1 px-1.5 py-0.5 align-middle text-[0.8em] font-medium leading-none whitespace-nowrap',
+        dsTokenClass(label),
+      )}
+    >
+      {LabelIcon && <LabelIcon className="size-3 shrink-0" />}
+      {label}
+    </span>
+  );
+}
+
+function renderDsStep(text: string): ReactNode {
+  const parts: ReactNode[] = [];
+  const re = /"([^"]+)"/g;
+  let last = 0;
+  let key = 0;
+  let m: RegExpExecArray | null = re.exec(text);
+  while (m !== null) {
+    if (m.index > last) {
+      parts.push(
+        <Fragment key={key++}>{linkifyDoubleServers(text.slice(last, m.index))}</Fragment>,
+      );
+    }
+    parts.push(<DsToken key={key++} label={m[1]} />);
+    last = m.index + m[0].length;
+    m = re.exec(text);
+  }
+  if (last < text.length) {
+    parts.push(<Fragment key={key++}>{linkifyDoubleServers(text.slice(last))}</Fragment>);
   }
   return parts;
 }
@@ -602,10 +683,14 @@ export function ProviderCredentialFields({
         <Field
           id="cred-username"
           label={t('providers.field.loginEmail')}
-          description={t('providers.field.doubleserversEmailDesc')}
-          link="https://doubleservers.com/login"
+          description={
+            <div className="space-y-1.5 text-sm leading-7">
+              <p>{renderDsStep(t('providers.field.doubleserversSetupStep1'))}</p>
+              <p>{renderDsStep(t('providers.field.doubleserversSetupStep2'))}</p>
+            </div>
+          }
         >
-          <Input id="cred-username" type="email" {...form.register('username')} />
+          <Input id="cred-username" {...form.register('username')} />
         </Field>
         <Field id="cred-password" label={t('providers.field.password')}>
           <PasswordInput
@@ -617,7 +702,11 @@ export function ProviderCredentialFields({
         <Field
           id="cred-totp"
           label={t('providers.field.totpSecret')}
-          description={t('providers.field.totpSecretDesc')}
+          description={
+            <div className="text-sm leading-7">
+              {renderDsStep(t('providers.field.doubleserversSetupStep3'))}
+            </div>
+          }
         >
           <PasswordInput
             id="cred-totp"

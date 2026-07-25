@@ -103,7 +103,11 @@ export const providers = {
       begetApiPassword: 'API password (optional, for balance)',
       begetApiPasswordDesc:
         'Separate "Beget API" password from the panel (Account → Security → Beget API) — enables balance sync',
-      doubleserversEmailDesc: 'Email used to sign in at doubleservers.com/login',
+      doubleserversSetupStep1: 'Go to doubleservers.com and open the "Profile" section.',
+      doubleserversSetupStep2:
+        'Go to "BACKUP LOGIN VIA EMAIL". Enter the email and password, then click "Attach email". Enter the code sent to your email and click "Confirm". Enter the credentials in the fields below.',
+      doubleserversSetupStep3:
+        'Optional. Go to "Authenticator app" and click "Connect". Enter the key you receive, confirm it in an external authenticator, click "Confirm", then paste the same key into the field below.',
       porkbunApiKey: 'API key',
       porkbunApiKeyDesc: 'Porkbun → Account → API Access → create an API key',
       porkbunSecretKey: 'Secret API key',
@@ -256,7 +260,11 @@ export const providers = {
       begetApiPassword: 'API-пароль (необязательно, для баланса)',
       begetApiPasswordDesc:
         'Отдельный пароль «Beget API» из панели (Аккаунт → Безопасность → Beget API) — включает синк баланса',
-      doubleserversEmailDesc: 'Email для входа на doubleservers.com/login',
+      doubleserversSetupStep1: 'Зайдите на doubleservers.com и откройте раздел "Profile".',
+      doubleserversSetupStep2:
+        'Перейдите к "BACKUP LOGIN VIA EMAIL". Введите email и пароль и нажмите "Attach email". Введите код, отправленный на почту, и нажмите "Confirm". Введите креды в поля ниже.',
+      doubleserversSetupStep3:
+        'Опционально. Перейдите к "Authenticator app" и нажмите "Connect". Введите полученный ключ и подтвердите его через внешний аутентификатор, нажмите "Confirm", а затем продублируйте тот же самый ключ в поле ниже.',
       porkbunApiKey: 'API-ключ',
       porkbunApiKeyDesc: 'Porkbun → Account → API Access → создать API-ключ',
       porkbunSecretKey: 'Секретный API-ключ',
