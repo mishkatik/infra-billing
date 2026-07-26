@@ -241,12 +241,13 @@ export class SyncService implements OnModuleInit {
         });
       } else {
         const data: Prisma.ServiceUpdateInput = {
-          type: sd.type,
           isActive: true,
           meta: (sd.meta ?? {}) as Prisma.InputJsonValue,
         };
         // Don't overwrite a manually-edited name.
         if (!existing.nameOverridden) data.name = sd.name;
+        // Don't overwrite a manually-edited type.
+        if (!existing.typeOverridden) data.type = sd.type;
         if (sd.countryCode) data.countryCode = sd.countryCode;
         if (sd.nextBilling !== undefined) data.nextBillingAt = nextBilling;
         // Don't overwrite a manually-edited price.

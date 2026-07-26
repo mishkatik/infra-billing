@@ -15,6 +15,7 @@ model Service {
   isManaged      Boolean   @default(false) @map("is_managed")
   costOverridden Boolean   @default(false) @map("cost_overridden")
   nameOverridden Boolean   @default(false) @map("name_overridden")
+  typeOverridden Boolean   @default(false) @map("type_overridden")
   meta           Json      @default("{}") @map("meta")
 
   createdAt DateTime @default(now()) @map("created_at")

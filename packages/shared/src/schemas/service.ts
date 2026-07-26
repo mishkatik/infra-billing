@@ -24,6 +24,7 @@ export const serviceSchema = z.object({
   isManaged: z.boolean().describe('Auto-synced from provider'),
   costOverridden: z.boolean().describe('Cost edited manually'),
   nameOverridden: z.boolean().describe('Name edited manually'),
+  typeOverridden: z.boolean().describe('Type edited manually'),
   meta: z.record(z.string(), z.unknown()).describe('Raw provider fields'),
   paymentsCount: z.number().int().nonnegative().describe('Number of payments').optional(),
   createdAt: isoDateSchema.describe('Creation timestamp'),

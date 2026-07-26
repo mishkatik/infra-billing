@@ -2,7 +2,6 @@ import type { Service } from '@infra/shared';
 import {
   IconBan,
   IconBraces,
-  IconEdit,
   IconLoader2,
   IconPlayerPlay,
   IconReceipt2,
@@ -153,18 +152,6 @@ export function ServiceDetailModal({
                   <span className="text-muted-foreground">{t('services.detail.payments')}</span>
                   <span>{shown.paymentsCount ?? 0}</span>
                 </div>
-                {shown.costOverridden && (
-                  <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <IconEdit className="size-3.5" />
-                    {t('services.detail.costOverridden')}
-                  </p>
-                )}
-                {shown.nameOverridden && (
-                  <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <IconEdit className="size-3.5" />
-                    {t('services.detail.nameOverridden')}
-                  </p>
-                )}
                 <div className="flex items-center justify-between gap-3 text-sm">
                   <span className="text-muted-foreground">{t('services.detail.created')}</span>
                   <span>{formatDate(shown.createdAt)}</span>

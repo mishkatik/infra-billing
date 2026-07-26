@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { trimMoney } from '@/utils/format';
+import { OverriddenMark } from './OverriddenMark';
 import type { SForm } from './serviceForm';
 
 interface ServiceFormFieldsProps {
@@ -44,8 +45,11 @@ export function ServiceFormFields({
     register,
     control,
     setValue,
-    formState: { errors },
+    formState: { errors, dirtyFields },
   } = form;
+  const showNameMark = Boolean(editing && (editing.nameOverridden || dirtyFields.name));
+  const showTypeMark = Boolean(editing && (editing.typeOverridden || dirtyFields.type));
+  const showCostMark = Boolean(editing && (editing.costOverridden || dirtyFields.cost));
 
   return (
     <>
@@ -107,9 +111,12 @@ export function ServiceFormFields({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="service-name">
-            {t('services.fieldName')} <span className="text-destructive">*</span>
-          </Label>
+          <div className="flex h-4 items-center gap-1">
+            <Label htmlFor="service-name">
+              {t('services.fieldName')} <span className="text-destructive">*</span>
+            </Label>
+            {showNameMark && <OverriddenMark label={t('services.detail.nameOverridden')} />}
+          </div>
           <Input
             id="service-name"
             aria-invalid={!!errors.name}
@@ -121,8 +128,11 @@ export function ServiceFormFields({
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="service-type">{t('services.fieldType')}</Label>
+          <div className="min-w-0 space-y-2">
+            <div className="flex h-4 items-center gap-1">
+              <Label htmlFor="service-type">{t('services.fieldType')}</Label>
+              {showTypeMark && <OverriddenMark label={t('services.detail.typeOverridden')} />}
+            </div>
             <Controller
               control={control}
               name="type"
@@ -142,8 +152,10 @@ export function ServiceFormFields({
               )}
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="service-period">{t('services.fieldPeriod')}</Label>
+          <div className="min-w-0 space-y-2">
+            <div className="flex h-4 items-center gap-1">
+              <Label htmlFor="service-period">{t('services.fieldPeriod')}</Label>
+            </div>
             <Controller
               control={control}
               name="period"
@@ -168,10 +180,13 @@ export function ServiceFormFields({
 
       <FormSection icon={IconCalendarDollar} title={t('services.section.billing')}>
         <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="service-cost">
-              {t('services.fieldCost')} <span className="text-destructive">*</span>
-            </Label>
+          <div className="min-w-0 space-y-2">
+            <div className="flex h-4 items-center gap-1">
+              <Label htmlFor="service-cost">
+                {t('services.fieldCost')} <span className="text-destructive">*</span>
+              </Label>
+              {showCostMark && <OverriddenMark label={t('services.detail.costOverridden')} />}
+            </div>
             <Input
               id="service-cost"
               aria-invalid={!!errors.cost}
@@ -183,8 +198,10 @@ export function ServiceFormFields({
             />
             {errors.cost && <p className="text-xs text-destructive">{errors.cost.message}</p>}
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="service-currency">{t('services.fieldCurrency')}</Label>
+          <div className="min-w-0 space-y-2">
+            <div className="flex h-4 items-center gap-1">
+              <Label htmlFor="service-currency">{t('services.fieldCurrency')}</Label>
+            </div>
             <Controller
               control={control}
               name="currency"
@@ -207,8 +224,10 @@ export function ServiceFormFields({
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="service-country">{t('services.fieldCountry')}</Label>
+          <div className="min-w-0 space-y-2">
+            <div className="flex h-4 items-center gap-1">
+              <Label htmlFor="service-country">{t('services.fieldCountry')}</Label>
+            </div>
             <Controller
               control={control}
               name="countryCode"
@@ -223,8 +242,10 @@ export function ServiceFormFields({
               )}
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="service-next-billing">{t('services.fieldNextBilling')}</Label>
+          <div className="min-w-0 space-y-2">
+            <div className="flex h-4 items-center gap-1">
+              <Label htmlFor="service-next-billing">{t('services.fieldNextBilling')}</Label>
+            </div>
             <Controller
               control={control}
               name="nextBillingAt"

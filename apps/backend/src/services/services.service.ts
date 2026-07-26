@@ -50,7 +50,10 @@ export class ServicesService {
       data.name = dto.name;
       data.nameOverridden = true;
     }
-    if (dto.type !== undefined) data.type = dto.type;
+    if (dto.type !== undefined && dto.type !== existing.type) {
+      data.type = dto.type;
+      data.typeOverridden = true;
+    }
     if (dto.cost !== undefined && !existing.cost.equals(dto.cost)) {
       data.cost = dto.cost;
       data.costOverridden = true;

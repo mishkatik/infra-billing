@@ -68,6 +68,7 @@ export function mapService(s: Service & { _count?: { payments: number } }): Serv
     isManaged: s.isManaged,
     costOverridden: s.costOverridden,
     nameOverridden: s.nameOverridden,
+    typeOverridden: s.typeOverridden,
     meta: (s.meta ?? {}) as Record<string, unknown>,
     paymentsCount: s._count?.payments,
     createdAt: dateToIso(s.createdAt)!,
