@@ -9,7 +9,7 @@
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/screenshot-dark.webp" />
     <source media="(prefers-color-scheme: light)" srcset="docs/screenshot-light.webp" />
-    <img src="docs/screenshot-light.webp" width="880" alt="Дашборд Infra Billing Panel" />
+    <img src="docs/screenshot-light.webp" width="900" alt="Дашборд Infra Billing Panel" />
   </picture>
 </p>
 
@@ -273,3 +273,12 @@ make dev                # backend :8080 + frontend :5173 (Vite проксиру�
 Открыть <http://localhost:5173>. `make migrate`/`make studio` сами ходят в БД на `127.0.0.1`
 (см. `LOCAL_DATABASE_URL` в Makefile). Локальный билд образа: `make docker-build` + `make docker-up`
 (использует `docker-compose.yml` со сборкой из исходников).
+
+Превью дашборда в шапке README обновляются так (нужны запущенные `make dev` и креды владельца):
+
+```bash
+# один раз, если нет системного Chrome: npx playwright install chromium
+CAPTURE_USER=admin CAPTURE_PASSWORD='…' make docs-screenshot
+```
+
+Скрипт пишет `docs/screenshot-{dark,light}.webp` (Retina → рамка → WebP).

@@ -1,7 +1,7 @@
 .PHONY: help install dev build typecheck lint format check check-fix hooks test \
         db-up db-down db-logs migrate generate studio auth-reset \
         docker-build docker-save docker-up docker-down \
-        bump-patch bump-minor bump-major tag-release
+        bump-patch bump-minor bump-major tag-release docs-screenshot
 
 IMAGE := infra-billing
 
@@ -31,6 +31,7 @@ help:
 	@echo "  docker-down   - docker compose down"
 	@echo "  bump-patch|minor|major - bump version (root + all workspaces in sync) and reinstall"
 	@echo "  tag-release   - create and push a signed git tag"
+	@echo "  docs-screenshot - Retina dashboard shots → docs/screenshot-{dark,light}.webp"
 
 install:
 	npm ci
@@ -136,3 +137,7 @@ tag-release:
 	git tag -s "$$VERSION" -m "Release $$VERSION" && \
 	git push origin --follow-tags && \
 	echo "Signed tag $$VERSION created and pushed"
+
+# Retina Playwright capture → framed WebP in docs/. Needs CAPTURE_USER + CAPTURE_PASSWORD.
+docs-screenshot:
+	npm run docs:screenshot

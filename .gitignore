@@ -20,6 +20,9 @@ infra-billing.tar.gz
 *.log
 .DS_Store
 
+# README capture intermediates (keep framed *.webp)
+docs/screenshot-*.raw.png
+
 # Prisma 7 generated client
 apps/backend/src/generated/
 

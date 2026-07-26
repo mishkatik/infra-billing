@@ -26,7 +26,8 @@
     "prisma:generate": "npm run prisma:generate -w @infra/backend",
     "prisma:migrate": "npm run prisma:migrate -w @infra/backend",
     "prisma:deploy": "npm run prisma:deploy -w @infra/backend",
-    "prisma:studio": "npm run prisma:studio -w @infra/backend"
+    "prisma:studio": "npm run prisma:studio -w @infra/backend",
+    "docs:screenshot": "node scripts/capture-readme.mjs"
   },
   "engines": {
     "node": ">=22"
@@ -35,6 +36,8 @@
     "@nestjs/swagger": "11.2.6"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.2"
+    "@biomejs/biome": "2.5.2",
+    "playwright": "1.54.2",
+    "sharp": "0.34.2"
   }
 }
