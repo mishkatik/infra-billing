@@ -6,7 +6,9 @@ import { mapTimewebServer } from './timeweb.mapper';
 import {
   FinancesResponse,
   PresetsResponse,
+  ServicesCostResponse,
   TimewebPreset,
+  TimewebServiceCost,
   TimewebServersResponse,
 } from './timeweb.types';
 
@@ -37,14 +39,35 @@ export class TimewebConnector implements Connector {
   }
 
   async fetchServices(signal: AbortSignal): Promise<ServiceData[]> {
-    const [serversRes, presets] = await Promise.all([
+    const [serversRes, presets, costs] = await Promise.all([
       this.http.get<TimewebServersResponse>('/api/v1/servers', { signal }),
       this.fetchPresets(signal),
+      this.fetchServiceCosts(signal),
     ]);
-    return (serversRes.data.servers ?? []).map((s) => mapTimewebServer(s, presets));
+    return (serversRes.data.servers ?? []).map((s) => mapTimewebServer(s, presets, costs));
   }
 
-  /** Server preset tariffs (best-effort): preset_id → preset. Empty map on failure. */
+  /**
+   * Per-service monthly prices (includes configurator VPS and add-ons via total_cost).
+   * Best-effort: empty map on failure so preset fallback can still fill tariff servers.
+   */
+  private async fetchServiceCosts(signal: AbortSignal): Promise<Map<number, TimewebServiceCost>> {
+    try {
+      const { data } = await this.http.get<ServicesCostResponse>('/api/v1/account/services/cost', {
+        signal,
+      });
+      const map = new Map<number, TimewebServiceCost>();
+      for (const row of data.services_costs ?? []) {
+        if (row.type && row.type !== 'server') continue;
+        if (typeof row.service_id === 'number') map.set(row.service_id, row);
+      }
+      return map;
+    } catch {
+      return new Map();
+    }
+  }
+
+  /** Server preset tariffs (fallback when services/cost is unavailable). Empty map on failure. */
   private async fetchPresets(signal: AbortSignal): Promise<Map<number, TimewebPreset>> {
     try {
       const { data } = await this.http.get<PresetsResponse>('/api/v1/presets/servers', { signal });
@@ -52,7 +75,6 @@ export class TimewebConnector implements Connector {
       for (const p of data.server_presets ?? []) map.set(p.id, p);
       return map;
     } catch {
-      // Pricing is best-effort; without presets cost is left unset (owner edits).
       return new Map();
     }
   }

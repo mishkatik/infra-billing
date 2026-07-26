@@ -14,7 +14,7 @@ export interface ServiceData {
   cost?: Decimal;
   currency?: string;
   period?: string;
-  nextBilling?: Date;
+  nextBilling?: Date | null;
   meta: Record<string, unknown>;
 }
 

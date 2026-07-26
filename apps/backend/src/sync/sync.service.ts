@@ -248,7 +248,7 @@ export class SyncService implements OnModuleInit {
         // Don't overwrite a manually-edited name.
         if (!existing.nameOverridden) data.name = sd.name;
         if (sd.countryCode) data.countryCode = sd.countryCode;
-        if (nextBilling) data.nextBillingAt = nextBilling;
+        if (sd.nextBilling !== undefined) data.nextBillingAt = nextBilling;
         // Don't overwrite a manually-edited price.
         if (!existing.costOverridden) {
           if (sd.cost) data.cost = sd.cost.toFixed(2);
