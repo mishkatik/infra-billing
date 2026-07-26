@@ -5,6 +5,7 @@ const PROVIDER_BRAND: Record<string, string> = {
   yandex: '#4C8BF5',
   timeweb: '#8B5CF6',
   hetzner: '#EF4444',
+  hostkey: '#E85D04',
   doubleservers: '#A78BFA',
   selectel: '#22C55E',
   beget: '#F97316',

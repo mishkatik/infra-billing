@@ -9,9 +9,10 @@
 
 ## Возможности
 
-- **Провайдеры с API:** Timeweb Cloud, Hetzner Cloud, netcup, HostBill, ISPsystem BILLmanager,
-  Selectel, 4VPS.SU, Netlen, Beget Cloud, Porkbun, Vultr, Linode, Aeza, VDSina, Cloudflare,
-  StormWall, Yandex Cloud, Double Servers. Плюс **Manual** — провайдеры без API ведутся руками.
+- **Провайдеры с API:** Timeweb Cloud, Hetzner Cloud, Hostkey (InvAPI), netcup, HostBill,
+  ISPsystem BILLmanager, Selectel, 4VPS.SU, Netlen, Beget Cloud, Porkbun, Vultr, Linode, Aeza,
+  VDSina, Cloudflare, StormWall, Yandex Cloud, Double Servers. Плюс **Manual** — провайдеры без
+  API ведутся руками.
 - **Автосинк** (по расписанию + кнопкой): баланс + валюта аккаунта, список серверов/услуг, даты
   следующих списаний; история баланса по дням (снапшоты).
 - **Импорт платежей** там, где API отдаёт реестр: пополнения и списания (BILLmanager, Netlen,
@@ -179,6 +180,9 @@ curl -H "Authorization: Bearer ib_…" https://infra-billing/api/providers
 - **Hetzner Cloud** — Project → Security → API Tokens (read). Баланса/счетов/платежей в API нет —
   синкаем серверы, месячный cap тарифа, страну и синтетическую дату списания (1-е число следующего
   месяца) для upcoming-алертов.
+- **Hostkey** — InvAPI (`invapi.hostkey.ru`) → меню пользователя → API-ключи. Тянет credit-баланс
+  (WHMCS), серверы с `prebill_rate` / периодом и синтетическую дату списания (1-е число следующего
+  месяца). Реестр платежей в v1 не импортируется.
 - **netcup** — кнопка «Авторизоваться через netcup» в форме: войдите в SCP в браузере и подтвердите
   (OAuth2 device flow, токен подтянется сам). Баланса/цен/списаний в API нет — только серверы
   (страна определяется по дата-центру).

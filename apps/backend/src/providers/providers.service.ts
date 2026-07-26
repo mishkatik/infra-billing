@@ -90,6 +90,7 @@ export class ProvidersService {
     if (
       kind === 'timeweb' ||
       kind === 'hetzner' ||
+      kind === 'hostkey' ||
       kind === 'netcup' ||
       kind === 'netlen' ||
       kind === 'vultr' ||
@@ -137,6 +138,7 @@ export class ProvidersService {
     if (
       kind === 'timeweb' ||
       kind === 'hetzner' ||
+      kind === 'hostkey' ||
       kind === 'netcup' ||
       kind === 'netlen' ||
       kind === 'vultr' ||

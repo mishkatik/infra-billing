@@ -63,6 +63,8 @@ export const providers = {
       apiTokenDescLinode:
         'Linode → Account → API Tokens → create a Personal Access Token (read access to Account and Linodes)',
       apiTokenDescAeza: 'Aeza panel → API Keys → create an API key',
+      apiTokenDescHostkey:
+        'Go to invapi.hostkey.ru. Open the username menu → "API keys" → "Add new", enter any name, then "Create".',
       apiTokenDescTimeweb: 'Go to "API and Terraform" → "Add token", enter any name, then "Issue".',
       apiTokenDescHetzner:
         'Go to console.hetzner.com. Open "Projects" → "Default" → "Security" → "API Tokens" → "Generate API Token", enter any name, then "Generate API Token".',
@@ -129,6 +131,7 @@ export const providers = {
       porkbunCreds: 'Enter the Porkbun API key and secret key',
       linodeToken: 'Enter the Linode API token',
       aezaToken: 'Enter the Aeza API key',
+      hostkeyToken: 'Enter the Hostkey InvAPI key',
       vdsinaToken: 'Enter the VDSina API token',
       cloudflareCreds: 'Enter the Cloudflare account ID and API token',
       stormwallToken: 'Enter the StormWall API key',
@@ -218,6 +221,8 @@ export const providers = {
       apiTokenDescLinode:
         'Linode → Account → API Tokens → создать Personal Access Token (доступ на чтение к Account и Linodes)',
       apiTokenDescAeza: 'Панель Aeza → API Keys → создать API-ключ',
+      apiTokenDescHostkey:
+        'Зайдите на invapi.hostkey.ru. Откройте меню пользователя → "API-ключи" → "Добавить", введите любое имя, затем "Создать".',
       apiTokenDescTimeweb:
         'Перейдите в "API и Terraform" → "Добавить токен", введите любое имя, затем "Выпустить".',
       apiTokenDescHetzner:
@@ -286,6 +291,7 @@ export const providers = {
       porkbunCreds: 'Укажите API-ключ и секретный ключ Porkbun',
       linodeToken: 'Укажите API-токен Linode',
       aezaToken: 'Укажите API-ключ Aeza',
+      hostkeyToken: 'Укажите API-ключ Hostkey InvAPI',
       vdsinaToken: 'Укажите API-токен VDSina',
       cloudflareCreds: 'Укажите account ID и API-токен Cloudflare',
       stormwallToken: 'Укажите API-ключ StormWall',

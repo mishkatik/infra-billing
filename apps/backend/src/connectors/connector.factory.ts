@@ -12,6 +12,7 @@ import { Connector } from './connector.interface';
 import { DoubleServersConnector } from './doubleservers/doubleservers.connector';
 import type { DoubleServersCredentials } from './doubleservers/doubleservers.types';
 import { HetznerConnector } from './hetzner/hetzner.connector';
+import { HostkeyConnector } from './hostkey/hostkey.connector';
 import { HostbillConnector } from './hostbill/hostbill.connector';
 import type { HostbillCredentials } from './hostbill/hostbill.types';
 import { LinodeConnector } from './linode/linode.connector';
@@ -41,6 +42,8 @@ export class ConnectorFactory {
         return new TimewebConnector(token);
       case 'hetzner':
         return new HetznerConnector(token);
+      case 'hostkey':
+        return new HostkeyConnector(token);
       case 'netlen':
         // Netlen secret is the raw API key (single string, sent as the X-API-Key header).
         return new NetlenConnector(token);

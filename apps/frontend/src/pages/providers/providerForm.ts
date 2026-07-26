@@ -27,6 +27,7 @@ export interface FormValues {
 export const DEFAULT_LOGIN_URLS: Record<string, string> = {
   timeweb: 'https://timeweb.cloud/my',
   hetzner: 'https://console.hetzner.com',
+  hostkey: 'https://invapi.hostkey.ru',
   netcup: 'https://www.customercontrolpanel.de',
   selectel: 'https://my.selectel.ru',
   '4vps': 'https://4vps.su/dashboard',
@@ -78,6 +79,7 @@ export function validateProviderCredentials(v: FormValues, t: TFunction): string
   if (v.kind === 'porkbun' && !(v.token && v.secretKey)) return t('providers.err.porkbunCreds');
   if (v.kind === 'linode' && !v.token) return t('providers.err.linodeToken');
   if (v.kind === 'aeza' && !v.token) return t('providers.err.aezaToken');
+  if (v.kind === 'hostkey' && !v.token) return t('providers.err.hostkeyToken');
   if (v.kind === 'vdsina' && !v.token) return t('providers.err.vdsinaToken');
   if (v.kind === 'cloudflare' && !(v.accountId && v.token))
     return t('providers.err.cloudflareCreds');

@@ -327,6 +327,76 @@ function renderHzStep(text: string): ReactNode {
   return parts;
 }
 
+const HK_NAV = new Set(['API keys', 'API-ключи']);
+const HK_PRIMARY = new Set(['Add new', 'Create', 'Добавить', 'Создать']);
+const HK_ICON: Record<string, Icon> = {
+  'API keys': IconKey,
+  'API-ключи': IconKey,
+  'Add new': IconPlus,
+  Добавить: IconPlus,
+};
+
+function linkifyHostkey(text: string): ReactNode {
+  const marker = 'invapi.hostkey.ru';
+  const idx = text.indexOf(marker);
+  if (idx === -1) return text;
+  return (
+    <>
+      {text.slice(0, idx)}
+      <a
+        href="https://invapi.hostkey.ru"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-brand underline underline-offset-4 hover:no-underline"
+      >
+        {marker}
+      </a>
+      {text.slice(idx + marker.length)}
+    </>
+  );
+}
+
+function hkTokenClass(label: string): string {
+  if (HK_PRIMARY.has(label)) return 'rounded-md bg-[#e85d04] text-white';
+  if (HK_NAV.has(label)) return 'rounded-md bg-[#1f1a17] text-[#ff9f1c]';
+  return 'rounded-md bg-white/[0.07] text-foreground ring-1 ring-white/10 ring-inset';
+}
+
+function HkToken({ label }: { label: string }) {
+  const LabelIcon = HK_ICON[label];
+  return (
+    <span
+      className={cn(
+        'mx-0.5 inline-flex items-center gap-1 px-1.5 py-0.5 align-middle text-[0.8em] font-medium leading-none whitespace-nowrap',
+        hkTokenClass(label),
+      )}
+    >
+      {LabelIcon && <LabelIcon className="size-3 shrink-0" />}
+      {label}
+    </span>
+  );
+}
+
+function renderHkStep(text: string): ReactNode {
+  const parts: ReactNode[] = [];
+  const re = /"([^"]+)"/g;
+  let last = 0;
+  let key = 0;
+  let m: RegExpExecArray | null = re.exec(text);
+  while (m !== null) {
+    if (m.index > last) {
+      parts.push(<Fragment key={key++}>{linkifyHostkey(text.slice(last, m.index))}</Fragment>);
+    }
+    parts.push(<HkToken key={key++} label={m[1]} />);
+    last = m.index + m[0].length;
+    m = re.exec(text);
+  }
+  if (last < text.length) {
+    parts.push(<Fragment key={key++}>{linkifyHostkey(text.slice(last))}</Fragment>);
+  }
+  return parts;
+}
+
 const DS_NAV = new Set(['Profile', 'Authenticator app']);
 const DS_SECTION = new Set(['BACKUP LOGIN VIA EMAIL']);
 const DS_PRIMARY = new Set(['Attach email', 'Confirm']);
@@ -679,6 +749,28 @@ export function ProviderCredentialFields({
         label={t('providers.field.apiToken')}
         description={t('providers.field.apiTokenDescAeza')}
         link="https://my.aeza.net/settings/apikeys"
+      >
+        <SecretFormField
+          form={form}
+          name="token"
+          id="cred-token"
+          hasStored={storedSecrets?.hasToken}
+          reveal={reveal}
+        />
+      </Field>
+    );
+  }
+
+  if (kind === 'hostkey') {
+    return (
+      <Field
+        id="cred-token"
+        label={t('providers.field.apiToken')}
+        description={
+          <div className="text-sm leading-7">
+            {renderHkStep(t('providers.field.apiTokenDescHostkey'))}
+          </div>
+        }
       >
         <SecretFormField
           form={form}

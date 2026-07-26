@@ -20,6 +20,7 @@ const SERVICE_TYPES: ServiceType[] = [
 const PROVIDER_KINDS: ProviderKind[] = [
   'timeweb',
   'hetzner',
+  'hostkey',
   'netcup',
   'hostbill',
   'billmgr',
