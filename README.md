@@ -5,11 +5,13 @@
 хостинг-провайдеров, тянет баланс аккаунта, список ресурсов, тарифы и даты списаний, складывает
 снапшоты и строит аналитику/прогнозы. Провайдеров без API владелец ведёт вручную.
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshot-dark.webp" />
-  <source media="(prefers-color-scheme: light)" srcset="docs/screenshot-light.webp" />
-  <img src="docs/screenshot-light.webp" alt="Дашборд Infra Billing Panel" />
-</picture>
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/screenshot-dark.webp" />
+    <source media="(prefers-color-scheme: light)" srcset="docs/screenshot-light.webp" />
+    <img src="docs/screenshot-light.webp" width="880" alt="Дашборд Infra Billing Panel" />
+  </picture>
+</p>
 
 ## Возможности
 
