@@ -99,12 +99,10 @@ export function ProvidersPage() {
   };
 
   const submit = form.handleSubmit(async (v) => {
-    if (!selected) {
-      const err = validateProviderCredentials(v, t);
-      if (err) {
-        notifyError(err);
-        return;
-      }
+    const err = validateProviderCredentials(v, t, { requireCreds: !selected });
+    if (err) {
+      notifyError(err);
+      return;
     }
     const creds = buildCredentials(v);
     const iconName = canonicalTablerIconName(v.iconName);

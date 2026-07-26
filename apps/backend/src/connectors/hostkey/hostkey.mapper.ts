@@ -1,5 +1,4 @@
 import Decimal from 'decimal.js';
-import type { Period } from '@infra/shared';
 import { ServiceData } from '../connector.interface';
 import { HostkeyServer } from './hostkey.types';
 
@@ -33,7 +32,7 @@ function locationCode(s: HostkeyServer): string | undefined {
   return undefined;
 }
 
-function mapPeriod(period?: string): Period {
+function mapPeriod(period?: string): string {
   const p = (period ?? 'monthly').toLowerCase();
   if (p.includes('year') || p === 'annually' || p === 'yearly') return 'yearly';
   if (p.includes('quarter') || p === 'quarterly') return 'quarterly';
@@ -43,19 +42,47 @@ function mapPeriod(period?: string): Period {
   return 'monthly';
 }
 
-export function mapHostkeyServer(s: HostkeyServer, currency: string, nextBilling: Date): ServiceData {
-  const rate = s.prebill_rate != null ? Number(s.prebill_rate) : NaN;
-  const period = mapPeriod(s.prebill_period);
+function pickCost(s: HostkeyServer, currency: string): number | undefined {
+  const prebill = s.prebill_rate != null ? Number(s.prebill_rate) : NaN;
+  if (Number.isFinite(prebill)) return prebill;
+  const c = currency.toUpperCase();
+  const byCurrency =
+    c === 'RUB' || c === 'RUR'
+      ? Number(s.price_RUR)
+      : c === 'USD'
+        ? Number(s.price_USD)
+        : Number(s.price_EUR);
+  if (Number.isFinite(byCurrency) && byCurrency > 0) return byCurrency;
+  for (const n of [Number(s.price_RUR), Number(s.price_EUR), Number(s.price_USD)]) {
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  return undefined;
+}
+
+function parseDueDate(raw?: string): Date | undefined {
+  if (!raw) return undefined;
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(raw.trim());
+  if (!m) return undefined;
+  return new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
+}
+
+export function mapHostkeyServer(
+  s: HostkeyServer,
+  currency: string,
+  fallbackNextBilling: Date,
+): ServiceData {
+  const cost = pickCost(s, currency);
   const typeRaw = (s.type ?? '').toLowerCase();
+  const dedicated = typeRaw.includes('server') || typeRaw.includes('dedicated');
   return {
     externalId: String(s.id),
-    name: s.hostname || s.name || `hostkey-${s.id}`,
-    type: typeRaw.includes('server') || typeRaw.includes('dedicated') ? 'dedicated' : 'vps',
+    name: s.hostname || s.name || s.IP || `hostkey-${s.id}`,
+    type: dedicated ? 'dedicated' : 'vps',
     countryCode: locationCode(s),
-    cost: Number.isFinite(rate) ? new Decimal(rate) : undefined,
+    cost: cost != null ? new Decimal(cost) : undefined,
     currency,
-    period,
-    nextBilling,
+    period: mapPeriod(s.prebill_period),
+    nextBilling: parseDueDate(s.due_date) ?? fallbackNextBilling,
     meta: { ...s },
   };
 }

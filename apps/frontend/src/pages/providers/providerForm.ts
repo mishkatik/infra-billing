@@ -63,36 +63,62 @@ export const EMPTY_FORM: FormValues = {
   isPostpaid: false,
 };
 
+const HOSTKEY_API_KEY_RE = /^[a-f0-9]{16}-[a-f0-9]{16}$/i;
+
+function normalizeHostkeyToken(raw: string): string {
+  return raw
+    .trim()
+    .replace(/[\s\u00a0]+/g, '')
+    .replace(/[.•・∙]/g, '-');
+}
+
 // Per-kind required-credential check. Caller runs this only on create (edits allow blank fields,
 // which mean "keep the stored credential"). Returns the error message to show, or null when ok.
-export function validateProviderCredentials(v: FormValues, t: TFunction): string | null {
-  if ((v.kind === 'hostbill' || v.kind === 'billmgr') && !(v.baseUrl && v.username && v.password))
+export function validateProviderCredentials(
+  v: FormValues,
+  t: TFunction,
+  opts?: { requireCreds?: boolean },
+): string | null {
+  const requireCreds = opts?.requireCreds ?? true;
+  if (
+    requireCreds &&
+    (v.kind === 'hostbill' || v.kind === 'billmgr') &&
+    !(v.baseUrl && v.username && v.password)
+  )
     return t('providers.err.hostbillCreds');
-  if (v.kind === 'selectel' && !(v.accountId && v.username && v.password))
+  if (requireCreds && v.kind === 'selectel' && !(v.accountId && v.username && v.password))
     return t('providers.err.selectelCreds');
-  if (v.kind === '4vps' && !v.token) return t('providers.err.vps4Token');
-  if (v.kind === 'netcup' && !v.token) return t('providers.err.netcupToken');
-  if (v.kind === 'beget' && !(v.username && v.password)) return t('providers.err.begetCreds');
-  if (v.kind === 'doubleservers' && !(v.username && v.password))
+  if (requireCreds && v.kind === '4vps' && !v.token) return t('providers.err.vps4Token');
+  if (requireCreds && v.kind === 'netcup' && !v.token) return t('providers.err.netcupToken');
+  if (requireCreds && v.kind === 'beget' && !(v.username && v.password))
+    return t('providers.err.begetCreds');
+  if (requireCreds && v.kind === 'doubleservers' && !(v.username && v.password))
     return t('providers.err.doubleserversCreds');
-  if (v.kind === 'vultr' && !v.token) return t('providers.err.vultrToken');
-  if (v.kind === 'porkbun' && !(v.token && v.secretKey)) return t('providers.err.porkbunCreds');
-  if (v.kind === 'linode' && !v.token) return t('providers.err.linodeToken');
-  if (v.kind === 'aeza' && !v.token) return t('providers.err.aezaToken');
-  if (v.kind === 'hostkey' && !v.token) return t('providers.err.hostkeyToken');
-  if (v.kind === 'vdsina' && !v.token) return t('providers.err.vdsinaToken');
-  if (v.kind === 'cloudflare' && !(v.accountId && v.token))
+  if (requireCreds && v.kind === 'vultr' && !v.token) return t('providers.err.vultrToken');
+  if (requireCreds && v.kind === 'porkbun' && !(v.token && v.secretKey))
+    return t('providers.err.porkbunCreds');
+  if (requireCreds && v.kind === 'linode' && !v.token) return t('providers.err.linodeToken');
+  if (requireCreds && v.kind === 'aeza' && !v.token) return t('providers.err.aezaToken');
+  if (v.kind === 'hostkey') {
+    if (requireCreds && !v.token) return t('providers.err.hostkeyToken');
+    if (v.token && !HOSTKEY_API_KEY_RE.test(normalizeHostkeyToken(v.token)))
+      return t('providers.err.hostkeyTokenFormat');
+  }
+  if (requireCreds && v.kind === 'vdsina' && !v.token) return t('providers.err.vdsinaToken');
+  if (requireCreds && v.kind === 'cloudflare' && !(v.accountId && v.token))
     return t('providers.err.cloudflareCreds');
-  if (v.kind === 'stormwall' && !v.token) return t('providers.err.stormwallToken');
-  if (v.kind === 'yandex' && !v.token) return t('providers.err.yandexKey');
+  if (requireCreds && v.kind === 'stormwall' && !v.token) return t('providers.err.stormwallToken');
+  if (requireCreds && v.kind === 'yandex' && !v.token) return t('providers.err.yandexKey');
   return null;
 }
 
 // Spread every credential field with blanks omitted, so an empty field on edit keeps the stored
 // value (the backend only overwrites credentials it actually receives).
 export function buildCredentials(v: FormValues) {
+  const token =
+    v.kind === 'hostkey' && v.token ? normalizeHostkeyToken(v.token) : v.token || undefined;
   return {
-    token: v.token || undefined,
+    token: token || undefined,
     baseUrl: v.baseUrl || undefined,
     username: v.username || undefined,
     password: v.password || undefined,

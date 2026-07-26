@@ -64,7 +64,7 @@ export const providers = {
         'Linode → Account → API Tokens → create a Personal Access Token (read access to Account and Linodes)',
       apiTokenDescAeza: 'Aeza panel → API Keys → create an API key',
       apiTokenDescHostkey:
-        'Go to invapi.hostkey.ru. Open the username menu → "API keys" → "Add new", enter any name, then "Create".',
+        'Go to invapi.hostkey.ru. Open "Username" → "API keys" → "Add key", enter any name, then "Create". Then copy the key and finish by pressing "OK".',
       apiTokenDescTimeweb: 'Go to "API and Terraform" → "Add token", enter any name, then "Issue".',
       apiTokenDescHetzner:
         'Go to console.hetzner.com. Open "Projects" → "Default" → "Security" → "API Tokens" → "Generate API Token", enter any name, then "Generate API Token".',
@@ -132,6 +132,8 @@ export const providers = {
       linodeToken: 'Enter the Linode API token',
       aezaToken: 'Enter the Aeza API key',
       hostkeyToken: 'Enter the Hostkey InvAPI key',
+      hostkeyTokenFormat:
+        'Hostkey key must look like d35f42c3a881b52d-ccbc5a508624d503',
       vdsinaToken: 'Enter the VDSina API token',
       cloudflareCreds: 'Enter the Cloudflare account ID and API token',
       stormwallToken: 'Enter the StormWall API key',
@@ -222,7 +224,7 @@ export const providers = {
         'Linode → Account → API Tokens → создать Personal Access Token (доступ на чтение к Account и Linodes)',
       apiTokenDescAeza: 'Панель Aeza → API Keys → создать API-ключ',
       apiTokenDescHostkey:
-        'Зайдите на invapi.hostkey.ru. Откройте меню пользователя → "API-ключи" → "Добавить", введите любое имя, затем "Создать".',
+        'Зайдите на invapi.hostkey.ru. Откройте "Пользователь" → "API ключи" → "Добавить ключ", введите любое имя, затем "Создать". Затем скопируйте ключ и завершите нажав "ОК".',
       apiTokenDescTimeweb:
         'Перейдите в "API и Terraform" → "Добавить токен", введите любое имя, затем "Выпустить".',
       apiTokenDescHetzner:
@@ -292,6 +294,8 @@ export const providers = {
       linodeToken: 'Укажите API-токен Linode',
       aezaToken: 'Укажите API-ключ Aeza',
       hostkeyToken: 'Укажите API-ключ Hostkey InvAPI',
+      hostkeyTokenFormat:
+        'Ключ Hostkey должен быть вида d35f42c3a881b52d-ccbc5a508624d503',
       vdsinaToken: 'Укажите API-токен VDSina',
       cloudflareCreds: 'Укажите account ID и API-токен Cloudflare',
       stormwallToken: 'Укажите API-ключ StormWall',

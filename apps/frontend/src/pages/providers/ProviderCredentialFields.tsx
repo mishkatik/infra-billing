@@ -1,5 +1,6 @@
 import {
   type Icon,
+  IconChevronDown,
   IconCircles,
   IconCrown,
   IconDeviceMobile,
@@ -327,13 +328,19 @@ function renderHzStep(text: string): ReactNode {
   return parts;
 }
 
-const HK_NAV = new Set(['API keys', 'API-ключи']);
-const HK_PRIMARY = new Set(['Add new', 'Create', 'Добавить', 'Создать']);
+const HK_USER_MENU = new Set(['Username', 'Пользователь']);
+const HK_LINK = new Set(['API keys', 'API ключи', 'API-ключи']);
+const HK_SOFT = new Set([
+  'Add key',
+  'Create',
+  'OK',
+  'Добавить ключ',
+  'Создать',
+  'ОК',
+]);
 const HK_ICON: Record<string, Icon> = {
-  'API keys': IconKey,
-  'API-ключи': IconKey,
-  'Add new': IconPlus,
-  Добавить: IconPlus,
+  'Add key': IconPlus,
+  'Добавить ключ': IconPlus,
 };
 
 function linkifyHostkey(text: string): ReactNode {
@@ -357,12 +364,23 @@ function linkifyHostkey(text: string): ReactNode {
 }
 
 function hkTokenClass(label: string): string {
-  if (HK_PRIMARY.has(label)) return 'rounded-md bg-[#e85d04] text-white';
-  if (HK_NAV.has(label)) return 'rounded-md bg-[#1f1a17] text-[#ff9f1c]';
+  if (HK_LINK.has(label)) return 'rounded-md bg-white px-1.5 font-semibold text-[#8369c4] ring-1 ring-black/5 ring-inset';
+  if (HK_SOFT.has(label)) return 'rounded-md bg-[#f2ebfa] text-[#8369c4]';
   return 'rounded-md bg-white/[0.07] text-foreground ring-1 ring-white/10 ring-inset';
 }
 
 function HkToken({ label }: { label: string }) {
+  if (HK_USER_MENU.has(label)) {
+    return (
+      <span className="mx-0.5 inline-flex items-center gap-1.5 rounded-md bg-[#f0f2f5] px-1.5 py-0.5 align-middle text-[0.8em] font-medium leading-none whitespace-nowrap text-[#1a1a1a]">
+        <span className="inline-flex size-4 items-center justify-center rounded-[5px] bg-[#e4e6eb]">
+          <IconUser className="size-2.5 shrink-0 text-[#3a3a3a]" stroke={1.75} />
+        </span>
+        <span>{label}</span>
+        <IconChevronDown className="size-2.5 shrink-0 text-[#3a3a3a]" stroke={2} />
+      </span>
+    );
+  }
   const LabelIcon = HK_ICON[label];
   return (
     <span
