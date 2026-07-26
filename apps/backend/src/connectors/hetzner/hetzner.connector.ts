@@ -10,9 +10,11 @@ const PER_PAGE = 50;
 /**
  * Hetzner Cloud connector, REST API (https://docs.hetzner.cloud). No maintained
  * npm SDK (official is Go-only; `hcloud-js` is stale), so we use a thin axios client.
- * Auth: Bearer <API_TOKEN>. The Cloud API has NO account balance, and billing is
- * hourly (price_hourly is sub-cent); we store the monthly cap (price_monthly, EUR)
- * and keep the hourly rate in meta.
+ * Auth: Bearer <API_TOKEN>.
+ *
+ * Postpaid: Cloud API has no account balance, credit, invoices, payments, or
+ * invoice day. We store the monthly price cap (price_monthly) only; next billing
+ * is left empty for the owner to set manually if needed.
  */
 export class HetznerConnector implements Connector {
   private readonly http: AxiosInstance;

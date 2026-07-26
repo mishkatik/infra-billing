@@ -176,7 +176,9 @@ curl -H "Authorization: Bearer ib_…" https://infra-billing/api/providers
 возвращаются). После сохранения провайдер сразу синкается.
 
 - **Timeweb Cloud** — ЛК → «API и Terraform» → создать токен.
-- **Hetzner Cloud** — Project → Security → API Tokens (read). Баланса в API нет — только серверы.
+- **Hetzner Cloud** — Project → Security → API Tokens (read). Баланса/счетов/платежей в API нет —
+  синкаем серверы, месячный cap тарифа, страну и синтетическую дату списания (1-е число следующего
+  месяца) для upcoming-алертов.
 - **netcup** — кнопка «Авторизоваться через netcup» в форме: войдите в SCP в браузере и подтвердите
   (OAuth2 device flow, токен подтянется сам). Баланса/цен/списаний в API нет — только серверы
   (страна определяется по дата-центру).

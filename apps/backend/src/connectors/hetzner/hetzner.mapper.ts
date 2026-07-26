@@ -1,11 +1,32 @@
 import Decimal from 'decimal.js';
 import { ServiceData } from '../connector.interface';
-import { HetznerServer } from './hetzner.types';
+import { HetznerLocation, HetznerServer } from './hetzner.types';
 
-/** Map a Hetzner Cloud server to our domain Service (price = monthly cap, gross/EUR). */
+/** Hetzner location name → ISO country when `location.country` is missing. */
+const LOCATION_COUNTRY: Record<string, string> = {
+  fsn1: 'DE',
+  nbg1: 'DE',
+  hel1: 'FI',
+  ash: 'US',
+  hil: 'US',
+  sin: 'SG',
+};
+
+function resolveLocation(s: HetznerServer): HetznerLocation | undefined {
+  return s.location ?? s.datacenter?.location;
+}
+
+function locationToCountry(loc?: HetznerLocation): string | undefined {
+  const iso = loc?.country?.toUpperCase();
+  if (iso && /^[A-Z]{2}$/.test(iso)) return iso;
+  if (!loc?.name) return undefined;
+  return LOCATION_COUNTRY[loc.name.toLowerCase()];
+}
+
+/** Map a Hetzner Cloud server to our domain Service (price = monthly cap, gross). */
 export function mapHetznerServer(s: HetznerServer): ServiceData {
-  const locName = s.datacenter?.location?.name;
-  const country = s.datacenter?.location?.country;
+  const loc = resolveLocation(s);
+  const locName = loc?.name;
   const price =
     s.server_type?.prices?.find((p) => p.location === locName) ?? s.server_type?.prices?.[0];
   const monthly = price?.price_monthly?.gross;
@@ -14,11 +35,11 @@ export function mapHetznerServer(s: HetznerServer): ServiceData {
     externalId: String(s.id),
     name: s.name,
     type: 'vps',
-    countryCode: country && /^[A-Z]{2}$/.test(country) ? country : undefined,
-    // price_monthly is the monthly cap of hourly billing (gross, incl. VAT).
+    countryCode: locationToCountry(loc),
     cost: monthly ? new Decimal(monthly) : undefined,
     currency: 'EUR',
     period: 'monthly',
+    nextBilling: null,
     meta: price
       ? {
           ...s,
