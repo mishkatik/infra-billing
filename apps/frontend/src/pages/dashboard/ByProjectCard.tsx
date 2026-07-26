@@ -59,8 +59,8 @@ export function ByProjectCard({ projectRows, base, isLoading, projectOf }: ByPro
                                 style={{ backgroundColor: item.payload?.fill ?? item.color }}
                               />
                               <div className="flex flex-1 items-center justify-between gap-2 leading-none">
-                                <span className="text-muted-foreground">{name}</span>
-                                <span className="font-mono font-medium text-foreground tabular-nums">
+                                <span className="truncate text-muted-foreground">{name}</span>
+                                <span className="shrink-0 whitespace-nowrap font-mono font-medium text-foreground tabular-nums">
                                   {chartMoney(Number(value))}
                                 </span>
                               </div>

@@ -185,7 +185,7 @@ function ChartTooltipContent({
               <div
                 key={index}
                 className={cn(
-                  'flex w-full flex-wrap items-stretch gap-2 [&>svg]:h-2.5 [&>svg]:w-2.5 [&>svg]:text-muted-foreground',
+                  'flex w-full flex-nowrap items-stretch gap-2 [&>svg]:h-2.5 [&>svg]:w-2.5 [&>svg]:text-muted-foreground',
                   indicator === 'dot' && 'items-center',
                 )}
               >
@@ -230,7 +230,7 @@ function ChartTooltipContent({
                         </span>
                       </div>
                       {item.value != null && (
-                        <span className="font-mono font-medium text-foreground tabular-nums">
+                        <span className="shrink-0 whitespace-nowrap font-mono font-medium text-foreground tabular-nums">
                           {typeof item.value === 'number'
                             ? item.value.toLocaleString()
                             : String(item.value)}

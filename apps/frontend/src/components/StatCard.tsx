@@ -11,13 +11,23 @@ interface StatCardProps {
 
 export function StatCard({ label, value, icon: IconCmp }: StatCardProps) {
   return (
-    <Card className="flex-row items-start justify-between gap-4 rounded-xl p-5">
-      <div className="min-w-0">
-        <p className="section-label">{label}</p>
-        <p className="mt-1 truncate text-2xl font-bold">{value}</p>
+    <Card
+      data-kpi-card
+      className="flex-row items-center justify-between gap-4 overflow-hidden rounded-xl p-5"
+    >
+      <div className="min-w-0 flex-1">
+        <p data-kpi-label className="section-label whitespace-nowrap">
+          {label}
+        </p>
+        <p data-kpi-value className="mt-1 whitespace-nowrap text-2xl font-bold">
+          {value}
+        </p>
       </div>
-      <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground">
-        <IconCmp size={20} />
+      <div
+        data-kpi-icon
+        className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-foreground/15 bg-background text-foreground"
+      >
+        <IconCmp size={20} stroke={1.75} />
       </div>
     </Card>
   );

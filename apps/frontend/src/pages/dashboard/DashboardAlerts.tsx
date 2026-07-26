@@ -2,68 +2,25 @@ import type { AnalyticsSummary } from '@infra/shared';
 import { IconAlertTriangle, IconCash } from '@tabler/icons-react';
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ProviderIcon } from '@/components/ProviderIcon';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { providerFavicon } from '@/utils/favicon';
-import { countryFlag, formatDateShort, formatMoney } from '@/utils/format';
-import { countryBadgeStyle, providerBadgeStyle } from './badgeTints';
-import { agoLabel, dayLabel } from './dashboardUtils';
+import { formatMoney } from '@/utils/format';
+import {
+  AlertChargeGrid,
+  AlertChargeRow,
+  ProviderBadge,
+  ServiceBadge,
+  clusterIsWrapped,
+  clusterOneLineWidth,
+} from './dashboardAlertUi';
+import { agoLabel, dayLabel, severityBadgeClass } from './dashboardUtils';
 
 interface DashboardAlertsProps {
   overdue: AnalyticsSummary['overdueBillings'];
   upcoming: AnalyticsSummary['upcomingBillings'];
   runway: AnalyticsSummary['balanceRunway'];
   topUps: AnalyticsSummary['balanceTopUps'];
-}
-
-function ProviderBadge({
-  name,
-  kind,
-  faviconLink,
-  loginUrl,
-  iconName,
-  iconBg,
-}: {
-  name: string;
-  kind?: string | null;
-  faviconLink?: string | null;
-  loginUrl?: string | null;
-  iconName?: string | null;
-  iconBg?: string | null;
-}) {
-  const tint = providerBadgeStyle(kind);
-  return (
-    <Badge
-      variant="outline"
-      className="gap-1.5 border py-0.5 pr-2 pl-1 font-normal shadow-none"
-      style={tint}
-    >
-      <ProviderIcon
-        name={name}
-        src={providerFavicon({ faviconLink: faviconLink ?? null, loginUrl: loginUrl ?? null })}
-        iconName={iconName}
-        iconBg={iconBg}
-        size={16}
-      />
-      <span style={{ color: tint.color }}>{name}</span>
-    </Badge>
-  );
-}
-
-function ServiceBadge({ countryCode, name }: { countryCode?: string | null; name: string }) {
-  const flag = countryFlag(countryCode);
-  return (
-    <Badge
-      variant="outline"
-      className="gap-1 border font-medium"
-      style={countryBadgeStyle(countryCode)}
-    >
-      {flag ? <span className="text-sm leading-none">{flag}</span> : null}
-      {name}
-    </Badge>
-  );
 }
 
 function horizontalChrome(el: HTMLElement): number {
@@ -99,38 +56,39 @@ function titleOneLineWidth(el: HTMLElement): number {
 }
 
 function rowOneLineWidth(row: HTMLElement): number {
-  const kids = Array.from(row.children) as HTMLElement[];
-  const prevRow = {
-    flexWrap: row.style.flexWrap,
-    width: row.style.width,
-    maxWidth: row.style.maxWidth,
-    minWidth: row.style.minWidth,
-  };
-  const prevKids = kids.map((k) => ({ flexShrink: k.style.flexShrink }));
-
-  row.style.flexWrap = 'nowrap';
-  row.style.width = 'max-content';
-  row.style.maxWidth = 'none';
-  row.style.minWidth = 'max-content';
-  for (const k of kids) k.style.flexShrink = '0';
-
-  const width = Math.ceil(row.getBoundingClientRect().width);
-
-  row.style.flexWrap = prevRow.flexWrap;
-  row.style.width = prevRow.width;
-  row.style.maxWidth = prevRow.maxWidth;
-  row.style.minWidth = prevRow.minWidth;
-  kids.forEach((k, i) => {
-    k.style.flexShrink = prevKids[i]?.flexShrink ?? '';
-  });
-  return width;
+  const who = row.querySelector<HTMLElement>('[data-alert-who]');
+  const leader = row.querySelector<HTMLElement>('[data-alert-leader]');
+  const metas = Array.from(row.querySelectorAll<HTMLElement>('[data-alert-meta]'));
+  const grid = row.parentElement;
+  const gap =
+    Number.parseFloat(
+      (grid && getComputedStyle(grid).columnGap) ||
+        (grid && getComputedStyle(grid).gap) ||
+        '0',
+    ) || 0;
+  if (who) {
+    const leaderMin = leader
+      ? Number.parseFloat(getComputedStyle(leader).minWidth || '0') || 12
+      : 0;
+    const metaWidth = metas.reduce((sum, m) => sum + Math.ceil(m.scrollWidth), 0);
+    // who + leader sit in the first grid cell (one internal gap), then meta columns.
+    return (
+      clusterOneLineWidth(who) +
+      gap +
+      leaderMin +
+      metaWidth +
+      gap * Math.max(metas.length, 0)
+    );
+  }
+  return metas.reduce((sum, m) => sum + Math.ceil(m.scrollWidth), 0);
 }
 
 function rowIsWrapped(row: HTMLElement): boolean {
-  const kids = Array.from(row.children) as HTMLElement[];
-  if (kids.length < 2) return false;
-  const top = kids[0].offsetTop;
-  return kids.some((k) => Math.abs(k.offsetTop - top) > 1);
+  const who = row.querySelector<HTMLElement>('[data-alert-who]');
+  if (who && clusterIsWrapped(who)) return true;
+  const metas = Array.from(row.querySelectorAll<HTMLElement>('[data-alert-meta]'));
+  if (who && metas[0] && Math.abs(who.offsetTop - metas[0].offsetTop) > 1) return true;
+  return false;
 }
 
 /** Equal 2-col grid while content fits on one line per half; otherwise stack. */
@@ -228,33 +186,35 @@ export function DashboardAlerts({ overdue, upcoming, runway, topUps }: Dashboard
         <Alert variant="destructive">
           <IconAlertTriangle className="size-4" />
           <AlertTitle>{t('dashboard.overdue.title')}</AlertTitle>
-          <AlertDescription>
-            <div className="space-y-2">
-              {overdue.map((b) => (
-                <div
+          <AlertDescription className="mt-2 block w-full">
+            <AlertChargeGrid>
+              {overdue.map((b, index) => (
+                <AlertChargeRow
                   key={b.serviceUuid}
-                  className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm"
-                >
-                  <span>{t('dashboard.critical.serviceLead')}</span>
-                  <ProviderBadge
-                    name={b.providerName}
-                    kind={b.providerKind}
-                    faviconLink={b.providerFaviconLink}
-                    loginUrl={b.providerLoginUrl}
-                    iconName={b.providerIconName}
-                    iconBg={b.providerIconBg}
-                  />
-                  <ServiceBadge countryCode={b.countryCode} name={b.name} />
-                  <span>
-                    {t('dashboard.overdue.charge', {
-                      when: agoLabel(t, b.daysOverdue),
-                      date: formatDateShort(b.nextBillingAt),
-                      amount: formatMoney(b.cost, b.currency),
-                    })}
-                  </span>
-                </div>
+                  index={index}
+                  who={
+                    <>
+                      <span>{t('dashboard.critical.serviceLead')}</span>
+                      <ProviderBadge
+                        name={b.providerName}
+                        kind={b.providerKind}
+                        faviconLink={b.providerFaviconLink}
+                        loginUrl={b.providerLoginUrl}
+                        iconName={b.providerIconName}
+                        iconBg={b.providerIconBg}
+                      />
+                      <ServiceBadge countryCode={b.countryCode} name={b.name} />
+                    </>
+                  }
+                  badge={
+                    <Badge className={cn('capitalize', severityBadgeClass('critical'))}>
+                      {agoLabel(t, b.daysOverdue)}
+                    </Badge>
+                  }
+                  amount={formatMoney(b.cost, b.currency)}
+                />
               ))}
-            </div>
+            </AlertChargeGrid>
           </AlertDescription>
         </Alert>
       )}
@@ -268,33 +228,35 @@ export function DashboardAlerts({ overdue, upcoming, runway, topUps }: Dashboard
             >
               <IconAlertTriangle className="size-4" />
               <AlertTitle>{t('dashboard.critical.title')}</AlertTitle>
-              <AlertDescription className="mt-1 w-full justify-items-stretch">
-                <div className="w-full space-y-2">
-                  {critical.map((b) => (
-                    <div
+              <AlertDescription className="mt-2 block w-full">
+                <AlertChargeGrid>
+                  {critical.map((b, index) => (
+                    <AlertChargeRow
                       key={b.serviceUuid}
-                      data-alert-row
-                      className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm"
-                    >
-                      <span>{t('dashboard.critical.serviceLead')}</span>
-                      <ProviderBadge
-                        name={b.providerName}
-                        kind={b.providerKind}
-                        faviconLink={b.providerFaviconLink}
-                        loginUrl={b.providerLoginUrl}
-                        iconName={b.providerIconName}
-                        iconBg={b.providerIconBg}
-                      />
-                      <ServiceBadge countryCode={b.countryCode} name={b.name} />
-                      <span>
-                        {t('dashboard.critical.charge', {
-                          when: dayLabel(t, b.daysUntil),
-                          amount: formatMoney(b.cost, b.currency),
-                        })}
-                      </span>
-                    </div>
+                      index={index}
+                      who={
+                        <>
+                          <span>{t('dashboard.critical.serviceLead')}</span>
+                          <ProviderBadge
+                            name={b.providerName}
+                            kind={b.providerKind}
+                            faviconLink={b.providerFaviconLink}
+                            loginUrl={b.providerLoginUrl}
+                            iconName={b.providerIconName}
+                            iconBg={b.providerIconBg}
+                          />
+                          <ServiceBadge countryCode={b.countryCode} name={b.name} />
+                        </>
+                      }
+                      badge={
+                        <Badge className={cn('capitalize', severityBadgeClass(b.severity))}>
+                          {dayLabel(t, b.daysUntil)}
+                        </Badge>
+                      }
+                      amount={formatMoney(b.cost, b.currency)}
+                    />
                   ))}
-                </div>
+                </AlertChargeGrid>
               </AlertDescription>
             </Alert>
           )}
@@ -303,9 +265,9 @@ export function DashboardAlerts({ overdue, upcoming, runway, topUps }: Dashboard
             <Alert className="h-full min-w-0 [&>[data-slot=alert-description]]:col-span-full [&>[data-slot=alert-description]]:col-start-1">
               <IconCash className="size-4" />
               <AlertTitle>{t('dashboard.critical.topUpTitle')}</AlertTitle>
-              <AlertDescription className="mt-1 w-full justify-items-stretch">
-                <div className="flex w-full flex-col gap-2">
-                  {criticalTopUps.map((u) => {
+              <AlertDescription className="mt-2 block w-full">
+                <AlertChargeGrid>
+                  {criticalTopUps.map((u, index) => {
                     const fromCritical = critical.find((b) => b.providerUuid === u.providerUuid);
                     const soonest = critical
                       .filter((b) => b.providerUuid === u.providerUuid)
@@ -314,30 +276,39 @@ export function DashboardAlerts({ overdue, upcoming, runway, topUps }: Dashboard
                         null as (typeof critical)[number] | null,
                       );
                     return (
-                      <div
+                      <AlertChargeRow
                         key={u.providerUuid}
-                        data-alert-row
-                        className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm"
-                      >
-                        <span>{t('dashboard.critical.topUpLead')}</span>
-                        <ProviderBadge
-                          name={u.providerName}
-                          kind={u.providerKind || fromCritical?.providerKind}
-                          faviconLink={u.providerFaviconLink ?? fromCritical?.providerFaviconLink}
-                          loginUrl={u.providerLoginUrl ?? fromCritical?.providerLoginUrl}
-                          iconName={u.providerIconName ?? fromCritical?.providerIconName}
-                          iconBg={u.providerIconBg ?? fromCritical?.providerIconBg}
-                        />
-                        <span>
-                          {t('dashboard.critical.topUp', {
-                            amount: formatMoney(u.amount, u.currency),
-                            when: dayLabel(t, soonest?.daysUntil ?? 0),
-                          })}
-                        </span>
-                      </div>
+                        index={index}
+                        who={
+                          <>
+                            <span>{t('dashboard.critical.topUpLead')}</span>
+                            <ProviderBadge
+                              name={u.providerName}
+                              kind={u.providerKind || fromCritical?.providerKind}
+                              faviconLink={
+                                u.providerFaviconLink ?? fromCritical?.providerFaviconLink
+                              }
+                              loginUrl={u.providerLoginUrl ?? fromCritical?.providerLoginUrl}
+                              iconName={u.providerIconName ?? fromCritical?.providerIconName}
+                              iconBg={u.providerIconBg ?? fromCritical?.providerIconBg}
+                            />
+                          </>
+                        }
+                        badge={
+                          <Badge
+                            className={cn(
+                              'capitalize',
+                              severityBadgeClass(soonest?.severity ?? 'critical'),
+                            )}
+                          >
+                            {dayLabel(t, soonest?.daysUntil ?? 0)}
+                          </Badge>
+                        }
+                        amount={formatMoney(u.amount, u.currency)}
+                      />
                     );
                   })}
-                </div>
+                </AlertChargeGrid>
               </AlertDescription>
             </Alert>
           )}
@@ -348,7 +319,7 @@ export function DashboardAlerts({ overdue, upcoming, runway, topUps }: Dashboard
         <Alert variant="destructive">
           <IconAlertTriangle className="size-4" />
           <AlertTitle>{t('dashboard.runway.criticalTitle')}</AlertTitle>
-          <AlertDescription>
+          <AlertDescription className="mt-2">
             <div className="space-y-1">
               {runwayCritical.map((r) => (
                 <p key={r.providerUuid} className="text-sm">

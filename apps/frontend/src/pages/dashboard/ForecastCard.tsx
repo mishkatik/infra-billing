@@ -55,10 +55,10 @@ export function ForecastCard({ forecast, base }: ForecastCardProps) {
                           }}
                         />
                         <div className="flex flex-1 items-center justify-between gap-2 leading-none">
-                          <span className="text-muted-foreground">
+                          <span className="truncate text-muted-foreground">
                             {chartConfig[name as keyof typeof chartConfig]?.label ?? name}
                           </span>
-                          <span className="font-mono font-medium text-foreground tabular-nums">
+                          <span className="shrink-0 whitespace-nowrap font-mono font-medium text-foreground tabular-nums">
                             {chartMoney(Number(value))}
                           </span>
                         </div>

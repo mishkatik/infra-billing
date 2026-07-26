@@ -12,15 +12,15 @@ export const dashboard = {
     critical: {
       title: "Critical: won't cover the charge",
       serviceLead: 'Service',
-      charge: 'charge of {{amount}} {{when}}',
+      charge: '{{amount}} · {{when}}',
       balance: ' · balance {{amount}}',
       topUpTitle: 'Top up recommended',
       topUpLead: 'Top up provider',
-      topUp: 'on {{amount}} {{when}}',
+      topUp: '{{amount}} · {{when}}',
     },
     overdue: {
       title: 'Overdue: billing date has passed',
-      charge: 'billing {{when}} ({{date}}), {{amount}}',
+      charge: '{{amount}} · {{when}} ({{date}})',
     },
     runway: {
       criticalTitle: 'Critical: balance running out',
@@ -62,7 +62,9 @@ export const dashboard = {
     },
     upcoming: {
       title: 'Upcoming charges (14 days)',
-      insufficientBalance: ' · insufficient balance',
+      insufficientBalance: 'Insufficient balance',
+      balanceOk: 'Covered by balance',
+      balanceUnknown: 'Balance unknown',
     },
     due: {
       today: 'today',
@@ -87,15 +89,15 @@ export const dashboard = {
     critical: {
       title: 'Критично: не хватит на списание',
       serviceLead: 'Сервис',
-      charge: 'списание на {{amount}} {{when}}',
+      charge: '{{amount}} · {{when}}',
       balance: ' · баланс {{amount}}',
       topUpTitle: 'Рекомендуемое пополнение',
       topUpLead: 'Пополнить провайдера',
-      topUp: 'на {{amount}} {{when}}',
+      topUp: '{{amount}} · {{when}}',
     },
     overdue: {
       title: 'Просрочено: дата списания прошла',
-      charge: 'списание {{when}} ({{date}}) на {{amount}}',
+      charge: '{{amount}} · {{when}} ({{date}})',
     },
     runway: {
       criticalTitle: 'Критично: баланс заканчивается',
@@ -137,7 +139,9 @@ export const dashboard = {
     },
     upcoming: {
       title: 'Ближайшие списания (14 дней)',
-      insufficientBalance: ' · не хватает баланса',
+      insufficientBalance: 'Не хватает баланса',
+      balanceOk: 'Покрыто балансом',
+      balanceUnknown: 'Баланс неизвестен',
     },
     due: {
       today: 'сегодня',

@@ -26,7 +26,7 @@ const PROVIDER_BRAND: Record<string, string> = {
 /** Soft country tint for service badges (complements the flag). */
 const COUNTRY_TINT: Record<string, string> = {
   RU: '#3B82F6',
-  DE: '#F59E0B',
+  DE: '#B87333',
   FI: '#0EA5E9',
   NL: '#F97316',
   PL: '#EF4444',
