@@ -11,8 +11,12 @@ export const dashboard = {
     },
     critical: {
       title: "Critical: won't cover the charge",
-      charge: 'charge {{when}} of {{amount}}',
+      serviceLead: 'Service',
+      charge: 'charge of {{amount}} {{when}}',
       balance: ' · balance {{amount}}',
+      topUpTitle: 'Top up recommended',
+      topUpLead: 'Top up provider',
+      topUp: 'on {{amount}} {{when}}',
     },
     overdue: {
       title: 'Overdue: billing date has passed',
@@ -82,8 +86,12 @@ export const dashboard = {
     },
     critical: {
       title: 'Критично: не хватит на списание',
-      charge: 'списание {{when}} на {{amount}}',
+      serviceLead: 'Сервис',
+      charge: 'списание на {{amount}} {{when}}',
       balance: ' · баланс {{amount}}',
+      topUpTitle: 'Рекомендуемое пополнение',
+      topUpLead: 'Пополнить провайдера',
+      topUp: 'на {{amount}} {{when}}',
     },
     overdue: {
       title: 'Просрочено: дата списания прошла',

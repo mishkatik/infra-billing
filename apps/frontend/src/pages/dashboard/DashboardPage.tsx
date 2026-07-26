@@ -59,6 +59,7 @@ export function DashboardPage() {
         overdue={summary?.overdueBillings ?? []}
         upcoming={summary?.upcomingBillings ?? []}
         runway={summary?.balanceRunway ?? []}
+        topUps={summary?.balanceTopUps ?? []}
       />
 
       <div className="grid gap-4 lg:grid-cols-2">

@@ -120,42 +120,59 @@ export class AnalyticsService {
 
     // Running balance per provider (base currency); charges deplete it in date order, so once a
     // provider's funds run out the later charges in the window are flagged uncovered.
+    // A parallel map in the provider's own currency drives the top-up suggestion amount.
     const runningBalance = new Map<string, Decimal | null>();
+    const runningBalanceNative = new Map<string, Decimal | null>();
     for (const p of providers) {
+      const hasPrepaid = p.balance != null && p.balanceCurrency && !p.isPostpaid;
       runningBalance.set(
         p.uuid,
-        // Postpaid providers (invoice-billed) carry no prepaid funds → balance is unknown here.
-        p.balance != null && p.balanceCurrency && !p.isPostpaid
+        hasPrepaid
           ? this.currency.convert(
-              new Decimal(p.balance.toString()),
-              p.balanceCurrency,
+              new Decimal(p.balance!.toString()),
+              p.balanceCurrency!,
               baseCurrency,
               rates,
             )
           : null,
       );
+      runningBalanceNative.set(p.uuid, hasPrepaid ? new Decimal(p.balance!.toString()) : null);
     }
 
     const upcomingBillings = upcomingSorted.map(({ s, date, costBase }) => {
       const bal = runningBalance.get(s.providerUuid) ?? null;
+      const provider = providerByUuid.get(s.providerUuid);
       let covered: boolean | null;
       if (bal == null) {
         covered = null; // provider has no balance API → unknown
       } else {
         covered = bal.gte(costBase);
         runningBalance.set(s.providerUuid, bal.sub(costBase));
+        const native = runningBalanceNative.get(s.providerUuid);
+        if (native != null && provider?.balanceCurrency) {
+          const costNative = this.currency.convert(
+            new Decimal(s.cost.toString()),
+            s.currency,
+            provider.balanceCurrency,
+            rates,
+          );
+          runningBalanceNative.set(s.providerUuid, native.sub(costNative));
+        }
       }
       const daysUntil = Math.max(0, date.startOf('day').diff(today, 'day'));
       let severity: 'critical' | 'warning' | 'ok';
       if (covered === false && daysUntil <= 7) severity = 'critical';
       else if (covered === false || daysUntil <= 3) severity = 'warning';
       else severity = 'ok';
-      const provider = providerByUuid.get(s.providerUuid);
       return {
         serviceUuid: s.uuid,
         name: s.name,
+        providerUuid: s.providerUuid,
         providerName: providerName.get(s.providerUuid) ?? '',
+        providerKind: provider?.kind ?? 'manual',
         providerLoginUrl: provider?.loginUrl ?? null,
+        providerFaviconLink: provider?.faviconLink ?? null,
+        countryCode: s.countryCode ?? null,
         nextBillingAt: s.nextBillingAt!.toISOString(),
         cost: new Decimal(s.cost.toString()).toFixed(2),
         currency: s.currency,
@@ -168,6 +185,28 @@ export class AnalyticsService {
       };
     });
 
+    // Top-up = shortfall after simulating upcoming charges. Only for providers that already have
+    // a critical (uncovered + due within a week) line — matches the dashboard critical banner.
+    const criticalProviderUuids = new Set(
+      upcomingBillings.filter((b) => b.severity === 'critical').map((b) => b.providerUuid),
+    );
+    const balanceTopUps: AnalyticsSummary['balanceTopUps'] = [];
+    for (const p of providers) {
+      if (!criticalProviderUuids.has(p.uuid) || !p.balanceCurrency) continue;
+      const native = runningBalanceNative.get(p.uuid);
+      if (native == null || native.gte(0)) continue;
+      balanceTopUps.push({
+        providerUuid: p.uuid,
+        providerName: p.name,
+        providerKind: p.kind,
+        providerLoginUrl: p.loginUrl ?? null,
+        providerFaviconLink: p.faviconLink ?? null,
+        amount: native.abs().toFixed(2),
+        currency: p.balanceCurrency,
+      });
+    }
+    balanceTopUps.sort((a, b) => new Decimal(b.amount).cmp(new Decimal(a.amount)));
+
     // Dated charges already in the past: pay-or-fix reminders, most overdue first.
     const overdueBillings: AnalyticsSummary['overdueBillings'] = [];
     for (const s of services) {
@@ -178,7 +217,10 @@ export class AnalyticsService {
         serviceUuid: s.uuid,
         name: s.name,
         providerName: providerName.get(s.providerUuid) ?? '',
+        providerKind: provider?.kind ?? 'manual',
         providerLoginUrl: provider?.loginUrl ?? null,
+        providerFaviconLink: provider?.faviconLink ?? null,
+        countryCode: s.countryCode ?? null,
         nextBillingAt: s.nextBillingAt!.toISOString(),
         cost: new Decimal(s.cost.toString()).toFixed(2),
         currency: s.currency,
@@ -303,6 +345,7 @@ export class AnalyticsService {
       upcomingBillings,
       overdueBillings,
       balanceRunway,
+      balanceTopUps,
     };
   }
 
