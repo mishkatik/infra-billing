@@ -1,4 +1,4 @@
-import type { AnalyticsSummary } from '@infra/shared';
+import type { AnalyticsSummary, Project } from '@infra/shared';
 import { useTranslation } from 'react-i18next';
 import { Cell, Pie, PieChart } from 'recharts';
 import { ProviderIcon } from '@/components/ProviderIcon';
@@ -12,6 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { projectFavicon } from '@/utils/favicon';
 import { formatMoney } from '@/utils/format';
 import { DONUT_COLORS } from './dashboardUtils';
 
@@ -19,10 +20,10 @@ interface ByProjectCardProps {
   projectRows: AnalyticsSummary['byProject'];
   base: string;
   isLoading: boolean;
-  projectIconOf: (uuid: string) => string | null;
+  projectOf: (uuid: string) => Project | undefined;
 }
 
-export function ByProjectCard({ projectRows, base, isLoading, projectIconOf }: ByProjectCardProps) {
+export function ByProjectCard({ projectRows, base, isLoading, projectOf }: ByProjectCardProps) {
   const { t } = useTranslation();
   const chartMoney = (v: number) => formatMoney(String(v), base);
   const rows = [...projectRows].sort((a, b) => Number(b.monthlyCost) - Number(a.monthlyCost));
@@ -106,7 +107,13 @@ export function ByProjectCard({ projectRows, base, isLoading, projectIconOf }: B
                   <TableRow key={p.projectUuid}>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <ProviderIcon name={p.name} src={projectIconOf(p.projectUuid)} size={18} />
+                        <ProviderIcon
+                          name={p.name}
+                          src={projectFavicon(projectOf(p.projectUuid)?.faviconLink ?? null)}
+                          iconName={projectOf(p.projectUuid)?.iconName}
+                          iconBg={projectOf(p.projectUuid)?.iconBg}
+                          size={18}
+                        />
                         <span className="text-sm font-medium">{p.name}</span>
                       </div>
                     </TableCell>

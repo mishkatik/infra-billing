@@ -19,7 +19,12 @@ export class ProjectsService {
   }
 
   async create(dto: CreateProjectDto): Promise<ProjectDto> {
-    const p = await this.projects.create({ name: dto.name, faviconLink: dto.faviconLink || null });
+    const p = await this.projects.create({
+      name: dto.name,
+      faviconLink: dto.faviconLink || null,
+      iconName: dto.iconName ?? null,
+      iconBg: dto.iconBg ?? null,
+    });
     return mapProject(p);
   }
 
@@ -28,6 +33,8 @@ export class ProjectsService {
     const data: Prisma.ProjectUpdateInput = {};
     if (dto.name !== undefined) data.name = dto.name;
     if (dto.faviconLink !== undefined) data.faviconLink = dto.faviconLink || null;
+    if (dto.iconName !== undefined) data.iconName = dto.iconName;
+    if (dto.iconBg !== undefined) data.iconBg = dto.iconBg;
     const p = await this.projects.update(uuid, data);
     return mapProject(p);
   }

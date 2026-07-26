@@ -3,6 +3,7 @@ import { IconLoader2 } from '@tabler/icons-react';
 import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
+import { IconAppearanceFields } from '@/components/IconAppearanceFields';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -11,6 +12,8 @@ import { Label } from '@/components/ui/label';
 export interface ProjectFormValues {
   name: string;
   faviconLink: string;
+  iconName: string;
+  iconBg: string;
 }
 
 interface ProjectFormModalProps {
@@ -32,6 +35,9 @@ export function ProjectFormModal({
 }: ProjectFormModalProps) {
   const { t } = useTranslation();
   const nameError = form.formState.errors.name;
+  const previewName = form.watch('name');
+  const iconName = form.watch('iconName');
+  const iconBg = form.watch('iconBg');
   return (
     <Dialog open={opened} onOpenChange={(o) => !o && onClose()}>
       <DialogContent>
@@ -63,6 +69,13 @@ export function ProjectFormModal({
               {...form.register('faviconLink')}
             />
           </div>
+          <IconAppearanceFields
+            previewName={previewName}
+            iconName={iconName}
+            iconBg={iconBg}
+            onIconNameChange={(v) => form.setValue('iconName', v, { shouldDirty: true })}
+            onIconBgChange={(v) => form.setValue('iconBg', v, { shouldDirty: true })}
+          />
           <Button type="submit" className="w-full" disabled={isPending}>
             {isPending && <IconLoader2 className="size-4 animate-spin" />}
             {t('common.save')}

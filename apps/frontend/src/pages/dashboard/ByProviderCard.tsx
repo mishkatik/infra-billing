@@ -72,6 +72,8 @@ export function ByProviderCard({ providerRows, base, isLoading, providerOf }: By
                         src={providerFavicon(
                           providerOf(p.providerUuid) ?? { faviconLink: null, loginUrl: null },
                         )}
+                        iconName={providerOf(p.providerUuid)?.iconName}
+                        iconBg={providerOf(p.providerUuid)?.iconBg}
                         size={18}
                       />
                       <span className="text-sm font-medium">{p.name}</span>

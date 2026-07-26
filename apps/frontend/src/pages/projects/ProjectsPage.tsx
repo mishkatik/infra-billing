@@ -13,11 +13,19 @@ import {
   useUpdateProject,
 } from '@/api/projects';
 import { PageHeader } from '@/components/PageHeader';
+import { DEFAULT_ICON_BG } from '@/components/tablerIconCatalog';
 import { Button } from '@/components/ui/button';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { notifyError, notifySuccess } from '@/utils/notify';
 import { ProjectFormModal, type ProjectFormValues } from './ProjectFormModal';
 import { ProjectsTable } from './ProjectsTable';
+
+const EMPTY_PROJECT_FORM: ProjectFormValues = {
+  name: '',
+  faviconLink: '',
+  iconName: '',
+  iconBg: '',
+};
 
 export function ProjectsPage() {
   const { t } = useTranslation();
@@ -31,29 +39,47 @@ export function ProjectsPage() {
   const [editing, setEditing] = useState<Project | null>(null);
 
   const form = useForm<ProjectFormValues>({
-    defaultValues: { name: '', faviconLink: '' },
+    defaultValues: EMPTY_PROJECT_FORM,
     mode: 'onSubmit',
   });
 
   const openCreate = () => {
     setEditing(null);
-    form.reset({ name: '', faviconLink: '' });
+    form.reset({ ...EMPTY_PROJECT_FORM });
     open();
   };
 
   const openEdit = (p: Project) => {
     setEditing(p);
-    form.reset({ name: p.name, faviconLink: p.faviconLink ?? '' });
+    form.reset({
+      name: p.name,
+      faviconLink: p.faviconLink ?? '',
+      iconName: p.iconName ?? '',
+      iconBg: p.iconBg ?? '',
+    });
     open();
   };
 
   const submit = form.handleSubmit(async (v) => {
-    const dto = { name: v.name.trim(), faviconLink: v.faviconLink.trim() || null };
+    const icon = v.iconName
+      ? { iconName: v.iconName, iconBg: v.iconBg || DEFAULT_ICON_BG }
+      : { iconName: null as string | null, iconBg: null as string | null };
+    const dto = {
+      name: v.name.trim(),
+      faviconLink: v.faviconLink.trim() || null,
+      ...icon,
+    };
     try {
       if (editing) {
         await update.mutateAsync({ uuid: editing.uuid, dto });
       } else {
-        await create.mutateAsync({ name: dto.name, faviconLink: dto.faviconLink ?? undefined });
+        await create.mutateAsync({
+          name: dto.name,
+          faviconLink: dto.faviconLink ?? undefined,
+          ...(v.iconName
+            ? { iconName: v.iconName, iconBg: v.iconBg || DEFAULT_ICON_BG }
+            : {}),
+        });
       }
       close();
       notifySuccess(editing ? t('projects.updated') : t('projects.created'));

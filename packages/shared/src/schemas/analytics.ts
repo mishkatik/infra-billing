@@ -73,6 +73,8 @@ export const upcomingBillingSchema = z.object({
   // Provider cabinet link (loginUrl), used to deeplink the provider in Telegram alerts.
   providerLoginUrl: z.string().describe('Provider cabinet link').nullable(),
   providerFaviconLink: z.string().describe('Provider favicon URL').nullable(),
+  providerIconName: z.string().describe('Provider Tabler icon name').nullable(),
+  providerIconBg: z.string().describe('Provider icon tile background').nullable(),
   countryCode: z.string().describe('Service country code').nullable(),
   nextBillingAt: isoDateSchema.describe('Next billing date'),
   cost: moneySchema.describe('Cost in service currency'),
@@ -96,6 +98,8 @@ export const balanceTopUpSchema = z.object({
   providerKind: z.string().describe('Provider connector kind'),
   providerLoginUrl: z.string().describe('Provider cabinet link').nullable(),
   providerFaviconLink: z.string().describe('Provider favicon URL').nullable(),
+  providerIconName: z.string().describe('Provider Tabler icon name').nullable(),
+  providerIconBg: z.string().describe('Provider icon tile background').nullable(),
   amount: moneySchema.describe('Suggested top-up amount'),
   currency: currencySchema.describe('Balance / top-up currency'),
 });
@@ -109,6 +113,8 @@ export const overdueBillingSchema = z.object({
   providerKind: z.string().describe('Provider connector kind'),
   providerLoginUrl: z.string().describe('Provider cabinet link').nullable(),
   providerFaviconLink: z.string().describe('Provider favicon URL').nullable(),
+  providerIconName: z.string().describe('Provider Tabler icon name').nullable(),
+  providerIconBg: z.string().describe('Provider icon tile background').nullable(),
   countryCode: z.string().describe('Service country code').nullable(),
   nextBillingAt: isoDateSchema.describe('Missed billing date'),
   cost: moneySchema.describe('Cost in service currency'),

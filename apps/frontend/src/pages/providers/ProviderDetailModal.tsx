@@ -72,7 +72,12 @@ export function ProviderDetailModal({
       >
         <DialogHeader>
           <DialogTitle className="flex flex-wrap items-center gap-2">
-            <ProviderIcon name={shown.name} src={providerFavicon(shown)} />
+            <ProviderIcon
+              name={shown.name}
+              src={providerFavicon(shown)}
+              iconName={shown.iconName}
+              iconBg={shown.iconBg}
+            />
             <span>{shown.name}</span>
             <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">
               {kindLabel(shown.kind)}

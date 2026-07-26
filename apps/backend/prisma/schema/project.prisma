@@ -3,6 +3,8 @@ model Project {
 
   name        String  @map("name")
   faviconLink String? @map("favicon_link")
+  iconName    String? @map("icon_name")
+  iconBg      String? @map("icon_bg")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt      @map("updated_at")

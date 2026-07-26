@@ -2,6 +2,7 @@ import { IconKey, IconServer2 } from '@tabler/icons-react';
 import { Controller, type UseFormReturn } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { FormSection } from '@/components/FormSection';
+import { IconAppearanceFields } from '@/components/IconAppearanceFields';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -43,6 +44,9 @@ export function ProviderFormFields({
   const { t } = useTranslation();
   const nameError = form.formState.errors.name;
   const kind = form.watch('kind');
+  const previewName = form.watch('name');
+  const iconName = form.watch('iconName');
+  const iconBg = form.watch('iconBg');
   return (
     <>
       <FormSection icon={IconServer2} title={t('providers.section.main')}>
@@ -117,6 +121,13 @@ export function ProviderFormFields({
             <p className="text-xs text-destructive">{form.formState.errors.loginUrl.message}</p>
           )}
         </div>
+        <IconAppearanceFields
+          previewName={previewName}
+          iconName={iconName}
+          iconBg={iconBg}
+          onIconNameChange={(v) => form.setValue('iconName', v, { shouldDirty: true })}
+          onIconBgChange={(v) => form.setValue('iconBg', v, { shouldDirty: true })}
+        />
         <Controller
           control={form.control}
           name="isPostpaid"

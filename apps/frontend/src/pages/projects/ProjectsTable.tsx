@@ -93,7 +93,13 @@ export function ProjectsTable({
                 <TableRow key={p.uuid}>
                   <TableCell className="py-3">
                     <div className="flex items-center gap-2">
-                      <ProviderIcon name={p.name} src={projectFavicon(p.faviconLink)} size={20} />
+                      <ProviderIcon
+                        name={p.name}
+                        src={projectFavicon(p.faviconLink)}
+                        iconName={p.iconName}
+                        iconBg={p.iconBg}
+                        size={20}
+                      />
                       <span className="font-semibold">{p.name}</span>
                       {isDefault && (
                         <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">

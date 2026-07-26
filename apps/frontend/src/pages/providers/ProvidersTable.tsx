@@ -77,7 +77,12 @@ export function ProvidersTable({
               >
                 <TableCell className="py-3">
                   <div className="flex items-center gap-2">
-                    <ProviderIcon name={p.name} src={providerFavicon(p)} />
+                    <ProviderIcon
+                      name={p.name}
+                      src={providerFavicon(p)}
+                      iconName={p.iconName}
+                      iconBg={p.iconBg}
+                    />
                     <span className="font-semibold">{p.name}</span>
                     {p.loginUrl && (
                       <Button

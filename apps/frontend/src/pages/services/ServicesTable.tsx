@@ -124,12 +124,16 @@ export function ServicesTable({
                     <EntityLabel
                       name={provider?.name ?? ''}
                       src={providerFavicon(provider ?? { faviconLink: null, loginUrl: null })}
+                      iconName={provider?.iconName}
+                      iconBg={provider?.iconBg}
                     />
                   </TableCell>
                   <TableCell>
                     <EntityLabel
                       name={project?.name ?? ''}
                       src={projectFavicon(project?.faviconLink ?? null)}
+                      iconName={project?.iconName}
+                      iconBg={project?.iconBg}
                     />
                   </TableCell>
                   <TableCell>{serviceTypeLabel(s.type)}</TableCell>

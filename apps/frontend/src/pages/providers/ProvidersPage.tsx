@@ -25,6 +25,7 @@ import { notifyError, notifySuccess } from '@/utils/notify';
 import { ProviderDetailModal } from './ProviderDetailModal';
 import { ProviderFormModal } from './ProviderFormModal';
 import { ProvidersTable } from './ProvidersTable';
+import { DEFAULT_ICON_BG } from '@/components/tablerIconCatalog';
 import {
   EMPTY_FORM,
   type FormValues,
@@ -70,6 +71,8 @@ export function ProvidersPage() {
       name: p.name,
       kind: p.kind,
       loginUrl: p.loginUrl ?? '',
+      iconName: p.iconName ?? '',
+      iconBg: p.iconBg ?? '',
       // Non-secret fields are prefilled; secrets stay blank until reveal-on-demand.
       baseUrl: p.baseUrl ?? '',
       username: p.username ?? '',
@@ -101,6 +104,9 @@ export function ProvidersPage() {
       }
     }
     const creds = buildCredentials(v);
+    const icon = v.iconName
+      ? { iconName: v.iconName, iconBg: v.iconBg || DEFAULT_ICON_BG }
+      : { iconName: null as string | null, iconBg: null as string | null };
     try {
       let saved: Provider;
       if (selected) {
@@ -109,6 +115,7 @@ export function ProvidersPage() {
           dto: {
             name: v.name,
             loginUrl: v.loginUrl || undefined,
+            ...icon,
             isPostpaid: v.isPostpaid,
             ...creds,
           },
@@ -119,6 +126,9 @@ export function ProvidersPage() {
           name: v.name,
           kind: v.kind as ProviderKind,
           loginUrl: v.loginUrl || undefined,
+          ...(v.iconName
+            ? { iconName: v.iconName, iconBg: v.iconBg || DEFAULT_ICON_BG }
+            : {}),
           isPostpaid: v.isPostpaid,
           ...creds,
         });

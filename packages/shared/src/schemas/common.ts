@@ -33,3 +33,12 @@ export const moneySchema = z.string().regex(/^-?\d+(\.\d{1,2})?$/, 'decimal stri
 
 /** ISO 8601 datetime string (UTC). The frontend renders it in local time. */
 export const isoDateSchema = z.string().datetime({ offset: true });
+
+/** Tabler Icons React export name, e.g. IconServer. */
+export const iconNameSchema = z
+  .string()
+  .regex(/^Icon[A-Za-z0-9]+$/, 'Tabler icon name')
+  .max(64);
+
+/** Solid hex background for a custom Tabler icon tile. */
+export const iconBgSchema = z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'hex color #RRGGBB');

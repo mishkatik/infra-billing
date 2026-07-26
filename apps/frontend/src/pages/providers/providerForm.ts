@@ -7,6 +7,8 @@ export interface FormValues {
   kind: string;
   token: string;
   loginUrl: string;
+  iconName: string;
+  iconBg: string;
   baseUrl: string;
   username: string;
   password: string;
@@ -46,6 +48,8 @@ export const EMPTY_FORM: FormValues = {
   kind: 'manual',
   token: '',
   loginUrl: '',
+  iconName: '',
+  iconBg: '',
   baseUrl: '',
   username: '',
   password: '',

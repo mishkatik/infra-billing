@@ -5,6 +5,8 @@ model Provider {
   kind            String    @map("kind")
   faviconLink     String?   @map("favicon_link")
   loginUrl        String?   @map("login_url")
+  iconName        String?   @map("icon_name")
+  iconBg          String?   @map("icon_bg")
   credentialsEnc  Bytes?    @map("credentials_enc")
   balance         Decimal?  @db.Decimal(14, 2) @map("balance")
   balanceCurrency String?   @map("balance_currency")

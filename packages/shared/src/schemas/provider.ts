@@ -1,6 +1,13 @@
 import { z } from 'zod';
 import { providerKindSchema } from '../enums';
-import { currencySchema, isoDateSchema, moneySchema, uuidSchema } from './common';
+import {
+  currencySchema,
+  iconBgSchema,
+  iconNameSchema,
+  isoDateSchema,
+  moneySchema,
+  uuidSchema,
+} from './common';
 
 /** Provider as returned by the API. The API token is NEVER returned. */
 export const providerSchema = z.object({
@@ -9,6 +16,9 @@ export const providerSchema = z.object({
   kind: providerKindSchema.describe('Connector kind'),
   faviconLink: z.string().describe('Favicon URL').nullable(),
   loginUrl: z.string().describe('Control panel URL').nullable(),
+  // Optional Tabler icon + tile color; when set, overrides favicon derived from loginUrl.
+  iconName: iconNameSchema.describe('Tabler icon name').nullable(),
+  iconBg: iconBgSchema.describe('Icon tile background').nullable(),
   balance: moneySchema.describe('Account balance').nullable(),
   balanceCurrency: currencySchema.describe('Balance currency').nullable(),
   // Invoice-billed (postpaid): balance is not prepaid funds → excluded from balance warnings.
@@ -74,6 +84,8 @@ export const createProviderSchema = z.object({
   name: z.string().min(1).describe('Display name'),
   kind: providerKindSchema.describe('Connector kind'),
   loginUrl: z.string().url().describe('Control panel URL').optional(),
+  iconName: iconNameSchema.describe('Tabler icon name').optional(),
+  iconBg: iconBgSchema.describe('Icon tile background').optional(),
   isPostpaid: z.boolean().describe('Invoice-billed / postpaid').optional(),
   ...credentialFields,
 });
@@ -82,6 +94,8 @@ export type CreateProvider = z.infer<typeof createProviderSchema>;
 export const updateProviderSchema = z.object({
   name: z.string().min(1).describe('Display name').optional(),
   loginUrl: z.string().url().describe('Control panel URL').nullable().optional(),
+  iconName: iconNameSchema.describe('Tabler icon name').nullable().optional(),
+  iconBg: iconBgSchema.describe('Icon tile background').nullable().optional(),
   isPostpaid: z.boolean().describe('Invoice-billed / postpaid').optional(),
   ...credentialFields,
 });

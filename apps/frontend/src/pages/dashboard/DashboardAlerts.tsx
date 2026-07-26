@@ -21,11 +21,15 @@ function ProviderBadge({
   kind,
   faviconLink,
   loginUrl,
+  iconName,
+  iconBg,
 }: {
   name: string;
   kind?: string | null;
   faviconLink?: string | null;
   loginUrl?: string | null;
+  iconName?: string | null;
+  iconBg?: string | null;
 }) {
   const tint = providerBadgeStyle(kind);
   return (
@@ -37,6 +41,8 @@ function ProviderBadge({
       <ProviderIcon
         name={name}
         src={providerFavicon({ faviconLink: faviconLink ?? null, loginUrl: loginUrl ?? null })}
+        iconName={iconName}
+        iconBg={iconBg}
         size={16}
       />
       <span style={{ color: tint.color }}>{name}</span>
@@ -85,6 +91,8 @@ export function DashboardAlerts({ overdue, upcoming, runway, topUps }: Dashboard
                     kind={b.providerKind}
                     faviconLink={b.providerFaviconLink}
                     loginUrl={b.providerLoginUrl}
+                    iconName={b.providerIconName}
+                    iconBg={b.providerIconBg}
                   />
                   <ServiceBadge countryCode={b.countryCode} name={b.name} />
                   <span>
@@ -123,6 +131,8 @@ export function DashboardAlerts({ overdue, upcoming, runway, topUps }: Dashboard
                         kind={b.providerKind}
                         faviconLink={b.providerFaviconLink}
                         loginUrl={b.providerLoginUrl}
+                        iconName={b.providerIconName}
+                        iconBg={b.providerIconBg}
                       />
                       <ServiceBadge countryCode={b.countryCode} name={b.name} />
                       <span>
@@ -163,6 +173,8 @@ export function DashboardAlerts({ overdue, upcoming, runway, topUps }: Dashboard
                           kind={u.providerKind || fromCritical?.providerKind}
                           faviconLink={u.providerFaviconLink ?? fromCritical?.providerFaviconLink}
                           loginUrl={u.providerLoginUrl ?? fromCritical?.providerLoginUrl}
+                          iconName={u.providerIconName ?? fromCritical?.providerIconName}
+                          iconBg={u.providerIconBg ?? fromCritical?.providerIconBg}
                         />
                         <span>
                           {t('dashboard.critical.topUp', {

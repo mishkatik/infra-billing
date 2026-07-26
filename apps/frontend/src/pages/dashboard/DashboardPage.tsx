@@ -7,7 +7,6 @@ import { useProviders } from '@/api/providers';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { projectFavicon } from '@/utils/favicon';
 import { ByProjectCard } from './ByProjectCard';
 import { ByProviderCard } from './ByProviderCard';
 import { DashboardAlerts } from './DashboardAlerts';
@@ -24,8 +23,7 @@ export function DashboardPage() {
   const { data: providers } = useProviders();
   const { data: projectsList } = useProjects();
   const providerOf = (uuid: string) => providers?.find((p) => p.uuid === uuid);
-  const projectIconOf = (uuid: string) =>
-    projectFavicon(projectsList?.find((p) => p.uuid === uuid)?.faviconLink ?? null);
+  const projectOf = (uuid: string) => projectsList?.find((p) => p.uuid === uuid);
   const base = summary?.baseCurrency ?? '';
 
   // Completely empty panel (not a single provider): show a getting-started
@@ -71,7 +69,7 @@ export function DashboardPage() {
         projectRows={summary?.byProject ?? []}
         base={base}
         isLoading={isLoading}
-        projectIconOf={projectIconOf}
+        projectOf={projectOf}
       />
 
       <ByProviderCard
