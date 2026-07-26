@@ -6,7 +6,8 @@ import {
   DEFAULT_ICON_BG,
   ICON_BG_SWATCHES,
   TABLER_ICON_CATALOG,
-  resolveTablerIcon,
+  canonicalTablerIconName,
+  resolveTablerIconEntry,
 } from '@/components/tablerIconCatalog';
 import { Button } from '@/components/ui/button';
 import {
@@ -38,11 +39,13 @@ export function IconAppearanceFields({
 }: IconAppearanceFieldsProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
-  const selected = resolveTablerIcon(iconName);
+  const selected = resolveTablerIconEntry(iconName);
   const bg = iconBg || DEFAULT_ICON_BG;
+  const storedName = canonicalTablerIconName(iconName) ?? '';
 
   const pickIcon = (name: string) => {
-    onIconNameChange(name);
+    const canonical = canonicalTablerIconName(name) ?? name;
+    onIconNameChange(canonical);
     if (!iconBg) onIconBgChange(DEFAULT_ICON_BG);
     setOpen(false);
   };
@@ -63,8 +66,8 @@ export function IconAppearanceFields({
         <ProviderIcon
           name={previewName || '?'}
           src={null}
-          iconName={iconName || null}
-          iconBg={iconName ? bg : null}
+          iconName={storedName || null}
+          iconBg={storedName ? bg : null}
           size={32}
         />
 
@@ -77,7 +80,7 @@ export function IconAppearanceFields({
               className="flex h-9 min-w-40 flex-1 items-center justify-between gap-2 rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30"
             >
               <span className={cn('truncate', !selected && 'text-muted-foreground')}>
-                {selected ? iconName : t('common.iconPick')}
+                {selected ? selected.label : t('common.iconPick')}
               </span>
               <IconChevronDown className="size-4 shrink-0 text-muted-foreground opacity-50" />
             </button>
@@ -98,16 +101,16 @@ export function IconAppearanceFields({
                   >
                     {t('common.iconUseFavicon')}
                   </CommandItem>
-                  {TABLER_ICON_CATALOG.map(({ name, Icon, keywords }) => (
+                  {TABLER_ICON_CATALOG.map(({ name, label, Icon, keywords }) => (
                     <CommandItem
                       key={name}
                       value={name}
-                      keywords={keywords}
-                      onSelect={() => pickIcon(name)}
+                      keywords={[label, ...keywords]}
+                      onSelect={(value) => pickIcon(value)}
                     >
-                      <Icon className="size-4" />
-                      <span className="truncate">{name.replace(/^Icon/, '')}</span>
-                      {name === iconName && <IconCheck className="ml-auto size-4" />}
+                      <Icon className="size-4 text-foreground" stroke={1.75} />
+                      <span className="truncate">{label}</span>
+                      {name === storedName && <IconCheck className="ml-auto size-4" />}
                     </CommandItem>
                   ))}
                 </CommandGroup>
@@ -116,7 +119,7 @@ export function IconAppearanceFields({
           </PopoverContent>
         </Popover>
 
-        {iconName ? (
+        {storedName ? (
           <Button type="button" variant="ghost" size="icon" className="size-9" onClick={clear}>
             <IconX className="size-4" />
             <span className="sr-only">{t('common.iconClear')}</span>
@@ -124,7 +127,7 @@ export function IconAppearanceFields({
         ) : null}
       </div>
 
-      {iconName ? (
+      {storedName ? (
         <div className="space-y-2">
           <Label>{t('common.iconBg')}</Label>
           <div className="flex flex-wrap items-center gap-2">

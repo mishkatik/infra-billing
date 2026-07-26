@@ -3,6 +3,10 @@ import { Controller, type UseFormReturn } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { FormSection } from '@/components/FormSection';
 import { IconAppearanceFields } from '@/components/IconAppearanceFields';
+import {
+  DEFAULT_ICON_BG,
+  resolveTablerIcon,
+} from '@/components/tablerIconCatalog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -47,9 +51,14 @@ export function ProviderFormFields({
   const previewName = form.watch('name');
   const iconName = form.watch('iconName');
   const iconBg = form.watch('iconBg');
+  const HeaderIcon = resolveTablerIcon(iconName) ?? IconServer2;
   return (
     <>
-      <FormSection icon={IconServer2} title={t('providers.section.main')}>
+      <FormSection
+        icon={HeaderIcon}
+        iconBg={iconName ? iconBg || DEFAULT_ICON_BG : null}
+        title={t('providers.section.main')}
+      >
         <div className="space-y-2">
           <Label htmlFor="provider-name">
             {t('providers.field.name')} <span className="text-destructive">*</span>

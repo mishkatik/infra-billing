@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { createElement, useEffect, useState } from 'react';
 import {
   DEFAULT_ICON_BG,
   iconFgForBg,
@@ -24,7 +24,7 @@ export function ProviderIcon({
   iconBg?: string | null;
   size?: number;
 }) {
-  const Tabler = resolveTablerIcon(iconName);
+  const TablerIcon = resolveTablerIcon(iconName);
   const fallback = faviconRootFallback(src);
   const key = `${src ?? ''}|${fallback ?? ''}`;
   const [resolved, setResolved] = useState<{ key: string; src: string | null }>({
@@ -33,7 +33,7 @@ export function ProviderIcon({
   });
 
   useEffect(() => {
-    if (Tabler) return;
+    if (TablerIcon) return;
     const candidates = [src, fallback].filter((c): c is string => !!c);
     if (candidates.length === 0) {
       setResolved({ key, src: null });
@@ -60,20 +60,26 @@ export function ProviderIcon({
     return () => {
       cancelled = true;
     };
-  }, [Tabler, key, src, fallback]);
+  }, [TablerIcon, key, src, fallback]);
 
-  const favicon = !Tabler && resolved.key === key ? resolved.src : null;
+  const favicon = !TablerIcon && resolved.key === key ? resolved.src : null;
   const initial = (name.trim().charAt(0) || '?').toUpperCase();
   const bg = iconBg || DEFAULT_ICON_BG;
   const fg = iconFgForBg(bg);
+  const glyph = Math.max(12, Math.round(size * 0.64));
 
-  if (Tabler) {
+  if (TablerIcon) {
     return (
       <div
-        className="flex shrink-0 items-center justify-center overflow-hidden rounded-md border border-black/10 select-none"
+        className="flex shrink-0 items-center justify-center rounded-md border border-black/10 select-none"
         style={{ width: size, height: size, backgroundColor: bg, color: fg }}
       >
-        <Tabler size={Math.max(10, Math.round(size * 0.62))} stroke={1.75} />
+        {createElement(TablerIcon, {
+          size: glyph,
+          stroke: 1.75,
+          color: fg,
+          'aria-hidden': true,
+        })}
       </div>
     );
   }

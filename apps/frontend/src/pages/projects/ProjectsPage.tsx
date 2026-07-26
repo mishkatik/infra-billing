@@ -13,7 +13,10 @@ import {
   useUpdateProject,
 } from '@/api/projects';
 import { PageHeader } from '@/components/PageHeader';
-import { DEFAULT_ICON_BG } from '@/components/tablerIconCatalog';
+import {
+  DEFAULT_ICON_BG,
+  canonicalTablerIconName,
+} from '@/components/tablerIconCatalog';
 import { Button } from '@/components/ui/button';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { notifyError, notifySuccess } from '@/utils/notify';
@@ -61,8 +64,9 @@ export function ProjectsPage() {
   };
 
   const submit = form.handleSubmit(async (v) => {
-    const icon = v.iconName
-      ? { iconName: v.iconName, iconBg: v.iconBg || DEFAULT_ICON_BG }
+    const iconName = canonicalTablerIconName(v.iconName);
+    const icon = iconName
+      ? { iconName, iconBg: v.iconBg || DEFAULT_ICON_BG }
       : { iconName: null as string | null, iconBg: null as string | null };
     const dto = {
       name: v.name.trim(),
@@ -76,9 +80,7 @@ export function ProjectsPage() {
         await create.mutateAsync({
           name: dto.name,
           faviconLink: dto.faviconLink ?? undefined,
-          ...(v.iconName
-            ? { iconName: v.iconName, iconBg: v.iconBg || DEFAULT_ICON_BG }
-            : {}),
+          ...(iconName ? { iconName, iconBg: v.iconBg || DEFAULT_ICON_BG } : {}),
         });
       }
       close();

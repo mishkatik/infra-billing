@@ -25,7 +25,10 @@ import { notifyError, notifySuccess } from '@/utils/notify';
 import { ProviderDetailModal } from './ProviderDetailModal';
 import { ProviderFormModal } from './ProviderFormModal';
 import { ProvidersTable } from './ProvidersTable';
-import { DEFAULT_ICON_BG } from '@/components/tablerIconCatalog';
+import {
+  DEFAULT_ICON_BG,
+  canonicalTablerIconName,
+} from '@/components/tablerIconCatalog';
 import {
   EMPTY_FORM,
   type FormValues,
@@ -104,8 +107,9 @@ export function ProvidersPage() {
       }
     }
     const creds = buildCredentials(v);
-    const icon = v.iconName
-      ? { iconName: v.iconName, iconBg: v.iconBg || DEFAULT_ICON_BG }
+    const iconName = canonicalTablerIconName(v.iconName);
+    const icon = iconName
+      ? { iconName, iconBg: v.iconBg || DEFAULT_ICON_BG }
       : { iconName: null as string | null, iconBg: null as string | null };
     try {
       let saved: Provider;
@@ -126,9 +130,7 @@ export function ProvidersPage() {
           name: v.name,
           kind: v.kind as ProviderKind,
           loginUrl: v.loginUrl || undefined,
-          ...(v.iconName
-            ? { iconName: v.iconName, iconBg: v.iconBg || DEFAULT_ICON_BG }
-            : {}),
+          ...(iconName ? { iconName, iconBg: v.iconBg || DEFAULT_ICON_BG } : {}),
           isPostpaid: v.isPostpaid,
           ...creds,
         });
