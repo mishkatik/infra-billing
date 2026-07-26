@@ -18,6 +18,23 @@ import { trimMoney } from '@/utils/format';
 import { OverriddenMark } from './OverriddenMark';
 import type { SForm } from './serviceForm';
 
+function metaString(meta: Record<string, unknown> | undefined, key: string): string | undefined {
+  const v = meta?.[key];
+  return typeof v === 'string' ? v : undefined;
+}
+
+/** Pencil when the value leaves the provider baseline (or the loaded value before first sync). */
+function showOverrideMark(
+  current: string,
+  loaded: string,
+  savedOverridden: boolean,
+  synced: string | undefined,
+): boolean {
+  if (synced != null) return current !== synced;
+  if (savedOverridden) return true;
+  return current !== loaded;
+}
+
 interface ServiceFormFieldsProps {
   form: UseFormReturn<SForm>;
   editing: Service | null;
@@ -45,11 +62,35 @@ export function ServiceFormFields({
     register,
     control,
     setValue,
-    formState: { errors, dirtyFields },
+    watch,
+    formState: { errors, defaultValues },
   } = form;
-  const showNameMark = Boolean(editing && (editing.nameOverridden || dirtyFields.name));
-  const showTypeMark = Boolean(editing && (editing.typeOverridden || dirtyFields.type));
-  const showCostMark = Boolean(editing && (editing.costOverridden || dirtyFields.cost));
+  const name = watch('name');
+  const type = watch('type');
+  const cost = watch('cost');
+  const syncedName = metaString(editing?.meta, 'syncedName');
+  const syncedType = metaString(editing?.meta, 'syncedType');
+  const syncedCost = metaString(editing?.meta, 'syncedCost');
+  const showNameMark = Boolean(
+    editing &&
+      showOverrideMark(name, defaultValues?.name ?? '', editing.nameOverridden, syncedName),
+  );
+  const showTypeMark = Boolean(
+    editing &&
+      showOverrideMark(type, defaultValues?.type ?? '', editing.typeOverridden, syncedType),
+  );
+  const loadedCost = trimMoney(String(defaultValues?.cost ?? ''));
+  const baselineCost = syncedCost != null ? trimMoney(syncedCost) : loadedCost;
+  const showCostMark = Boolean(
+    editing &&
+      showOverrideMark(
+        trimMoney(cost),
+        loadedCost,
+        editing.costOverridden,
+        syncedCost != null ? trimMoney(syncedCost) : undefined,
+      ),
+  );
+  const restoreOpts = { shouldDirty: true, shouldValidate: true } as const;
 
   return (
     <>
@@ -115,7 +156,14 @@ export function ServiceFormFields({
             <Label htmlFor="service-name">
               {t('services.fieldName')} <span className="text-destructive">*</span>
             </Label>
-            {showNameMark && <OverriddenMark label={t('services.detail.nameOverridden')} />}
+            {showNameMark && (
+              <OverriddenMark
+                label={t('services.detail.nameOverridden')}
+                onRestore={() =>
+                  setValue('name', syncedName ?? defaultValues?.name ?? '', restoreOpts)
+                }
+              />
+            )}
           </div>
           <Input
             id="service-name"
@@ -131,7 +179,14 @@ export function ServiceFormFields({
           <div className="min-w-0 space-y-2">
             <div className="flex h-4 items-center gap-1">
               <Label htmlFor="service-type">{t('services.fieldType')}</Label>
-              {showTypeMark && <OverriddenMark label={t('services.detail.typeOverridden')} />}
+              {showTypeMark && (
+                <OverriddenMark
+                  label={t('services.detail.typeOverridden')}
+                  onRestore={() =>
+                    setValue('type', syncedType ?? defaultValues?.type ?? '', restoreOpts)
+                  }
+                />
+              )}
             </div>
             <Controller
               control={control}
@@ -185,7 +240,12 @@ export function ServiceFormFields({
               <Label htmlFor="service-cost">
                 {t('services.fieldCost')} <span className="text-destructive">*</span>
               </Label>
-              {showCostMark && <OverriddenMark label={t('services.detail.costOverridden')} />}
+              {showCostMark && (
+                <OverriddenMark
+                  label={t('services.detail.costOverridden')}
+                  onRestore={() => setValue('cost', baselineCost, restoreOpts)}
+                />
+              )}
             </div>
             <Input
               id="service-cost"

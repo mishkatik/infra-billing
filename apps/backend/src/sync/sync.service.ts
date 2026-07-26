@@ -221,6 +221,15 @@ export class SyncService implements OnModuleInit {
       const nextBilling =
         sd.nextBilling && !Number.isNaN(sd.nextBilling.getTime()) ? sd.nextBilling : null;
       const existing = await this.services.findByExternalId(providerUuid, sd.externalId);
+      // Keep the provider's proposed name/type/cost in meta even when overridden, so the
+      // UI can drop the pencil (and update can clear the flag) when the owner reverts.
+      const meta = {
+        ...(sd.meta ?? {}),
+        syncedName: sd.name,
+        syncedType: sd.type,
+        syncedCost: sd.cost != null ? sd.cost.toFixed(2) : null,
+      } as Prisma.InputJsonValue;
+
       if (!existing) {
         await this.services.create({
           providerUuid,
@@ -237,12 +246,12 @@ export class SyncService implements OnModuleInit {
           nextBillingAt: nextBilling,
           isActive: true,
           isManaged: true,
-          meta: (sd.meta ?? {}) as Prisma.InputJsonValue,
+          meta,
         });
       } else {
         const data: Prisma.ServiceUpdateInput = {
           isActive: true,
-          meta: (sd.meta ?? {}) as Prisma.InputJsonValue,
+          meta,
         };
         // Don't overwrite a manually-edited name.
         if (!existing.nameOverridden) data.name = sd.name;

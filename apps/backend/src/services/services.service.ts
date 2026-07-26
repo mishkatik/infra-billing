@@ -44,20 +44,69 @@ export class ServicesService {
     if (!existing) throw new NotFoundException('Service not found');
 
     const data: Prisma.ServiceUpdateInput = {};
-    // The form submits every field, so compare with the stored value: only a real
-    // manual edit sets the overridden flag (sync must not overwrite such fields).
-    if (dto.name !== undefined && dto.name !== existing.name) {
-      data.name = dto.name;
-      data.nameOverridden = true;
+    const meta = { ...((existing.meta ?? {}) as Record<string, unknown>) };
+    let metaDirty = false;
+
+    const baselineName =
+      typeof meta.syncedName === 'string'
+        ? meta.syncedName
+        : !existing.nameOverridden
+          ? existing.name
+          : undefined;
+    const baselineType =
+      typeof meta.syncedType === 'string'
+        ? meta.syncedType
+        : !existing.typeOverridden
+          ? existing.type
+          : undefined;
+    const baselineCost =
+      typeof meta.syncedCost === 'string'
+        ? meta.syncedCost
+        : !existing.costOverridden
+          ? existing.cost.toFixed(2)
+          : undefined;
+
+    // The form submits every field. Mark overridden only when the value leaves the
+    // provider baseline; reverting to that baseline clears the flag. Seed synced*
+    // on first override so later edits can detect a revert without waiting for sync.
+    if (dto.name !== undefined) {
+      if (dto.name !== existing.name) data.name = dto.name;
+      if (baselineName != null) {
+        if (meta.syncedName !== baselineName) {
+          meta.syncedName = baselineName;
+          metaDirty = true;
+        }
+        data.nameOverridden = dto.name !== baselineName;
+      } else if (dto.name !== existing.name) {
+        data.nameOverridden = true;
+      }
     }
-    if (dto.type !== undefined && dto.type !== existing.type) {
-      data.type = dto.type;
-      data.typeOverridden = true;
+    if (dto.type !== undefined) {
+      if (dto.type !== existing.type) data.type = dto.type;
+      if (baselineType != null) {
+        if (meta.syncedType !== baselineType) {
+          meta.syncedType = baselineType;
+          metaDirty = true;
+        }
+        data.typeOverridden = dto.type !== baselineType;
+      } else if (dto.type !== existing.type) {
+        data.typeOverridden = true;
+      }
     }
-    if (dto.cost !== undefined && !existing.cost.equals(dto.cost)) {
-      data.cost = dto.cost;
-      data.costOverridden = true;
+    if (dto.cost !== undefined) {
+      const costStr = dto.cost;
+      if (!existing.cost.equals(dto.cost)) data.cost = dto.cost;
+      if (baselineCost != null) {
+        if (meta.syncedCost !== baselineCost) {
+          meta.syncedCost = baselineCost;
+          metaDirty = true;
+        }
+        data.costOverridden = costStr !== baselineCost;
+      } else if (!existing.cost.equals(dto.cost)) {
+        data.costOverridden = true;
+      }
     }
+    if (metaDirty) data.meta = meta as Prisma.InputJsonValue;
     if (dto.currency !== undefined) data.currency = dto.currency;
     if (dto.period !== undefined) data.period = dto.period;
     if (dto.countryCode !== undefined) data.countryCode = dto.countryCode;
