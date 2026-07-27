@@ -29,6 +29,17 @@ export function trimMoney(value: string): string {
   return frac ? `${sign}${int}.${frac.slice(0, 2)}` : `${sign}${int}`;
 }
 
+/**
+ * Money input → canonical 2-decimal form ("10.5" → "10.50"), for comparing a typed
+ * value against a stored one. Leaves non-numbers untouched.
+ */
+export function normalizeMoney(value: string): string {
+  const m = value.trim().match(/^(-?)(\d+)(?:\.(\d+))?$/);
+  if (!m) return value.trim();
+  const [, sign, int, frac] = m;
+  return `${sign}${int}.${(frac ?? '').slice(0, 2).padEnd(2, '0')}`;
+}
+
 /** ISO (UTC) → local datetime. */
 export function formatDate(iso: string | null | undefined): string {
   return iso ? dayjs(iso).format('DD.MM.YYYY HH:mm') : '—';

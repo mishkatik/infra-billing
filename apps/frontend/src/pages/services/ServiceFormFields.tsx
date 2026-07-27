@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { trimMoney } from '@/utils/format';
+import { normalizeMoney, trimMoney } from '@/utils/format';
 import { OverriddenMark } from './OverriddenMark';
 import type { SForm } from './serviceForm';
 
@@ -81,13 +81,14 @@ export function ServiceFormFields({
   );
   const loadedCost = trimMoney(String(defaultValues?.cost ?? ''));
   const baselineCost = syncedCost != null ? trimMoney(syncedCost) : loadedCost;
+  // Compare in canonical form so "10.5" doesn't read as an edit of a "10.50" baseline.
   const showCostMark = Boolean(
     editing &&
       showOverrideMark(
-        trimMoney(cost),
-        loadedCost,
+        normalizeMoney(cost),
+        normalizeMoney(loadedCost),
         editing.costOverridden,
-        syncedCost != null ? trimMoney(syncedCost) : undefined,
+        syncedCost != null ? normalizeMoney(syncedCost) : undefined,
       ),
   );
   const restoreOpts = { shouldDirty: true, shouldValidate: true } as const;

@@ -7,6 +7,9 @@ import { ServicesRepository } from '@repositories/services/services.repository';
 import { mapService } from '@common/mappers';
 import { CreateServiceDto, ServiceQueryDto, UpdateServiceDto } from './dto/service.dto';
 
+/** Decimal money string, as produced by toFixed(2) and accepted by the API. */
+const MONEY_RE = /^-?\d+(\.\d{1,2})?$/;
+
 @Injectable()
 export class ServicesService {
   constructor(
@@ -59,12 +62,14 @@ export class ServicesService {
         : !existing.typeOverridden
           ? existing.type
           : undefined;
-    const baselineCost =
-      typeof meta.syncedCost === 'string'
+    // Guard the stored baseline: meta is free-form JSON, and a malformed string would
+    // blow up the Decimal comparison below.
+    const syncedCost =
+      typeof meta.syncedCost === 'string' && MONEY_RE.test(meta.syncedCost)
         ? meta.syncedCost
-        : !existing.costOverridden
-          ? existing.cost.toFixed(2)
-          : undefined;
+        : undefined;
+    const baselineCost =
+      syncedCost ?? (!existing.costOverridden ? existing.cost.toFixed(2) : undefined);
 
     // The form submits every field. Mark overridden only when the value leaves the
     // provider baseline; reverting to that baseline clears the flag. Seed synced*
@@ -94,14 +99,15 @@ export class ServicesService {
       }
     }
     if (dto.cost !== undefined) {
-      const costStr = dto.cost;
       if (!existing.cost.equals(dto.cost)) data.cost = dto.cost;
       if (baselineCost != null) {
         if (meta.syncedCost !== baselineCost) {
           meta.syncedCost = baselineCost;
           metaDirty = true;
         }
-        data.costOverridden = costStr !== baselineCost;
+        // Compare numerically, not as strings: the form may submit "10.5" where the
+        // baseline is "10.50" — same price, so it must not count as an override.
+        data.costOverridden = !new Prisma.Decimal(baselineCost).equals(dto.cost);
       } else if (!existing.cost.equals(dto.cost)) {
         data.costOverridden = true;
       }
