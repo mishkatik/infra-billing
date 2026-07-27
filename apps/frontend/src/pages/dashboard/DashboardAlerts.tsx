@@ -11,10 +11,10 @@ import {
   AlertChargeRow,
   ProviderBadge,
   ServiceBadge,
-  clusterIsWrapped,
   clusterOneLineWidth,
 } from './dashboardAlertUi';
 import { agoLabel, dayLabel, severityBadgeClass } from './dashboardUtils';
+import { createLayoutGate } from './layoutMeasure';
 
 interface DashboardAlertsProps {
   overdue: AnalyticsSummary['overdueBillings'];
@@ -83,14 +83,6 @@ function rowOneLineWidth(row: HTMLElement): number {
   return metas.reduce((sum, m) => sum + Math.ceil(m.scrollWidth), 0);
 }
 
-function rowIsWrapped(row: HTMLElement): boolean {
-  const who = row.querySelector<HTMLElement>('[data-alert-who]');
-  if (who && clusterIsWrapped(who)) return true;
-  const metas = Array.from(row.querySelectorAll<HTMLElement>('[data-alert-meta]'));
-  if (who && metas[0] && Math.abs(who.offsetTop - metas[0].offsetTop) > 1) return true;
-  return false;
-}
-
 /** Equal 2-col grid while content fits on one line per half; otherwise stack. */
 function EqualPairGrid({ deps, children }: { deps: unknown; children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -100,40 +92,36 @@ function EqualPairGrid({ deps, children }: { deps: unknown; children: ReactNode 
   useLayoutEffect(() => {
     const root = ref.current;
     if (!root) return;
+    const gate = createLayoutGate();
+
+    const applyStack = (next: boolean) => {
+      if (stackRef.current === next) return;
+      stackRef.current = next;
+      gate.afterChange();
+      setStack(next);
+    };
 
     const measure = () => {
+      if (gate.shouldSkip()) return;
       const cards = Array.from(root.children) as HTMLElement[];
       if (cards.length < 2) {
-        stackRef.current = true;
-        setStack(true);
-        return;
-      }
-
-      // Catch the awkward middle state: already wrapping inside a 2-col layout.
-      if (
-        !stackRef.current &&
-        cards.some((card) =>
-          Array.from(card.querySelectorAll<HTMLElement>('[data-alert-row]')).some(rowIsWrapped),
-        )
-      ) {
-        stackRef.current = true;
-        setStack(true);
+        applyStack(true);
         return;
       }
 
       const gap = Number.parseFloat(getComputedStyle(root).gap || '0') || 0;
       const half = (root.clientWidth - gap) / 2;
       if (half <= 0) {
-        stackRef.current = true;
-        setStack(true);
+        applyStack(true);
         return;
       }
 
+      // Width-only decision: live wrap + remasure disagreed under deep browser zoom.
       // Hysteresis: stack early, unstack only with spare room.
-      const slack = stackRef.current ? 28 : 12;
+      const slack = stackRef.current ? 64 : 12;
       let needsStack = false;
       for (const card of cards) {
-        const available = half - horizontalChrome(card) - slack;
+        const available = Math.floor(half - horizontalChrome(card) - slack);
         const title = card.querySelector<HTMLElement>('[data-slot="alert-title"]');
         if (title && titleOneLineWidth(title) > available) {
           needsStack = true;
@@ -147,8 +135,7 @@ function EqualPairGrid({ deps, children }: { deps: unknown; children: ReactNode 
         }
         if (needsStack) break;
       }
-      stackRef.current = needsStack;
-      setStack(needsStack);
+      applyStack(needsStack);
     };
 
     const ro = new ResizeObserver(measure);

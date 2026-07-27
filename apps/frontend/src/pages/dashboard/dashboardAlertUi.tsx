@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import { providerFavicon } from '@/utils/favicon';
 import { countryFlag } from '@/utils/format';
 import { countryBadgeStyle, providerBadgeStyle } from './badgeTints';
+import { createLayoutGate } from './layoutMeasure';
 
 export function ProviderBadge({
   name,
@@ -97,7 +98,7 @@ export function clusterIsWrapped(el: HTMLElement): boolean {
   const kids = Array.from(el.children) as HTMLElement[];
   if (kids.length < 2) return false;
   const top = kids[0].offsetTop;
-  return kids.some((k) => Math.abs(k.offsetTop - top) > 1);
+  return kids.some((k) => Math.abs(k.offsetTop - top) > 2);
 }
 
 const AlertDateCtx = createContext(true);
@@ -130,8 +131,17 @@ export function AlertChargeGrid({
     }
     const root = ref.current;
     if (!root) return;
+    const gate = createLayoutGate();
+
+    const applyHide = (next: boolean) => {
+      if (hideRef.current === next) return;
+      hideRef.current = next;
+      gate.afterChange();
+      setHideDate(next);
+    };
 
     const measure = () => {
+      if (gate.shouldSkip()) return;
       const rows = Array.from(root.querySelectorAll<HTMLElement>('[data-alert-row]'));
       if (rows.length === 0) return;
 
@@ -143,28 +153,14 @@ export function AlertChargeGrid({
         dateWidthRef.current = max;
       }
 
-      const tight = rows.some((row) => {
-        const who = row.querySelector<HTMLElement>('[data-alert-who]');
-        const leader = row.querySelector<HTMLElement>('[data-alert-leader]');
-        if (who && clusterIsWrapped(who)) return true;
-        return Boolean(leader && leader.clientWidth <= 14);
-      });
-
-      if (!hideRef.current && tight) {
-        hideRef.current = true;
-        setHideDate(true);
-        return;
-      }
-
-      if (!hideRef.current) return;
-
       const gap =
         Number.parseFloat(getComputedStyle(root).columnGap || getComputedStyle(root).gap || '0') ||
         0;
       const available = root.clientWidth;
-      const slack = 28;
       const dateW = dateWidthRef.current;
-      const fits = rows.every((row) => {
+      const slack = hideRef.current ? 64 : 16;
+
+      const fitsWithDate = rows.every((row) => {
         const who = row.querySelector<HTMLElement>('[data-alert-who]');
         const leader = row.querySelector<HTMLElement>('[data-alert-leader]');
         const metas = Array.from(row.querySelectorAll<HTMLElement>('[data-alert-meta]'));
@@ -173,13 +169,24 @@ export function AlertChargeGrid({
           ? Number.parseFloat(getComputedStyle(leader).minWidth || '0') || 12
           : 0;
         const metaW = metas.reduce((sum, m) => sum + Math.ceil(m.scrollWidth), 0);
-        const metaCount = metas.length + 1;
-        return whoW + gap + leaderMin + metaW + dateW + gap * metaCount <= available - slack;
+        const metaCount = metas.length + (hideRef.current ? 1 : 0);
+        return (
+          whoW + gap + leaderMin + metaW + dateW + gap * Math.max(metaCount, 0) <= available - slack
+        );
       });
-      if (fits) {
-        hideRef.current = false;
-        setHideDate(false);
+
+      if (!hideRef.current) {
+        const tight = rows.some((row) => {
+          const who = row.querySelector<HTMLElement>('[data-alert-who]');
+          const leader = row.querySelector<HTMLElement>('[data-alert-leader]');
+          if (who && clusterIsWrapped(who)) return true;
+          return Boolean(leader && leader.clientWidth <= 14);
+        });
+        if (tight || !fitsWithDate) applyHide(true);
+        return;
       }
+
+      if (fitsWithDate) applyHide(false);
     };
 
     const ro = new ResizeObserver(measure);

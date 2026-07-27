@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { StatCard } from '@/components/StatCard';
 import { cn } from '@/lib/utils';
 import { formatMoney } from '@/utils/format';
+import { createLayoutGate } from './layoutMeasure';
 
 interface KpiCardsProps {
   summary: AnalyticsSummary | undefined;
@@ -59,8 +60,17 @@ export function KpiCards({ summary, base }: KpiCardsProps) {
   useLayoutEffect(() => {
     const root = ref.current;
     if (!root) return;
+    const gate = createLayoutGate();
+
+    const applyCols = (next: Cols) => {
+      if (colsRef.current === next) return;
+      colsRef.current = next;
+      gate.afterChange();
+      setCols(next);
+    };
 
     const measure = () => {
+      if (gate.shouldSkip()) return;
       const cards = Array.from(root.querySelectorAll<HTMLElement>('[data-kpi-card]'));
       if (cards.length === 0) return;
 
@@ -71,7 +81,7 @@ export function KpiCards({ summary, base }: KpiCardsProps) {
         const colW = (root.clientWidth - gap * (n - 1)) / n;
         if (colW <= 0) return false;
         return cards.every((card) => {
-          const available = colW - cardChrome(card) - slack;
+          const available = Math.floor(colW - cardChrome(card) - slack);
           const label = card.querySelector<HTMLElement>('[data-kpi-label]');
           const value = card.querySelector<HTMLElement>('[data-kpi-value]');
           if (!label || !value) return true;
@@ -79,28 +89,16 @@ export function KpiCards({ summary, base }: KpiCardsProps) {
         });
       };
 
-      const liveOverflow = cards.some((card) => {
-        const label = card.querySelector<HTMLElement>('[data-kpi-label]');
-        const value = card.querySelector<HTMLElement>('[data-kpi-value]');
-        return (
-          (!!label && label.scrollWidth > label.clientWidth + 2) ||
-          (!!value && value.scrollWidth > value.clientWidth + 2)
-        );
-      });
-      const maxAllowed: Cols = liveOverflow ? (current === 4 ? 2 : 1) : 4;
-
       let next: Cols = 1;
       for (const n of [4, 2, 1] as const) {
-        if (n > maxAllowed) continue;
-        // Slight hysteresis on expand only - keep denser layout until just past the edge.
-        const slack = n > current ? 8 : 2;
+        // Expand only with spare room so zoom subpixels cannot flip columns.
+        const slack = n > current ? 32 : 4;
         if (fits(n, slack)) {
           next = n;
           break;
         }
       }
-      colsRef.current = next;
-      setCols(next);
+      applyCols(next);
     };
 
     const ro = new ResizeObserver(measure);
