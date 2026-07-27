@@ -13,10 +13,7 @@ import {
   useUpdateProject,
 } from '@/api/projects';
 import { PageHeader } from '@/components/PageHeader';
-import {
-  DEFAULT_ICON_BG,
-  canonicalTablerIconName,
-} from '@/components/tablerIconCatalog';
+import { DEFAULT_ICON_BG, canonicalTablerIconName } from '@/components/tablerIconCatalog';
 import { Button } from '@/components/ui/button';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { notifyError, notifySuccess } from '@/utils/notify';

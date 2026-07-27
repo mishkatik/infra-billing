@@ -1,9 +1,5 @@
 import { createElement, useEffect, useState } from 'react';
-import {
-  DEFAULT_ICON_BG,
-  iconFgForBg,
-  resolveTablerIcon,
-} from '@/components/tablerIconCatalog';
+import { DEFAULT_ICON_BG, iconFgForBg, resolveTablerIcon } from '@/components/tablerIconCatalog';
 import { faviconRootFallback } from '@/utils/favicon';
 
 // Neutral initial avatar, swapped for the favicon only once it loads. Google's "no favicon"

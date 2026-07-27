@@ -132,8 +132,7 @@ export const providers = {
       linodeToken: 'Enter the Linode API token',
       aezaToken: 'Enter the Aeza API key',
       hostkeyToken: 'Enter the Hostkey InvAPI key',
-      hostkeyTokenFormat:
-        'Hostkey key must look like d35f42c3a881b52d-ccbc5a508624d503',
+      hostkeyTokenFormat: 'Hostkey key must look like d35f42c3a881b52d-ccbc5a508624d503',
       vdsinaToken: 'Enter the VDSina API token',
       cloudflareCreds: 'Enter the Cloudflare account ID and API token',
       stormwallToken: 'Enter the StormWall API key',
@@ -294,8 +293,7 @@ export const providers = {
       linodeToken: 'Укажите API-токен Linode',
       aezaToken: 'Укажите API-ключ Aeza',
       hostkeyToken: 'Укажите API-ключ Hostkey InvAPI',
-      hostkeyTokenFormat:
-        'Ключ Hostkey должен быть вида d35f42c3a881b52d-ccbc5a508624d503',
+      hostkeyTokenFormat: 'Ключ Hostkey должен быть вида d35f42c3a881b52d-ccbc5a508624d503',
       vdsinaToken: 'Укажите API-токен VDSina',
       cloudflareCreds: 'Укажите account ID и API-токен Cloudflare',
       stormwallToken: 'Укажите API-ключ StormWall',

@@ -5,12 +5,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { formatDateShort, formatMoney } from '@/utils/format';
-import {
-  AlertChargeGrid,
-  AlertChargeRow,
-  ProviderBadge,
-  ServiceBadge,
-} from './dashboardAlertUi';
+import { AlertChargeGrid, AlertChargeRow, ProviderBadge, ServiceBadge } from './dashboardAlertUi';
 import { dayLabel, severityBadgeClass } from './dashboardUtils';
 
 interface UpcomingBillingsCardProps {

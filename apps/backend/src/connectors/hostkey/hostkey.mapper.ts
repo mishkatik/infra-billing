@@ -20,9 +20,7 @@ function locationCode(s: HostkeyServer): string | undefined {
     (typeof s.location === 'string' ? s.location : null) ??
     s.location_name ??
     s.short_location ??
-    (typeof s.location === 'object' && s.location
-      ? (s.location.name ?? s.location.code)
-      : null);
+    (typeof s.location === 'object' && s.location ? (s.location.name ?? s.location.code) : null);
   if (!raw) return undefined;
   const key = String(raw).trim().toLowerCase();
   if (LOCATION_COUNTRY[key]) return LOCATION_COUNTRY[key];

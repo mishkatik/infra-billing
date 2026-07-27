@@ -1,13 +1,7 @@
 import { IconPencil } from '@tabler/icons-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
-export function OverriddenMark({
-  label,
-  onRestore,
-}: {
-  label: string;
-  onRestore: () => void;
-}) {
+export function OverriddenMark({ label, onRestore }: { label: string; onRestore: () => void }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>

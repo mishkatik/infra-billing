@@ -62,9 +62,7 @@ function rowOneLineWidth(row: HTMLElement): number {
   const grid = row.parentElement;
   const gap =
     Number.parseFloat(
-      (grid && getComputedStyle(grid).columnGap) ||
-        (grid && getComputedStyle(grid).gap) ||
-        '0',
+      (grid && getComputedStyle(grid).columnGap) || (grid && getComputedStyle(grid).gap) || '0',
     ) || 0;
   if (who) {
     const leaderMin = leader
@@ -72,13 +70,7 @@ function rowOneLineWidth(row: HTMLElement): number {
       : 0;
     const metaWidth = metas.reduce((sum, m) => sum + Math.ceil(m.scrollWidth), 0);
     // who + leader sit in the first grid cell (one internal gap), then meta columns.
-    return (
-      clusterOneLineWidth(who) +
-      gap +
-      leaderMin +
-      metaWidth +
-      gap * Math.max(metas.length, 0)
-    );
+    return clusterOneLineWidth(who) + gap + leaderMin + metaWidth + gap * Math.max(metas.length, 0);
   }
   return metas.reduce((sum, m) => sum + Math.ceil(m.scrollWidth), 0);
 }
@@ -90,6 +82,7 @@ function EqualPairGrid({ deps, children }: { deps: unknown; children: ReactNode 
   const [stack, setStack] = useState(false);
 
   useLayoutEffect(() => {
+    void deps;
     const root = ref.current;
     if (!root) return;
     const gate = createLayoutGate();

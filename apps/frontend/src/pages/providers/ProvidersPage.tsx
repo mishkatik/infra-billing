@@ -25,10 +25,7 @@ import { notifyError, notifySuccess } from '@/utils/notify';
 import { ProviderDetailModal } from './ProviderDetailModal';
 import { ProviderFormModal } from './ProviderFormModal';
 import { ProvidersTable } from './ProvidersTable';
-import {
-  DEFAULT_ICON_BG,
-  canonicalTablerIconName,
-} from '@/components/tablerIconCatalog';
+import { DEFAULT_ICON_BG, canonicalTablerIconName } from '@/components/tablerIconCatalog';
 import {
   EMPTY_FORM,
   type FormValues,

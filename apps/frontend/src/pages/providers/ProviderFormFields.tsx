@@ -3,10 +3,7 @@ import { Controller, type UseFormReturn } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { FormSection } from '@/components/FormSection';
 import { IconAppearanceFields } from '@/components/IconAppearanceFields';
-import {
-  DEFAULT_ICON_BG,
-  resolveTablerIcon,
-} from '@/components/tablerIconCatalog';
+import { DEFAULT_ICON_BG, resolveTablerIcon } from '@/components/tablerIconCatalog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';

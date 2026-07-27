@@ -330,14 +330,7 @@ function renderHzStep(text: string): ReactNode {
 
 const HK_USER_MENU = new Set(['Username', 'Пользователь']);
 const HK_LINK = new Set(['API keys', 'API ключи', 'API-ключи']);
-const HK_SOFT = new Set([
-  'Add key',
-  'Create',
-  'OK',
-  'Добавить ключ',
-  'Создать',
-  'ОК',
-]);
+const HK_SOFT = new Set(['Add key', 'Create', 'OK', 'Добавить ключ', 'Создать', 'ОК']);
 const HK_ICON: Record<string, Icon> = {
   'Add key': IconPlus,
   'Добавить ключ': IconPlus,
@@ -364,7 +357,8 @@ function linkifyHostkey(text: string): ReactNode {
 }
 
 function hkTokenClass(label: string): string {
-  if (HK_LINK.has(label)) return 'rounded-md bg-white px-1.5 font-semibold text-[#8369c4] ring-1 ring-black/5 ring-inset';
+  if (HK_LINK.has(label))
+    return 'rounded-md bg-white px-1.5 font-semibold text-[#8369c4] ring-1 ring-black/5 ring-inset';
   if (HK_SOFT.has(label)) return 'rounded-md bg-[#f2ebfa] text-[#8369c4]';
   return 'rounded-md bg-white/[0.07] text-foreground ring-1 ring-white/10 ring-inset';
 }

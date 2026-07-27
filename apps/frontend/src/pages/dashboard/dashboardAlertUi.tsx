@@ -124,6 +124,7 @@ export function AlertChargeGrid({
   const metaCols = [showBalance, true, effectiveShowDate, true].filter(Boolean).length;
 
   useLayoutEffect(() => {
+    void deps;
     if (!collapseDateWhenTight || !showDate) {
       hideRef.current = false;
       setHideDate(false);

@@ -58,6 +58,7 @@ export function KpiCards({ summary, base }: KpiCardsProps) {
   ].join('|');
 
   useLayoutEffect(() => {
+    void deps;
     const root = ref.current;
     if (!root) return;
     const gate = createLayoutGate();
