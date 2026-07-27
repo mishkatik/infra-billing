@@ -131,7 +131,11 @@ export const overdueBillingSchema = z.object({
 export const balanceRunwaySchema = z.object({
   providerUuid: uuidSchema.describe('Provider UUID'),
   providerName: z.string().describe('Provider name'),
+  providerKind: z.string().describe('Provider connector kind'),
   providerLoginUrl: z.string().describe('Provider cabinet link').nullable(),
+  providerFaviconLink: z.string().describe('Provider favicon URL').nullable(),
+  providerIconName: z.string().describe('Provider Tabler icon name').nullable(),
+  providerIconBg: z.string().describe('Provider icon tile background').nullable(),
   balance: moneySchema.describe('Current balance'),
   currency: currencySchema.describe('Balance currency'),
   burnPerDay: moneySchema.describe('Estimated daily spend in balance currency'),

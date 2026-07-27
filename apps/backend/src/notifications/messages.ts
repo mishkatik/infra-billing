@@ -171,7 +171,11 @@ export function sampleMessages(): string[] {
   const sampleRunway: BalanceRunway = {
     providerUuid: '00000000-0000-0000-0000-000000000000',
     providerName: 'Тестовый провайдер',
+    providerKind: 'manual',
     providerLoginUrl: 'https://example.com',
+    providerFaviconLink: null,
+    providerIconName: null,
+    providerIconBg: null,
     balance: '14.30',
     currency: 'USD',
     burnPerDay: '0.80',

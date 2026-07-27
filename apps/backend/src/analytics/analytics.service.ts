@@ -299,7 +299,11 @@ export class AnalyticsService {
       balanceRunway.push({
         providerUuid: p.uuid,
         providerName: p.name,
+        providerKind: p.kind,
         providerLoginUrl: p.loginUrl ?? null,
+        providerFaviconLink: p.faviconLink ?? null,
+        providerIconName: p.iconName ?? null,
+        providerIconBg: p.iconBg ?? null,
         balance: balance.toFixed(2),
         currency: p.balanceCurrency,
         burnPerDay: burn.toFixed(2),

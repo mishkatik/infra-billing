@@ -1,6 +1,8 @@
+import type { AnalyticsSummary } from '@infra/shared';
 import { IconServer2 } from '@tabler/icons-react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useForecast, useSummary } from '@/api/analytics';
 import { useProjects } from '@/api/projects';
 import { useProviders } from '@/api/providers';
@@ -12,12 +14,48 @@ import { ByProviderCard } from './ByProviderCard';
 import { DashboardAlerts } from './DashboardAlerts';
 import { ForecastCard } from './ForecastCard';
 import { KpiCards } from './KpiCards';
-import { RunwayCard } from './RunwayCard';
 import { SpendByTypeCard } from './SpendByTypeCard';
 import { UpcomingBillingsCard } from './UpcomingBillingsCard';
 
+/** Dev-only sample runway rows so badge redesign can be previewed without live low balances. */
+const PREVIEW_RUNWAY: AnalyticsSummary['balanceRunway'] = [
+  {
+    providerUuid: '00000000-0000-0000-0000-000000000101',
+    providerName: 'selectel.ru',
+    providerKind: 'selectel',
+    providerLoginUrl: 'https://my.selectel.ru',
+    providerFaviconLink: null,
+    providerIconName: null,
+    providerIconBg: null,
+    balance: '777.61',
+    currency: 'RUB',
+    burnPerDay: '359.74',
+    daysLeft: 2,
+    depletionAt: new Date(Date.now() + 2 * 86_400_000).toISOString(),
+    basis: 'snapshots',
+    severity: 'critical',
+  },
+  {
+    providerUuid: '00000000-0000-0000-0000-000000000102',
+    providerName: 'timeweb.cloud',
+    providerKind: 'timeweb',
+    providerLoginUrl: 'https://timeweb.cloud/my',
+    providerFaviconLink: null,
+    providerIconName: null,
+    providerIconBg: null,
+    balance: '1301.17',
+    currency: 'RUB',
+    burnPerDay: '173.08',
+    daysLeft: 7,
+    depletionAt: new Date(Date.now() + 7 * 86_400_000).toISOString(),
+    basis: 'services',
+    severity: 'warning',
+  },
+];
+
 export function DashboardPage() {
   const { t } = useTranslation();
+  const [params] = useSearchParams();
   const { data: summary, isLoading } = useSummary();
   const { data: forecast } = useForecast(6, 3);
   const { data: providers } = useProviders();
@@ -25,6 +63,11 @@ export function DashboardPage() {
   const providerOf = (uuid: string) => providers?.find((p) => p.uuid === uuid);
   const projectOf = (uuid: string) => projectsList?.find((p) => p.uuid === uuid);
   const base = summary?.baseCurrency ?? '';
+  const runway = useMemo(() => {
+    const live = summary?.balanceRunway ?? [];
+    if (!import.meta.env.DEV || params.get('previewAlerts') !== '1') return live;
+    return PREVIEW_RUNWAY;
+  }, [summary?.balanceRunway, params]);
 
   // Completely empty panel (not a single provider): show a getting-started
   // invitation rather than all-zero cards.
@@ -56,7 +99,7 @@ export function DashboardPage() {
       <DashboardAlerts
         overdue={summary?.overdueBillings ?? []}
         upcoming={summary?.upcomingBillings ?? []}
-        runway={summary?.balanceRunway ?? []}
+        runway={runway}
         topUps={summary?.balanceTopUps ?? []}
       />
 
@@ -80,8 +123,6 @@ export function DashboardPage() {
       />
 
       <UpcomingBillingsCard upcoming={summary?.upcomingBillings ?? []} />
-
-      <RunwayCard runway={summary?.balanceRunway ?? []} />
     </div>
   );
 }

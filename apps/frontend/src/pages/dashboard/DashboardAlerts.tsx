@@ -1,5 +1,5 @@
 import type { AnalyticsSummary } from '@infra/shared';
-import { IconAlertTriangle, IconCash } from '@tabler/icons-react';
+import { IconAlertTriangle, IconCash, IconClockHour4 } from '@tabler/icons-react';
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -11,10 +11,56 @@ import {
   AlertChargeRow,
   ProviderBadge,
   ServiceBadge,
+  clusterIsWrapped,
   clusterOneLineWidth,
 } from './dashboardAlertUi';
 import { agoLabel, dayLabel, severityBadgeClass } from './dashboardUtils';
 import { createLayoutGate } from './layoutMeasure';
+
+type RunwayRow = AnalyticsSummary['balanceRunway'][number];
+
+function RunwayChargeRows({ rows }: { rows: RunwayRow[] }) {
+  const { t } = useTranslation();
+  return (
+    <AlertChargeGrid
+      showBalance
+      deps={rows.map((r) => `${r.providerUuid}:${r.daysLeft}:${r.balance}`).join('|')}
+    >
+      {rows.map((r, index) => (
+        <AlertChargeRow
+          key={r.providerUuid}
+          index={index}
+          who={
+            <>
+              <span>{t('dashboard.runway.providerLead')}</span>
+              <ProviderBadge
+                name={r.providerName}
+                kind={r.providerKind}
+                faviconLink={r.providerFaviconLink}
+                loginUrl={r.providerLoginUrl}
+                iconName={r.providerIconName}
+                iconBg={r.providerIconBg}
+              />
+            </>
+          }
+          balance={
+            <span className="text-muted-foreground tabular-nums">
+              {t('dashboard.runway.perDay', {
+                amount: formatMoney(r.burnPerDay, r.currency),
+              })}
+            </span>
+          }
+          badge={
+            <Badge className={cn('capitalize', severityBadgeClass(r.severity))}>
+              {dayLabel(t, r.daysLeft)}
+            </Badge>
+          }
+          amount={formatMoney(r.balance, r.currency)}
+        />
+      ))}
+    </AlertChargeGrid>
+  );
+}
 
 interface DashboardAlertsProps {
   overdue: AnalyticsSummary['overdueBillings'];
@@ -31,6 +77,20 @@ function horizontalChrome(el: HTMLElement): number {
     Number.parseFloat(s.borderLeftWidth) +
     Number.parseFloat(s.borderRightWidth)
   );
+}
+
+/** Padding/border + optional leading icon track stolen from the content column. */
+function alertContentInset(card: HTMLElement): number {
+  const alert = card.querySelector<HTMLElement>('[data-slot="alert"]') ?? card;
+  let inset = horizontalChrome(alert);
+  const icon = alert.querySelector<HTMLElement>(':scope > svg');
+  if (icon) {
+    const gap =
+      Number.parseFloat(getComputedStyle(alert).columnGap || getComputedStyle(alert).gap || '0') ||
+      0;
+    inset += Math.ceil(icon.getBoundingClientRect().width) + gap;
+  }
+  return inset;
 }
 
 function titleOneLineWidth(el: HTMLElement): number {
@@ -75,8 +135,43 @@ function rowOneLineWidth(row: HTMLElement): number {
   return metas.reduce((sum, m) => sum + Math.ceil(m.scrollWidth), 0);
 }
 
-/** Equal 2-col grid while content fits on one line per half; otherwise stack. */
-function EqualPairGrid({ deps, children }: { deps: unknown; children: ReactNode }) {
+function cardOverflowsHalf(
+  card: HTMLElement,
+  half: number,
+  slack: number,
+  checkLiveWrap: boolean,
+): boolean {
+  if (checkLiveWrap) {
+    for (const who of card.querySelectorAll<HTMLElement>('[data-alert-who]')) {
+      if (clusterIsWrapped(who)) return true;
+    }
+  }
+  const available = Math.floor(half - alertContentInset(card) - slack);
+  const title = card.querySelector<HTMLElement>('[data-slot="alert-title"]');
+  if (title && titleOneLineWidth(title) > available) return true;
+  for (const row of card.querySelectorAll<HTMLElement>('[data-alert-row]')) {
+    if (rowOneLineWidth(row) > available) return true;
+  }
+  return false;
+}
+
+/**
+ * Two side-by-side pairs while content fits. When stacked, criticals are grouped first:
+ * charge-critical → runway-critical → top-up → balance-runway.
+ */
+function AlertPairsLayout({
+  deps,
+  chargeCritical,
+  topUp,
+  runwayCritical,
+  runway,
+}: {
+  deps: unknown;
+  chargeCritical: ReactNode | null;
+  topUp: ReactNode | null;
+  runwayCritical: ReactNode | null;
+  runway: ReactNode | null;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   const stackRef = useRef(false);
   const [stack, setStack] = useState(false);
@@ -96,38 +191,36 @@ function EqualPairGrid({ deps, children }: { deps: unknown; children: ReactNode 
 
     const measure = () => {
       if (gate.shouldSkip()) return;
-      const cards = Array.from(root.children) as HTMLElement[];
-      if (cards.length < 2) {
-        applyStack(true);
-        return;
-      }
-
-      const gap = Number.parseFloat(getComputedStyle(root).gap || '0') || 0;
+      const gap = Number.parseFloat(getComputedStyle(root).gap || '0') || 16;
       const half = (root.clientWidth - gap) / 2;
       if (half <= 0) {
         applyStack(true);
         return;
       }
 
-      // Width-only decision: live wrap + remasure disagreed under deep browser zoom.
+      const pairs = new Map<string, HTMLElement[]>();
+      for (const card of root.querySelectorAll<HTMLElement>('[data-alert-card]')) {
+        const pair = card.dataset.alertPair;
+        if (!pair) continue;
+        const list = pairs.get(pair) ?? [];
+        list.push(card);
+        pairs.set(pair, list);
+      }
+
+      // Only pairs with two cards can force a stack; a lone card is already full-width.
+      const paired = [...pairs.values()].filter((cards) => cards.length >= 2);
+      if (paired.length === 0) {
+        applyStack(false);
+        return;
+      }
+
+      // Stack before who badges wrap. Live wrap is a safety net while side-by-side.
       // Hysteresis: stack early, unstack only with spare room.
       const slack = stackRef.current ? 64 : 12;
-      let needsStack = false;
-      for (const card of cards) {
-        const available = Math.floor(half - horizontalChrome(card) - slack);
-        const title = card.querySelector<HTMLElement>('[data-slot="alert-title"]');
-        if (title && titleOneLineWidth(title) > available) {
-          needsStack = true;
-          break;
-        }
-        for (const row of card.querySelectorAll<HTMLElement>('[data-alert-row]')) {
-          if (rowOneLineWidth(row) > available) {
-            needsStack = true;
-            break;
-          }
-        }
-        if (needsStack) break;
-      }
+      const checkLiveWrap = !stackRef.current;
+      const needsStack = paired.some((cards) =>
+        cards.some((card) => cardOverflowsHalf(card, half, slack, checkLiveWrap)),
+      );
       applyStack(needsStack);
     };
 
@@ -141,24 +234,187 @@ function EqualPairGrid({ deps, children }: { deps: unknown; children: ReactNode 
     };
   }, [deps]);
 
+  const wrap = (pair: string, node: ReactNode | null) =>
+    node == null ? null : (
+      <div data-alert-card="" data-alert-pair={pair} className="min-w-0 h-full">
+        {node}
+      </div>
+    );
+
+  const chargeCriticalCard = wrap('charge', chargeCritical);
+  const topUpCard = wrap('charge', topUp);
+  const runwayCriticalCard = wrap('runway', runwayCritical);
+  const runwayCard = wrap('runway', runway);
+
+  if (stack) {
+    return (
+      <div ref={ref} className="grid grid-cols-1 gap-4">
+        {chargeCriticalCard}
+        {runwayCriticalCard}
+        {topUpCard}
+        {runwayCard}
+      </div>
+    );
+  }
+
   return (
-    <div
-      ref={ref}
-      className={cn('grid items-stretch gap-4', stack ? 'grid-cols-1' : 'grid-cols-2')}
-    >
-      {children}
+    <div ref={ref} className="grid gap-4">
+      {(chargeCriticalCard || topUpCard) && (
+        <div
+          className={cn(
+            'grid items-stretch gap-4',
+            chargeCriticalCard && topUpCard ? 'grid-cols-2' : 'grid-cols-1',
+          )}
+        >
+          {chargeCriticalCard}
+          {topUpCard}
+        </div>
+      )}
+      {(runwayCriticalCard || runwayCard) && (
+        <div
+          className={cn(
+            'grid items-stretch gap-4',
+            runwayCriticalCard && runwayCard ? 'grid-cols-2' : 'grid-cols-1',
+          )}
+        >
+          {runwayCriticalCard}
+          {runwayCard}
+        </div>
+      )}
     </div>
   );
 }
+
+const pairAlertClass =
+  'h-full min-w-0 [&>[data-slot=alert-description]]:col-span-full [&>[data-slot=alert-description]]:col-start-1';
 
 export function DashboardAlerts({ overdue, upcoming, runway, topUps }: DashboardAlertsProps) {
   const { t } = useTranslation();
   const critical = upcoming.filter((b) => b.severity === 'critical');
   const runwayCritical = runway.filter((r) => r.severity === 'critical');
+  // Warning-only companion to the critical runway alert (same dataset, no duplicated rows).
+  const runwayWarning = runway.filter((r) => r.severity === 'warning');
   const criticalTopUps = topUps.filter((u) =>
     critical.some((b) => b.providerUuid === u.providerUuid),
   );
-  const pairKey = `${critical.map((b) => `${b.serviceUuid}:${b.name}:${b.cost}:${b.providerName}`).join('|')}:${criticalTopUps.map((u) => `${u.providerUuid}:${u.amount}:${u.providerName}`).join('|')}:${t('dashboard.critical.title')}`;
+  const pairsKey = `${critical.map((b) => `${b.serviceUuid}:${b.name}:${b.cost}:${b.providerName}`).join('|')}:${criticalTopUps.map((u) => `${u.providerUuid}:${u.amount}:${u.providerName}`).join('|')}:${runwayCritical.map((r) => `${r.providerUuid}:${r.daysLeft}:${r.balance}`).join('|')}:${runwayWarning.map((r) => `${r.providerUuid}:${r.severity}:${r.daysLeft}`).join('|')}:${t('dashboard.critical.title')}`;
+
+  const chargeCriticalAlert =
+    critical.length > 0 ? (
+      <Alert variant="destructive" className={pairAlertClass}>
+        <IconAlertTriangle className="size-4" />
+        <AlertTitle>{t('dashboard.critical.title')}</AlertTitle>
+        <AlertDescription className="mt-2 block w-full">
+          <AlertChargeGrid>
+            {critical.map((b, index) => (
+              <AlertChargeRow
+                key={b.serviceUuid}
+                index={index}
+                who={
+                  <>
+                    <span>{t('dashboard.critical.serviceLead')}</span>
+                    <ProviderBadge
+                      name={b.providerName}
+                      kind={b.providerKind}
+                      faviconLink={b.providerFaviconLink}
+                      loginUrl={b.providerLoginUrl}
+                      iconName={b.providerIconName}
+                      iconBg={b.providerIconBg}
+                    />
+                    <ServiceBadge countryCode={b.countryCode} name={b.name} />
+                  </>
+                }
+                badge={
+                  <Badge className={cn('capitalize', severityBadgeClass(b.severity))}>
+                    {dayLabel(t, b.daysUntil)}
+                  </Badge>
+                }
+                amount={formatMoney(b.cost, b.currency)}
+              />
+            ))}
+          </AlertChargeGrid>
+        </AlertDescription>
+      </Alert>
+    ) : null;
+
+  const topUpAlert =
+    criticalTopUps.length > 0 ? (
+      <Alert className={pairAlertClass}>
+        <IconCash className="size-4" />
+        <AlertTitle>{t('dashboard.critical.topUpTitle')}</AlertTitle>
+        <AlertDescription className="mt-2 block w-full">
+          <AlertChargeGrid>
+            {criticalTopUps.map((u, index) => {
+              const fromCritical = critical.find((b) => b.providerUuid === u.providerUuid);
+              const soonest = critical
+                .filter((b) => b.providerUuid === u.providerUuid)
+                .reduce(
+                  (best, b) => (best == null || b.daysUntil < best.daysUntil ? b : best),
+                  null as (typeof critical)[number] | null,
+                );
+              return (
+                <AlertChargeRow
+                  key={u.providerUuid}
+                  index={index}
+                  who={
+                    <>
+                      <span>{t('dashboard.critical.topUpLead')}</span>
+                      <ProviderBadge
+                        name={u.providerName}
+                        kind={u.providerKind || fromCritical?.providerKind}
+                        faviconLink={u.providerFaviconLink ?? fromCritical?.providerFaviconLink}
+                        loginUrl={u.providerLoginUrl ?? fromCritical?.providerLoginUrl}
+                        iconName={u.providerIconName ?? fromCritical?.providerIconName}
+                        iconBg={u.providerIconBg ?? fromCritical?.providerIconBg}
+                      />
+                    </>
+                  }
+                  badge={
+                    <Badge
+                      className={cn(
+                        'capitalize',
+                        severityBadgeClass(soonest?.severity ?? 'critical'),
+                      )}
+                    >
+                      {dayLabel(t, soonest?.daysUntil ?? 0)}
+                    </Badge>
+                  }
+                  amount={formatMoney(u.amount, u.currency)}
+                />
+              );
+            })}
+          </AlertChargeGrid>
+        </AlertDescription>
+      </Alert>
+    ) : null;
+
+  const runwayCriticalAlert =
+    runwayCritical.length > 0 ? (
+      <Alert variant="destructive" className={pairAlertClass}>
+        <IconAlertTriangle className="size-4" />
+        <AlertTitle>{t('dashboard.runway.criticalTitle')}</AlertTitle>
+        <AlertDescription className="mt-2 block w-full">
+          <RunwayChargeRows rows={runwayCritical} />
+        </AlertDescription>
+      </Alert>
+    ) : null;
+
+  const runwayAlert =
+    runwayWarning.length > 0 ? (
+      <Alert className={pairAlertClass}>
+        <IconClockHour4 className="size-4" />
+        <AlertTitle>{t('dashboard.runway.title')}</AlertTitle>
+        <AlertDescription className="mt-2 block w-full">
+          <RunwayChargeRows rows={runwayWarning} />
+        </AlertDescription>
+      </Alert>
+    ) : null;
+
+  const hasPairs =
+    chargeCriticalAlert != null ||
+    topUpAlert != null ||
+    runwayCriticalAlert != null ||
+    runwayAlert != null;
 
   return (
     <>
@@ -199,119 +455,14 @@ export function DashboardAlerts({ overdue, upcoming, runway, topUps }: Dashboard
         </Alert>
       )}
 
-      {(critical.length > 0 || criticalTopUps.length > 0) && (
-        <EqualPairGrid deps={pairKey}>
-          {critical.length > 0 && (
-            <Alert
-              variant="destructive"
-              className="h-full min-w-0 [&>[data-slot=alert-description]]:col-span-full [&>[data-slot=alert-description]]:col-start-1"
-            >
-              <IconAlertTriangle className="size-4" />
-              <AlertTitle>{t('dashboard.critical.title')}</AlertTitle>
-              <AlertDescription className="mt-2 block w-full">
-                <AlertChargeGrid>
-                  {critical.map((b, index) => (
-                    <AlertChargeRow
-                      key={b.serviceUuid}
-                      index={index}
-                      who={
-                        <>
-                          <span>{t('dashboard.critical.serviceLead')}</span>
-                          <ProviderBadge
-                            name={b.providerName}
-                            kind={b.providerKind}
-                            faviconLink={b.providerFaviconLink}
-                            loginUrl={b.providerLoginUrl}
-                            iconName={b.providerIconName}
-                            iconBg={b.providerIconBg}
-                          />
-                          <ServiceBadge countryCode={b.countryCode} name={b.name} />
-                        </>
-                      }
-                      badge={
-                        <Badge className={cn('capitalize', severityBadgeClass(b.severity))}>
-                          {dayLabel(t, b.daysUntil)}
-                        </Badge>
-                      }
-                      amount={formatMoney(b.cost, b.currency)}
-                    />
-                  ))}
-                </AlertChargeGrid>
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {criticalTopUps.length > 0 && (
-            <Alert className="h-full min-w-0 [&>[data-slot=alert-description]]:col-span-full [&>[data-slot=alert-description]]:col-start-1">
-              <IconCash className="size-4" />
-              <AlertTitle>{t('dashboard.critical.topUpTitle')}</AlertTitle>
-              <AlertDescription className="mt-2 block w-full">
-                <AlertChargeGrid>
-                  {criticalTopUps.map((u, index) => {
-                    const fromCritical = critical.find((b) => b.providerUuid === u.providerUuid);
-                    const soonest = critical
-                      .filter((b) => b.providerUuid === u.providerUuid)
-                      .reduce(
-                        (best, b) => (best == null || b.daysUntil < best.daysUntil ? b : best),
-                        null as (typeof critical)[number] | null,
-                      );
-                    return (
-                      <AlertChargeRow
-                        key={u.providerUuid}
-                        index={index}
-                        who={
-                          <>
-                            <span>{t('dashboard.critical.topUpLead')}</span>
-                            <ProviderBadge
-                              name={u.providerName}
-                              kind={u.providerKind || fromCritical?.providerKind}
-                              faviconLink={
-                                u.providerFaviconLink ?? fromCritical?.providerFaviconLink
-                              }
-                              loginUrl={u.providerLoginUrl ?? fromCritical?.providerLoginUrl}
-                              iconName={u.providerIconName ?? fromCritical?.providerIconName}
-                              iconBg={u.providerIconBg ?? fromCritical?.providerIconBg}
-                            />
-                          </>
-                        }
-                        badge={
-                          <Badge
-                            className={cn(
-                              'capitalize',
-                              severityBadgeClass(soonest?.severity ?? 'critical'),
-                            )}
-                          >
-                            {dayLabel(t, soonest?.daysUntil ?? 0)}
-                          </Badge>
-                        }
-                        amount={formatMoney(u.amount, u.currency)}
-                      />
-                    );
-                  })}
-                </AlertChargeGrid>
-              </AlertDescription>
-            </Alert>
-          )}
-        </EqualPairGrid>
-      )}
-
-      {runwayCritical.length > 0 && (
-        <Alert variant="destructive">
-          <IconAlertTriangle className="size-4" />
-          <AlertTitle>{t('dashboard.runway.criticalTitle')}</AlertTitle>
-          <AlertDescription className="mt-2">
-            <div className="space-y-1">
-              {runwayCritical.map((r) => (
-                <p key={r.providerUuid} className="text-sm">
-                  <b>{r.providerName}</b>:{' '}
-                  {t('dashboard.runway.runsOut', { when: dayLabel(t, r.daysLeft) })} ·{' '}
-                  {t('dashboard.runway.perDay', { amount: formatMoney(r.burnPerDay, r.currency) })}
-                  {t('dashboard.runway.balance', { amount: formatMoney(r.balance, r.currency) })}
-                </p>
-              ))}
-            </div>
-          </AlertDescription>
-        </Alert>
+      {hasPairs && (
+        <AlertPairsLayout
+          deps={pairsKey}
+          chargeCritical={chargeCriticalAlert}
+          topUp={topUpAlert}
+          runwayCritical={runwayCriticalAlert}
+          runway={runwayAlert}
+        />
       )}
     </>
   );
