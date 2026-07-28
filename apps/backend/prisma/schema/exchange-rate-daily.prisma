@@ -1,0 +1,18 @@
+// Historical daily rates, keyed by the date a rate was in effect — unlike `exchange_rates`,
+// whose captured_at is insert time. Past spend is converted from this archive.
+model ExchangeRateDaily {
+  id BigInt @id @default(autoincrement()) @map("id")
+
+  code     String   @map("code")
+  base     String   @map("base")
+  rateDate DateTime @db.Date @map("rate_date")
+  rate     Decimal  @db.Decimal(18, 8) @map("rate")
+  source   String   @map("source")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Makes backfill idempotent: re-running skips days already stored.
+  @@unique([code, base, rateDate], map: "exchange_rates_daily_code_base_date_key")
+  @@index([base, rateDate], map: "exchange_rates_daily_base_date_idx")
+  @@map("exchange_rates_daily")
+}

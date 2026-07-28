@@ -1,7 +1,7 @@
 import { Body, Controller, Get, HttpCode, Post } from '@nestjs/common';
 import { API, API_SUB, CONTROLLERS_INFO } from '@infra/shared';
 import { CurrencyService } from './currency.service';
-import { CreateRateDto, RateDto, RatesRefreshDto } from './dto/rate.dto';
+import { CreateRateDto, RateDto, RatesBackfillDto, RatesRefreshDto } from './dto/rate.dto';
 import {
   ApiBearerAuth,
   ApiCreatedResponse,
@@ -37,5 +37,13 @@ export class RatesController {
   @ApiOkResponse({ type: RatesRefreshDto })
   async refresh() {
     return { updated: await this.currency.refreshRates() };
+  }
+
+  @Post(API_SUB.RATES_BACKFILL)
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Backfill historical daily rates' })
+  @ApiOkResponse({ type: RatesBackfillDto })
+  backfill() {
+    return this.currency.backfillHistory();
   }
 }

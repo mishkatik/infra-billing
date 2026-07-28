@@ -100,7 +100,7 @@ export const common = {
       selectProvider: 'Select a provider',
       amountFormat: 'Amount like 100 or 100.50',
       enterDate: 'Enter a date',
-      code3: 'Three-letter code',
+      currencyCode: '3 or 4 letter code',
       ratePositive: 'Rate must be a positive number',
     },
     placeholder: {
@@ -250,7 +250,7 @@ export const common = {
       selectProvider: 'Выберите провайдера',
       amountFormat: 'Сумма вида 100 или 100.50',
       enterDate: 'Укажите дату',
-      code3: 'Код из 3 букв',
+      currencyCode: 'Код из 3-4 букв',
       ratePositive: 'Курс — положительное число',
     },
     placeholder: {

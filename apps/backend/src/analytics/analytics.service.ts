@@ -33,6 +33,8 @@ export class AnalyticsService {
   async summary(): Promise<AnalyticsSummary> {
     const { baseCurrency } = await this.currency.getEffectiveSettings();
     const rates = await this.currency.getRubRates();
+    // Past spend uses the rate of its payment date; everything else uses today's.
+    const history = await this.currency.getHistoricalRates(rates);
 
     const [providers, projects, services, payments] = await Promise.all([
       this.providersRepo.listAll(),
@@ -83,7 +85,7 @@ export class AnalyticsService {
         new Decimal(p.amount.toString()),
         p.currency,
         baseCurrency,
-        rates,
+        history.ratesOn(p.paymentDate),
       );
       totalSpent = totalSpent.add(base);
       spentByProvider.set(
@@ -418,6 +420,7 @@ export class AnalyticsService {
   async forecast(months: number, monthsBack: number): Promise<ForecastPoint[]> {
     const { baseCurrency } = await this.currency.getEffectiveSettings();
     const rates = await this.currency.getRubRates();
+    const history = await this.currency.getHistoricalRates(rates);
 
     const current = dayjs().startOf('month');
     const currentKey = current.format('YYYY-MM');
@@ -446,11 +449,12 @@ export class AnalyticsService {
       if (p.type === 'charge' && providersWithTopups.has(p.providerUuid)) continue;
       const key = dayjs(p.paymentDate).format('YYYY-MM');
       if (!actualBuckets.has(key) || key > currentKey) continue; // future-dated payments ignored
+      // Same rate date as totalSpent — otherwise the KPI card and the chart disagree.
       const base = this.currency.convert(
         new Decimal(p.amount.toString()),
         p.currency,
         baseCurrency,
-        rates,
+        history.ratesOn(p.paymentDate),
       );
       actualBuckets.set(key, actualBuckets.get(key)!.add(base));
     }

@@ -2,12 +2,13 @@ import { z } from 'zod';
 
 export const uuidSchema = z.string().uuid();
 
-/** ISO 4217 currency code, e.g. RUB / USD / EUR. */
-export const currencySchema = z.string().regex(/^[A-Z]{3}$/, 'ISO 4217 currency code');
+/** Currency code: ISO 4217 (RUB / USD / EUR) or a 4-letter crypto ticker (USDT). */
+export const currencySchema = z.string().regex(/^[A-Z]{3,4}$/, 'currency code');
 
 /**
  * Supported currencies: UI pickers + the only ones kept from the CBR feed (it publishes ~55 daily).
  * RUB is the CBR base. Edit here to add/remove a currency everywhere.
+ * USDT is not a CBR currency — it is priced by Rapira (live) and CoinMarketCap (history).
  */
 export const SUPPORTED_CURRENCIES = [
   'RUB',
@@ -20,7 +21,11 @@ export const SUPPORTED_CURRENCIES = [
   'TRY',
   'KZT',
   'UAH',
+  'USDT',
 ] as const;
+
+/** Currencies quoted by the CBR feed. */
+export const CBR_CURRENCIES = SUPPORTED_CURRENCIES.filter((c) => c !== 'USDT');
 
 /** ISO 3166-1 alpha-2 country code. */
 export const countryCodeSchema = z.string().regex(/^[A-Z]{2}$/, 'ISO 3166-1 alpha-2');

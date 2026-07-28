@@ -57,6 +57,7 @@ export const API_SUB = {
   ANALYTICS_SUMMARY: 'summary',
   ANALYTICS_FORECAST: 'forecast',
   RATES_REFRESH: 'refresh',
+  RATES_BACKFILL: 'backfill',
   NOTIFICATIONS_CHECK: 'check',
   NOTIFICATIONS_TEST: 'test',
 } as const;
@@ -119,6 +120,7 @@ export const API_PATH = {
   RATES: {
     ROOT: path(API.RATES),
     REFRESH: path(API.RATES, API_SUB.RATES_REFRESH),
+    BACKFILL: path(API.RATES, API_SUB.RATES_BACKFILL),
   },
   SETTINGS: path(API.SETTINGS),
   NOTIFICATIONS: {

@@ -56,6 +56,10 @@ export const PERIODS = periodSchema.options;
 export const syncStatusSchema = z.enum(['running', 'ok', 'error']);
 export type SyncStatus = z.infer<typeof syncStatusSchema>;
 
-/** Exchange-rate source. */
+/** Fiat rate source, picked in settings. */
 export const rateSourceSchema = z.enum(['cbr', 'manual']);
 export type RateSource = z.infer<typeof rateSourceSchema>;
+
+/** What produced a stored rate row. Wider than `rateSourceSchema` — USDT has its own sources. */
+export const rateOriginSchema = z.enum(['cbr', 'manual', 'rapira', 'cmc']);
+export type RateOrigin = z.infer<typeof rateOriginSchema>;
