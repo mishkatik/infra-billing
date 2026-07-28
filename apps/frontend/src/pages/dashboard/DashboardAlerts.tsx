@@ -285,8 +285,12 @@ function AlertPairsLayout({
   );
 }
 
-const pairAlertClass =
-  'h-full min-w-0 [&>[data-slot=alert-description]]:col-span-full [&>[data-slot=alert-description]]:col-start-1';
+// Alert lays out as [icon | content], and the description defaults to the content column. Span it
+// across both tracks so the charge rows start at the card's left edge instead of under the title.
+const fullWidthRowsClass =
+  '[&>[data-slot=alert-description]]:col-span-full [&>[data-slot=alert-description]]:col-start-1';
+
+const pairAlertClass = cn('h-full min-w-0', fullWidthRowsClass);
 
 export function DashboardAlerts({ overdue, upcoming, runway, topUps }: DashboardAlertsProps) {
   const { t } = useTranslation();
@@ -419,7 +423,7 @@ export function DashboardAlerts({ overdue, upcoming, runway, topUps }: Dashboard
   return (
     <>
       {overdue.length > 0 && (
-        <Alert variant="destructive">
+        <Alert variant="destructive" className={fullWidthRowsClass}>
           <IconAlertTriangle className="size-4" />
           <AlertTitle>{t('dashboard.overdue.title')}</AlertTitle>
           <AlertDescription className="mt-2 block w-full">
