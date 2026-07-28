@@ -28,7 +28,8 @@ export const providerSchema = z.object({
   lastSyncError: z.string().describe('Last sync error').nullable(),
   servicesCount: z.number().int().nonnegative().describe('Number of services').optional(),
   paymentsCount: z.number().int().nonnegative().describe('Number of payments').optional(),
-  // Non-secret credential hints (hostbill/billmgr/selectel/4vps) so the edit form can prefill them.
+  // Non-secret credential hints (hostbill/billmgr/selectel/4vps/vdsina/aeza) so the edit form can
+  // prefill them.
   // Plaintext secrets are NEVER returned here — only presence flags for the edit form mask.
   baseUrl: z.string().describe('API base URL').nullable().optional(),
   username: z.string().describe('Account username').nullable().optional(),

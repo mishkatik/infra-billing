@@ -63,6 +63,8 @@ export const providers = {
       apiTokenDescLinode:
         'Linode → Account → API Tokens → create a Personal Access Token (read access to Account and Linodes)',
       apiTokenDescAeza: 'Aeza panel → API Keys → create an API key',
+      apiBaseUrlDescAeza:
+        'Branch panel: https://my.aeza.net (default) or https://my.aeza.ru (Russian branch). The branches are independent — the key must come from the same panel.',
       apiTokenDescHostkey:
         'Go to invapi.hostkey.ru. Open "Username" → "API keys" → "Add key", enter any name, then "Create". Then copy the key and finish by pressing "OK".',
       apiTokenDescTimeweb: 'Go to "API and Terraform" → "Add token", enter any name, then "Issue".',
@@ -222,6 +224,8 @@ export const providers = {
       apiTokenDescLinode:
         'Linode → Account → API Tokens → создать Personal Access Token (доступ на чтение к Account и Linodes)',
       apiTokenDescAeza: 'Панель Aeza → API Keys → создать API-ключ',
+      apiBaseUrlDescAeza:
+        'Панель филиала: https://my.aeza.net (по умолчанию) или https://my.aeza.ru (российский филиал). Филиалы независимы — ключ должен быть из той же панели.',
       apiTokenDescHostkey:
         'Зайдите на invapi.hostkey.ru. Откройте "Пользователь" → "API ключи" → "Добавить ключ", введите любое имя, затем "Создать". Затем скопируйте ключ и завершите нажав "ОК".',
       apiTokenDescTimeweb:

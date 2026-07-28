@@ -63,6 +63,22 @@ export const EMPTY_FORM: FormValues = {
   isPostpaid: false,
 };
 
+// Aeza runs two independent branches on an identical API — international .net and Russian .ru.
+// An API key belongs to exactly one of them, so the branch is part of the credentials.
+export const AEZA_BASE_URLS = ['https://my.aeza.net', 'https://my.aeza.ru'];
+export const AEZA_DEFAULT_BASE_URL = AEZA_BASE_URLS[0];
+
+/** Branch the entered base URL points at (panel origin or full API URL), .net while it's blank. */
+export function aezaBranchOrigin(raw: string | undefined): string {
+  const origin = (raw ?? '')
+    .trim()
+    .replace(/\/+$/, '')
+    .replace(/\/api\/v2$/i, '')
+    .replace(/\/+$/, '')
+    .toLowerCase();
+  return AEZA_BASE_URLS.includes(origin) ? origin : AEZA_DEFAULT_BASE_URL;
+}
+
 const HOSTKEY_API_KEY_RE = /^[a-f0-9]{16}-[a-f0-9]{16}$/i;
 
 function normalizeHostkeyToken(raw: string): string {

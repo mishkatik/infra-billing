@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { AezaConnector } from './aeza/aeza.connector';
+import { parseAezaCredentials } from './aeza/aeza.types';
 import { FourVpsConnector } from './4vps/4vps.connector';
 import type { FourVpsCredentials } from './4vps/4vps.types';
 import { BegetConnector } from './beget/beget.connector';
@@ -75,8 +76,9 @@ export class ConnectorFactory {
         // Linode secret is the raw Personal Access Token (sent as the Authorization Bearer header).
         return new LinodeConnector(token);
       case 'aeza':
-        // Aeza secret is the raw API key (single string, sent as the X-API-KEY header).
-        return new AezaConnector(token);
+        // Aeza secret is JSON: { token, baseUrl? } — baseUrl picks the .net/.ru branch. Providers
+        // saved before the branch field hold the bare API key; the parser accepts both.
+        return new AezaConnector(parseAezaCredentials(token));
       case 'vdsina':
         // VDSina secret is JSON: { token, baseUrl? } — baseUrl picks the .ru/.com branch.
         return new VdsinaConnector(JSON.parse(token) as VdsinaCredentials);

@@ -3,9 +3,18 @@ import Decimal from 'decimal.js';
 import { REQUEST_TIMEOUT_MS } from '../common/http';
 import { Account, Connector, PaymentData, ServiceData } from '../connector.interface';
 import { mapAezaPayments, mapAezaService } from './aeza.mapper';
-import { AezaAccount, AezaPaged, AezaService, AezaTransaction } from './aeza.types';
+import {
+  AEZA_API_PATH,
+  AEZA_BASE_URLS,
+  AEZA_DEFAULT_BASE_URL,
+  AezaAccount,
+  AezaCredentials,
+  AezaPaged,
+  AezaService,
+  AezaTransaction,
+  normalizeAezaBaseUrl,
+} from './aeza.types';
 
-const BASE_URL = 'https://my.aeza.net/api/v2';
 const PAGE_SIZE = 100;
 const MAX_PAGES = 50; // safety cap against a misbehaving pagination contract
 
@@ -15,16 +24,27 @@ const MAX_PAGES = 50; // safety cap against a misbehaving pagination contract
  * { items, total }); balance + currency from /accounts/me (prepaid: positive = funds). Billing from
  * /billing/transactions (replenishment/refund/compensation → topup, the rest → charge). No npm SDK
  * → thin axios client.
+ *
+ * Two independent branches (my.aeza.net and the Russian my.aeza.ru) run the same API; `baseUrl`
+ * picks which one the key belongs to, defaulting to .net. Keys are not interchangeable between
+ * branches, so the host is part of the credentials.
  */
 export class AezaConnector implements Connector {
   private readonly http: AxiosInstance;
   private cachedCurrency?: string;
 
-  constructor(token: string) {
+  constructor(creds: AezaCredentials) {
+    const baseUrl = creds.baseUrl ? normalizeAezaBaseUrl(creds.baseUrl) : AEZA_DEFAULT_BASE_URL;
+    // Hard allowlist: anything else would send the API key to a foreign host.
+    if (!baseUrl) {
+      throw new Error(`Aeza: baseUrl must be ${AEZA_BASE_URLS.join(' or ')}`);
+    }
     this.http = axios.create({
-      baseURL: BASE_URL,
+      baseURL: `${baseUrl}${AEZA_API_PATH}`,
       timeout: REQUEST_TIMEOUT_MS,
-      headers: { 'X-API-KEY': token },
+      headers: { 'X-API-KEY': creds.token },
+      // The JSON API never legitimately redirects; refuse rather than re-send the key elsewhere.
+      maxRedirects: 0,
     });
     // Surface Aeza's structured error body ({ error / message }) instead of a bare HTTP status.
     this.http.interceptors.response.use(undefined, (e) => {

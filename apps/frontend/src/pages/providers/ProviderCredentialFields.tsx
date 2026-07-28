@@ -28,7 +28,7 @@ import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { notifyError } from '@/utils/notify';
 import type { StoredSecretFlags } from './ProviderFormFields';
-import type { FormValues } from './providerForm';
+import { AEZA_DEFAULT_BASE_URL, aezaBranchOrigin, type FormValues } from './providerForm';
 
 interface ProviderCredentialFieldsProps {
   form: UseFormReturn<FormValues>;
@@ -526,6 +526,7 @@ export function ProviderCredentialFields({
     [providerUuid],
   );
 
+  const baseUrl = form.watch('baseUrl');
   const yandexToken = form.watch('token');
   const yandexBody: YandexDiscover | null =
     kind !== 'yandex'
@@ -756,20 +757,34 @@ export function ProviderCredentialFields({
 
   if (kind === 'aeza') {
     return (
-      <Field
-        id="cred-token"
-        label={t('providers.field.apiToken')}
-        description={t('providers.field.apiTokenDescAeza')}
-        link="https://my.aeza.net/settings/apikeys"
-      >
-        <SecretFormField
-          form={form}
-          name="token"
+      <>
+        <Field
           id="cred-token"
-          hasStored={storedSecrets?.hasToken}
-          reveal={reveal}
-        />
-      </Field>
+          label={t('providers.field.apiToken')}
+          description={t('providers.field.apiTokenDescAeza')}
+          // Keys are per-branch — point at the panel the chosen base URL belongs to.
+          link={`${aezaBranchOrigin(baseUrl)}/settings/apikeys`}
+        >
+          <SecretFormField
+            form={form}
+            name="token"
+            id="cred-token"
+            hasStored={storedSecrets?.hasToken}
+            reveal={reveal}
+          />
+        </Field>
+        <Field
+          id="cred-base-url"
+          label={t('providers.field.apiBaseUrl')}
+          description={t('providers.field.apiBaseUrlDescAeza')}
+        >
+          <Input
+            id="cred-base-url"
+            placeholder={AEZA_DEFAULT_BASE_URL}
+            {...form.register('baseUrl')}
+          />
+        </Field>
+      </>
     );
   }
 

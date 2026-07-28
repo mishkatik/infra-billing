@@ -7,6 +7,12 @@ import {
   YandexDiscoverResult,
 } from '@infra/shared';
 import { ProvidersRepository } from '@repositories/providers/providers.repository';
+import {
+  AEZA_BASE_URLS,
+  AezaCredentials,
+  normalizeAezaBaseUrl,
+  parseAezaCredentials,
+} from '@connectors/aeza/aeza.types';
 import { VDSINA_BASE_URLS } from '@connectors/vdsina/vdsina.types';
 import { YandexConnector } from '../connectors/yandex/yandex.connector';
 import type { YandexCredentials } from '../connectors/yandex/yandex.types';
@@ -62,6 +68,9 @@ export class ProvidersService {
       const c = this.decodeCredentials(enc);
       return { baseUrl: c.baseUrl ?? null };
     }
+    if (kind === 'aeza') {
+      return { baseUrl: this.decodeAezaCredentials(enc).baseUrl ?? null };
+    }
     if (kind === 'beget' || kind === 'doubleservers') {
       const c = this.decodeCredentials(enc);
       return { username: c.username ?? null };
@@ -95,11 +104,11 @@ export class ProvidersService {
       kind === 'netlen' ||
       kind === 'vultr' ||
       kind === 'linode' ||
-      kind === 'aeza' ||
       kind === 'stormwall'
     ) {
       return { hasToken: true };
     }
+    if (kind === 'aeza') return { hasToken: Boolean(this.decodeAezaCredentials(enc).token) };
     const c = this.decodeCredentials(enc);
     if (kind === '4vps' || kind === 'vdsina') return { hasToken: Boolean(c.token) };
     if (kind === 'cloudflare') return { hasToken: Boolean(c.apiToken) };
@@ -143,10 +152,14 @@ export class ProvidersService {
       kind === 'netlen' ||
       kind === 'vultr' ||
       kind === 'linode' ||
-      kind === 'aeza' ||
       kind === 'stormwall'
     ) {
       const token = this.decryptRaw(enc);
+      return token ? { token } : {};
+    }
+
+    if (kind === 'aeza') {
+      const token = this.decodeAezaCredentials(enc).token;
       return token ? { token } : {};
     }
 
@@ -284,6 +297,25 @@ export class ProvidersService {
         );
       }
       if (baseUrl) creds.baseUrl = baseUrl;
+      return this.crypto.encrypt(JSON.stringify(creds));
+    }
+    if (kind === 'aeza') {
+      // JSON { token, baseUrl? }; merge so a branch-only edit keeps the key. The .net and the
+      // Russian .ru branches are separate accounts on an identical API — the base URL picks one,
+      // and the allowlist keeps the key from reaching a foreign host.
+      if (!dto.token && !dto.baseUrl) return null;
+      const base = this.decodeAezaCredentials(existingEnc);
+      const token = dto.token ?? base.token;
+      if (!token) throw new BadRequestException('Provide the Aeza API key');
+      const creds: AezaCredentials = { token };
+      const supplied = dto.baseUrl ?? base.baseUrl;
+      if (supplied) {
+        const baseUrl = normalizeAezaBaseUrl(supplied);
+        if (!baseUrl) {
+          throw new BadRequestException(`Aeza base URL must be ${AEZA_BASE_URLS.join(' or ')}`);
+        }
+        creds.baseUrl = baseUrl;
+      }
       return this.crypto.encrypt(JSON.stringify(creds));
     }
     if (kind === 'selectel') {
@@ -470,6 +502,16 @@ export class ProvidersService {
     } catch {
       return {};
     }
+  }
+
+  /**
+   * Aeza credentials: JSON { token, baseUrl? }, or the bare API key for providers saved before the
+   * branch field existed — hence its own decoder instead of `decodeCredentials`.
+   */
+  private decodeAezaCredentials(enc?: Uint8Array | null): Partial<AezaCredentials> {
+    if (!enc) return {};
+    const raw = this.decryptRaw(enc);
+    return raw ? parseAezaCredentials(raw) : {};
   }
 
   private decryptRaw(enc: Uint8Array): string | null {
