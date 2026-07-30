@@ -104,6 +104,7 @@ export class ProvidersService {
       kind === 'netlen' ||
       kind === 'vultr' ||
       kind === 'linode' ||
+      kind === 'vibehost' ||
       kind === 'stormwall'
     ) {
       return { hasToken: true };
@@ -152,6 +153,7 @@ export class ProvidersService {
       kind === 'netlen' ||
       kind === 'vultr' ||
       kind === 'linode' ||
+      kind === 'vibehost' ||
       kind === 'stormwall'
     ) {
       const token = this.decryptRaw(enc);

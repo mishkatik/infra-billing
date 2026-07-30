@@ -810,6 +810,25 @@ export function ProviderCredentialFields({
     );
   }
 
+  if (kind === 'vibehost') {
+    return (
+      <Field
+        id="cred-token"
+        label={t('providers.field.apiToken')}
+        description={t('providers.field.apiTokenDescVibehost')}
+        link="https://t.me/VibeHostBot"
+      >
+        <SecretFormField
+          form={form}
+          name="token"
+          id="cred-token"
+          hasStored={storedSecrets?.hasToken}
+          reveal={reveal}
+        />
+      </Field>
+    );
+  }
+
   if (kind === 'stormwall') {
     return (
       <Field

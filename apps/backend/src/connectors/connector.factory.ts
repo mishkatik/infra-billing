@@ -27,6 +27,7 @@ import { StormwallConnector } from './stormwall/stormwall.connector';
 import { TimewebConnector } from './timeweb/timeweb.connector';
 import { VdsinaConnector } from './vdsina/vdsina.connector';
 import type { VdsinaCredentials } from './vdsina/vdsina.types';
+import { VibehostConnector } from './vibehost/vibehost.connector';
 import { VultrConnector } from './vultr/vultr.connector';
 import { YandexConnector } from './yandex/yandex.connector';
 import type { YandexCredentials } from './yandex/yandex.types';
@@ -79,6 +80,9 @@ export class ConnectorFactory {
         // Aeza secret is JSON: { token, baseUrl? } — baseUrl picks the .net/.ru branch. Providers
         // saved before the branch field hold the bare API key; the parser accepts both.
         return new AezaConnector(parseAezaCredentials(token));
+      case 'vibehost':
+        // VibeHost secret is the raw API key (single string, sent as the X-API-Key header).
+        return new VibehostConnector(token);
       case 'vdsina':
         // VDSina secret is JSON: { token, baseUrl? } — baseUrl picks the .ru/.com branch.
         return new VdsinaConnector(JSON.parse(token) as VdsinaCredentials);

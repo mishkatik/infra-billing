@@ -67,6 +67,7 @@ export const providers = {
         'Branch panel: https://my.aeza.net (default) or https://my.aeza.ru (Russian branch). The branches are independent — the key must come from the same panel.',
       apiTokenDescHostkey:
         'Go to invapi.hostkey.ru. Open "Username" → "API keys" → "Add key", enter any name, then "Create". Then copy the key and finish by pressing "OK".',
+      apiTokenDescVibehost: 'Telegram bot → Profile → API Keys → Create',
       apiTokenDescTimeweb: 'Go to "API and Terraform" → "Add token", enter any name, then "Issue".',
       apiTokenDescHetzner:
         'Go to console.hetzner.com. Open "Projects" → "Default" → "Security" → "API Tokens" → "Generate API Token", enter any name, then "Generate API Token".',
@@ -135,6 +136,7 @@ export const providers = {
       aezaToken: 'Enter the Aeza API key',
       hostkeyToken: 'Enter the Hostkey InvAPI key',
       hostkeyTokenFormat: 'Hostkey key must look like d35f42c3a881b52d-ccbc5a508624d503',
+      vibehostToken: 'Enter the VibeHost API key',
       vdsinaToken: 'Enter the VDSina API token',
       cloudflareCreds: 'Enter the Cloudflare account ID and API token',
       stormwallToken: 'Enter the StormWall API key',
@@ -228,6 +230,7 @@ export const providers = {
         'Панель филиала: https://my.aeza.net (по умолчанию) или https://my.aeza.ru (российский филиал). Филиалы независимы — ключ должен быть из той же панели.',
       apiTokenDescHostkey:
         'Зайдите на invapi.hostkey.ru. Откройте "Пользователь" → "API ключи" → "Добавить ключ", введите любое имя, затем "Создать". Затем скопируйте ключ и завершите нажав "ОК".',
+      apiTokenDescVibehost: 'Telegram-бот → Профиль → API Keys → Создать',
       apiTokenDescTimeweb:
         'Перейдите в "API и Terraform" → "Добавить токен", введите любое имя, затем "Выпустить".',
       apiTokenDescHetzner:
@@ -298,6 +301,7 @@ export const providers = {
       aezaToken: 'Укажите API-ключ Aeza',
       hostkeyToken: 'Укажите API-ключ Hostkey InvAPI',
       hostkeyTokenFormat: 'Ключ Hostkey должен быть вида d35f42c3a881b52d-ccbc5a508624d503',
+      vibehostToken: 'Укажите API-ключ VibeHost',
       vdsinaToken: 'Укажите API-токен VDSina',
       cloudflareCreds: 'Укажите account ID и API-токен Cloudflare',
       stormwallToken: 'Укажите API-ключ StormWall',

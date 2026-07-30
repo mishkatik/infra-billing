@@ -32,6 +32,7 @@ const PROVIDER_KINDS: ProviderKind[] = [
   'vultr',
   'linode',
   'aeza',
+  'vibehost',
   'vdsina',
   'cloudflare',
   'stormwall',

@@ -17,8 +17,8 @@
 
 - **Провайдеры с API:** Timeweb Cloud, Hetzner Cloud, Hostkey (InvAPI), netcup, HostBill,
   ISPsystem BILLmanager, Selectel, 4VPS.SU, Netlen, Beget Cloud, Porkbun, Vultr, Linode, Aeza,
-  VDSina, Cloudflare, StormWall, Yandex Cloud, Double Servers. Плюс **Manual** — провайдеры без
-  API ведутся руками.
+  VibeHost, VDSina, Cloudflare, StormWall, Yandex Cloud, Double Servers. Плюс **Manual** —
+  провайдеры без API ведутся руками.
 - **Автосинк** (по расписанию + кнопкой): баланс + валюта аккаунта, список серверов/услуг, даты
   следующих списаний; история баланса по дням (снапшоты).
 - **Импорт платежей** там, где API отдаёт реестр: пополнения и списания (BILLmanager, Netlen,
@@ -217,6 +217,11 @@ curl -H "Authorization: Bearer ib_…" https://infra-billing/api/providers
 - **Aeza** — API-ключ (панель → API Keys). Тянет серверы (цена по сроку оплаты, страна по
   локации, дата продления), баланс (валюта аккаунта — RUB/USD/EUR) и историю транзакций
   (пополнения + списания). Суммы в API — в минорных единицах (÷100). Баланс предоплатный.
+- **VibeHost** — API-ключ из Telegram-бота (*Профиль → API Keys → Создать*). Тянет баланс (USD),
+  VPS и выделенные серверы, месячные цены и даты следующей оплаты. Методы истории транзакций и
+  платежей пока возвращают `403` для `X-API-Key`, поэтому платежи нужно добавлять вручную.
+  Коннектор уже поддерживает `/api/v1/billing/transactions`: импорт заработает автоматически,
+  когда VibeHost разрешит этот метод для API-ключей.
 - **VDSina** — постоянный API-токен из личного кабинета (список пользователей:
   `https://cp.vdsina.ru/user/list`). Тянет баланс
   основного счёта (RUB), серверы и операции по балансу (оплаченные пополнения + списания).

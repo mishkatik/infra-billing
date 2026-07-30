@@ -37,6 +37,7 @@ export const DEFAULT_LOGIN_URLS: Record<string, string> = {
   vultr: 'https://console.vultr.com',
   linode: 'https://cloud.linode.com',
   aeza: 'https://my.aeza.net',
+  vibehost: 'https://vibehost.net',
   vdsina: 'https://cp.vdsina.ru',
   cloudflare: 'https://dash.cloudflare.com',
   porkbun: 'https://porkbun.com/account',
@@ -115,6 +116,7 @@ export function validateProviderCredentials(
     return t('providers.err.porkbunCreds');
   if (requireCreds && v.kind === 'linode' && !v.token) return t('providers.err.linodeToken');
   if (requireCreds && v.kind === 'aeza' && !v.token) return t('providers.err.aezaToken');
+  if (requireCreds && v.kind === 'vibehost' && !v.token) return t('providers.err.vibehostToken');
   if (v.kind === 'hostkey') {
     if (requireCreds && !v.token) return t('providers.err.hostkeyToken');
     if (v.token && !HOSTKEY_API_KEY_RE.test(normalizeHostkeyToken(v.token)))
