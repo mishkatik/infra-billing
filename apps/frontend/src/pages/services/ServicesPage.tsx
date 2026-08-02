@@ -218,7 +218,9 @@ export function ServicesPage() {
           // Stored in the DB, so it is fixed in the UI language active at creation time.
           description: t('services.bumpDescription'),
           paymentDate: toIso(dayjs().format('YYYY-MM-DD'))!,
-          type: 'charge',
+          // `topup`, not `charge`: analytics treats charges as per-service detail of a top-up and
+          // skips them for providers that have top-ups — a manual renewal would vanish from spend.
+          type: 'topup',
         });
       }
       await update.mutateAsync({ uuid: s.uuid, dto: { nextBillingAt: bumpedDate(s) } });
