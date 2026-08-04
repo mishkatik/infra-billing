@@ -26,6 +26,11 @@ export function stripOpenRouterVendorPrefix(name: string): string {
   return trimmed;
 }
 
+export function openRouterVendorFromModel(model: string): string | null {
+  const author = model.split('/')[0]?.replace(/^~/, '').trim().toLowerCase();
+  return author || null;
+}
+
 export function formatOpenRouterModelName(
   slug: string,
   namesById: Map<string, string>,
@@ -82,6 +87,7 @@ export function mapOpenRouterModelServices(
     .map((a) => {
       const cost = a.usageThisMonth.gt(0) ? a.usageThisMonth : a.usageWindow;
       const displayName = formatOpenRouterModelName(a.model, namesById, opts);
+      const vendor = openRouterVendorFromModel(a.model);
       return {
         externalId: openRouterModelExternalId(a.model),
         name: displayName,
@@ -92,6 +98,7 @@ export function mapOpenRouterModelServices(
         nextBilling: null,
         meta: {
           model: a.model,
+          vendor,
           displayName,
           providerName: a.providerName ?? null,
           requests: a.requests,

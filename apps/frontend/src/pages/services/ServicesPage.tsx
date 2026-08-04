@@ -142,6 +142,8 @@ export function ServicesPage() {
 
   const openDetail = (s: Service) => {
     const meta = (s.meta ?? {}) as Record<string, unknown>;
+    const model = metaString(meta, 'model');
+    const vendorFromModel = model.split('/')[0]?.replace(/^~/, '').trim().toLowerCase() ?? '';
     form.reset({
       providerUuid: s.providerUuid,
       projectUuid: s.projectUuid,
@@ -151,7 +153,7 @@ export function ServicesPage() {
       currency: s.currency,
       period: s.period,
       countryCode: s.countryCode ?? '',
-      vendor: metaString(meta, 'vendor'),
+      vendor: metaString(meta, 'vendor') || vendorFromModel,
       marker: metaString(meta, 'marker'),
       markerBg: metaString(meta, 'markerBg'),
       nextBillingAt: s.nextBillingAt ? dayjs(s.nextBillingAt).format('YYYY-MM-DD') : '',

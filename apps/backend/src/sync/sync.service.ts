@@ -221,14 +221,37 @@ export class SyncService implements OnModuleInit {
       const nextBilling =
         sd.nextBilling && !Number.isNaN(sd.nextBilling.getTime()) ? sd.nextBilling : null;
       const existing = await this.services.findByExternalId(providerUuid, sd.externalId);
-      // Keep the provider's proposed name/type/cost in meta even when overridden, so the
+      // Keep the provider's proposed name/type/cost/vendor in meta even when overridden, so the
       // UI can drop the pencil (and update can clear the flag) when the owner reverts.
+      const incomingMeta = { ...(sd.meta ?? {}) } as Record<string, unknown>;
+      const incomingVendor =
+        typeof incomingMeta.vendor === 'string' && incomingMeta.vendor.trim()
+          ? incomingMeta.vendor.trim()
+          : null;
+      const prevMeta = (existing?.meta ?? {}) as Record<string, unknown>;
+      const prevVendor =
+        typeof prevMeta.vendor === 'string' && prevMeta.vendor.trim()
+          ? prevMeta.vendor.trim()
+          : null;
+      const prevSyncedVendor =
+        typeof prevMeta.syncedVendor === 'string' && prevMeta.syncedVendor.trim()
+          ? prevMeta.syncedVendor.trim()
+          : null;
+      const vendorOverridden =
+        Boolean(prevVendor) &&
+        ((prevSyncedVendor != null && prevVendor !== prevSyncedVendor) ||
+          (prevSyncedVendor == null &&
+            incomingVendor != null &&
+            prevVendor !== incomingVendor));
+
       const meta = {
-        ...(sd.meta ?? {}),
+        ...incomingMeta,
         syncedName: sd.name,
         syncedType: sd.type,
         syncedCost: sd.cost != null ? sd.cost.toFixed(2) : null,
         ...(sd.countryCode ? { syncedCountry: sd.countryCode } : {}),
+        ...(incomingVendor ? { syncedVendor: incomingVendor } : {}),
+        ...(vendorOverridden && prevVendor ? { vendor: prevVendor } : {}),
       } as Prisma.InputJsonValue;
 
       if (!existing) {
