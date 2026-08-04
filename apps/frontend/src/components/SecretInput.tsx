@@ -34,9 +34,10 @@ export function SecretInput({
   const [revealing, setRevealing] = useState(false);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const alive = useRef(true);
-  // Fixed-length mask only while the stored secret is still untouched (never mirror real length).
-  // Once a value has been revealed or typed the field stays editable — otherwise the auto-hide
-  // would flip it back to read-only mid-edit and silently swallow the rest of the keystrokes.
+  const valueRef = useRef(value);
+  const revealedSnapshot = useRef<string | null>(null);
+  valueRef.current = value;
+
   const showMask = Boolean(hasStored && !visible && !value);
 
   useEffect(() => {
@@ -47,9 +48,20 @@ export function SecretInput({
     };
   }, []);
 
+  const hide = () => {
+    if (hideTimer.current) clearTimeout(hideTimer.current);
+    hideTimer.current = null;
+    setVisible(false);
+    const snap = revealedSnapshot.current;
+    if (hasStored && snap != null && valueRef.current === snap) {
+      revealedSnapshot.current = null;
+      onChange?.('');
+    }
+  };
+
   const scheduleHide = () => {
     if (hideTimer.current) clearTimeout(hideTimer.current);
-    hideTimer.current = setTimeout(() => setVisible(false), AUTO_HIDE_MS);
+    hideTimer.current = setTimeout(hide, AUTO_HIDE_MS);
   };
 
   const toggle = async () => {
@@ -58,27 +70,24 @@ export function SecretInput({
       setRevealing(true);
       try {
         const secret = await onReveal();
-        // The modal may have closed (or moved to another provider) while the request was in
-        // flight — writing now would drop this secret into whichever form is live by then.
         if (!alive.current) return;
+        revealedSnapshot.current = secret;
         onChange?.(secret);
         setVisible(true);
         scheduleHide();
       } catch {
-        // The reveal failed and the caller reported it; unlock the field so the owner can still
-        // type a replacement instead of being stuck behind an unopenable mask.
         if (alive.current) setVisible(true);
       } finally {
         if (alive.current) setRevealing(false);
       }
       return;
     }
-    setVisible((v) => {
-      const next = !v;
-      if (next) scheduleHide();
-      else if (hideTimer.current) clearTimeout(hideTimer.current);
-      return next;
-    });
+    if (visible) {
+      hide();
+      return;
+    }
+    setVisible(true);
+    scheduleHide();
   };
 
   const eye = (
