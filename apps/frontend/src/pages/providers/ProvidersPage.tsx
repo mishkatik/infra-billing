@@ -199,6 +199,7 @@ export function ProvidersPage() {
         sort={sort}
         onToggleSort={toggleSort}
         onRowClick={openDetail}
+        onSync={doSync}
       />
 
       <ProviderFormModal
