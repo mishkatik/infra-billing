@@ -7,6 +7,7 @@ import {
   IconExternalLink,
   IconGridDots,
   IconKey,
+  IconLock,
   IconMail,
   IconPlus,
   IconRefresh,
@@ -23,6 +24,7 @@ import { NetcupAuthorizeButton } from '@/components/NetcupAuthorizeButton';
 import { SecretInput } from '@/components/SecretInput';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
@@ -487,6 +489,85 @@ function renderDsStep(text: string): ReactNode {
   return parts;
 }
 
+// OpenRouter console chips (dark UI): muted Home nav, lime Management Keys row, green New Key CTA,
+// outlined Create.
+const OR_NAV = new Set(['Home']);
+const OR_SECTION = new Set(['Management Keys']);
+const OR_PRIMARY = new Set(['New Key', '+ New Key']);
+const OR_CREATE = new Set(['Create']);
+const OR_ICON: Record<string, Icon> = {
+  'Management Keys': IconLock,
+  'New Key': IconPlus,
+  '+ New Key': IconPlus,
+};
+
+function linkifyOpenRouter(text: string): ReactNode {
+  const marker = 'openrouter.ai';
+  const idx = text.indexOf(marker);
+  if (idx === -1) return text;
+  return (
+    <>
+      {text.slice(0, idx)}
+      <a
+        href="https://openrouter.ai"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-brand underline underline-offset-4 hover:no-underline"
+      >
+        {marker}
+      </a>
+      {text.slice(idx + marker.length)}
+    </>
+  );
+}
+
+function orTokenClass(label: string): string {
+  if (OR_PRIMARY.has(label)) return 'rounded-md bg-[#c8f135] text-black';
+  if (OR_SECTION.has(label))
+    return 'rounded-md bg-[#c8f135]/12 text-[#c8f135] ring-1 ring-[#c8f135]/35 ring-inset';
+  if (OR_CREATE.has(label))
+    return 'rounded-md bg-[#141414] text-white ring-1 ring-[#3a3a3a] ring-inset';
+  if (OR_NAV.has(label))
+    return 'rounded-md bg-white/[0.07] text-[#a1a1a1] ring-1 ring-white/15 ring-inset';
+  return 'rounded-md bg-white/[0.07] text-foreground ring-1 ring-white/10 ring-inset';
+}
+
+function OrToken({ label }: { label: string }) {
+  const LabelIcon = OR_ICON[label];
+  const text = label === '+ New Key' ? 'New Key' : label;
+  return (
+    <span
+      className={cn(
+        'mx-0.5 inline-flex items-center gap-1 px-1.5 py-0.5 align-middle text-[0.8em] font-medium leading-none whitespace-nowrap',
+        orTokenClass(label),
+      )}
+    >
+      {LabelIcon && <LabelIcon className="size-3 shrink-0" stroke={2} />}
+      {text}
+    </span>
+  );
+}
+
+function renderOrStep(text: string): ReactNode {
+  const parts: ReactNode[] = [];
+  const re = /"([^"]+)"/g;
+  let last = 0;
+  let key = 0;
+  let m: RegExpExecArray | null = re.exec(text);
+  while (m !== null) {
+    if (m.index > last) {
+      parts.push(<Fragment key={key++}>{linkifyOpenRouter(text.slice(last, m.index))}</Fragment>);
+    }
+    parts.push(<OrToken key={key++} label={m[1]} />);
+    last = m.index + m[0].length;
+    m = re.exec(text);
+  }
+  if (last < text.length) {
+    parts.push(<Fragment key={key++}>{linkifyOpenRouter(text.slice(last))}</Fragment>);
+  }
+  return parts;
+}
+
 // A pasted Yandex authorized key is only worth a discovery call once it parses into the fields the
 // backend signs the JWT with. Guards against firing on every keystroke of a half-pasted key.
 function isCompleteYandexKey(raw: string): boolean {
@@ -826,6 +907,50 @@ export function ProviderCredentialFields({
           reveal={reveal}
         />
       </Field>
+    );
+  }
+
+  if (kind === 'openrouter') {
+    return (
+      <>
+        <Field
+          id="cred-token"
+          label={t('providers.field.managementKey')}
+          description={
+            <div className="text-sm leading-7">
+              {renderOrStep(t('providers.field.apiTokenDescOpenrouter'))}
+            </div>
+          }
+        >
+          <SecretFormField
+            form={form}
+            name="token"
+            id="cred-token"
+            hasStored={storedSecrets?.hasToken}
+            reveal={reveal}
+          />
+        </Field>
+        <Controller
+          control={form.control}
+          name="useCatalogNames"
+          render={({ field }) => (
+            <div className="flex items-start gap-2">
+              <Checkbox
+                id="or-catalog-names"
+                checked={field.value}
+                onCheckedChange={(c) => field.onChange(c === true)}
+                className="mt-0.5"
+              />
+              <div className="space-y-1">
+                <Label htmlFor="or-catalog-names">{t('providers.field.useCatalogNames')}</Label>
+                <p className="text-xs text-muted-foreground">
+                  {t('providers.field.useCatalogNamesDesc')}
+                </p>
+              </div>
+            </div>
+          )}
+        />
+      </>
     );
   }
 

@@ -19,6 +19,7 @@ export interface FormValues {
   apiPassword: string;
   secretKey: string;
   isPostpaid: boolean;
+  useCatalogNames: boolean;
 }
 
 // Well-known cabinet URLs per connector kind, pre-filled into loginUrl on create so the owner
@@ -42,6 +43,7 @@ export const DEFAULT_LOGIN_URLS: Record<string, string> = {
   porkbun: 'https://porkbun.com/account',
   yandex: 'https://console.yandex.cloud',
   doubleservers: 'https://doubleservers.com/dashboard',
+  openrouter: 'https://openrouter.ai',
 };
 
 export const EMPTY_FORM: FormValues = {
@@ -61,6 +63,7 @@ export const EMPTY_FORM: FormValues = {
   apiPassword: '',
   secretKey: '',
   isPostpaid: false,
+  useCatalogNames: true,
 };
 
 // Aeza runs two independent branches on an identical API — international .net and Russian .ru.
@@ -125,6 +128,7 @@ export function validateProviderCredentials(
     return t('providers.err.cloudflareCreds');
   if (requireCreds && v.kind === 'stormwall' && !v.token) return t('providers.err.stormwallToken');
   if (requireCreds && v.kind === 'yandex' && !v.token) return t('providers.err.yandexKey');
+  if (requireCreds && v.kind === 'openrouter' && !v.token) return t('providers.err.openrouterToken');
   return null;
 }
 
@@ -133,7 +137,7 @@ export function validateProviderCredentials(
 export function buildCredentials(v: FormValues) {
   const token =
     v.kind === 'hostkey' && v.token ? normalizeHostkeyToken(v.token) : v.token || undefined;
-  return {
+  const base = {
     token: token || undefined,
     baseUrl: v.baseUrl || undefined,
     username: v.username || undefined,
@@ -145,4 +149,11 @@ export function buildCredentials(v: FormValues) {
     apiPassword: v.apiPassword || undefined,
     secretKey: v.secretKey || undefined,
   };
+  if (v.kind === 'openrouter') {
+    return {
+      ...base,
+      useCatalogNames: v.useCatalogNames,
+    };
+  }
+  return base;
 }

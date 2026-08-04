@@ -15,6 +15,7 @@ const SERVICE_TYPES: ServiceType[] = [
   'storage',
   'db',
   'license',
+  'llm',
   'other',
 ];
 const PROVIDER_KINDS: ProviderKind[] = [
@@ -37,6 +38,7 @@ const PROVIDER_KINDS: ProviderKind[] = [
   'stormwall',
   'yandex',
   'doubleservers',
+  'openrouter',
   'manual',
 ];
 

@@ -20,7 +20,7 @@ import { cn } from '@/lib/utils';
 import { projectFavicon, providerFavicon } from '@/utils/favicon';
 import { countryFlag, formatCost, formatDateShort, truncate } from '@/utils/format';
 import type { ServiceSortKey } from './servicesSort';
-import { LOCATED_TYPES, ServiceTypeIcon } from './ServiceTypeIcon';
+import { LOCATED_TYPES, ServiceTypeIcon, serviceTypeModel } from './ServiceTypeIcon';
 
 const NAME_MAX_LENGTH = 40;
 
@@ -99,7 +99,7 @@ export function ServicesTable({
                       {LOCATED_TYPES.has(s.type) ? (
                         <span>{countryFlag(s.countryCode)}</span>
                       ) : (
-                        <ServiceTypeIcon type={s.type} />
+                        <ServiceTypeIcon type={s.type} model={serviceTypeModel(s.meta)} />
                       )}
                       {s.name.length > NAME_MAX_LENGTH ? (
                         <Tooltip>

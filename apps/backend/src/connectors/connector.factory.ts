@@ -19,6 +19,8 @@ import type { HostbillCredentials } from './hostbill/hostbill.types';
 import { LinodeConnector } from './linode/linode.connector';
 import { NetcupConnector } from './netcup/netcup.connector';
 import { NetlenConnector } from './netlen/netlen.connector';
+import { OpenRouterConnector } from './openrouter/openrouter.connector';
+import { parseOpenRouterCredentials } from './openrouter/openrouter.types';
 import { PorkbunConnector } from './porkbun/porkbun.connector';
 import type { PorkbunCredentials } from './porkbun/porkbun.types';
 import { SelectelConnector } from './selectel/selectel.connector';
@@ -95,6 +97,8 @@ export class ConnectorFactory {
       case 'doubleservers':
         // Double Servers secret is JSON: { username (email), password, totpSecret? }.
         return new DoubleServersConnector(JSON.parse(token) as DoubleServersCredentials);
+      case 'openrouter':
+        return new OpenRouterConnector(parseOpenRouterCredentials(token));
       default:
         throw new Error(`Connector for kind="${kind}" is not supported`);
     }

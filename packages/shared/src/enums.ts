@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-/** Connector kinds. API-backed: timeweb, hetzner, hostkey, netcup, hostbill, billmgr, selectel, 4vps, netlen, beget, porkbun, vultr, linode, aeza, vdsina, cloudflare, stormwall, yandex, doubleservers. manual = no sync. */
+/** Connector kinds. API-backed: timeweb, hetzner, hostkey, netcup, hostbill, billmgr, selectel, 4vps, netlen, beget, porkbun, vultr, linode, aeza, vdsina, cloudflare, stormwall, yandex, doubleservers, openrouter. manual = no sync. */
 export const providerKindSchema = z.enum([
   'timeweb',
   'hetzner',
@@ -21,6 +21,7 @@ export const providerKindSchema = z.enum([
   'stormwall',
   'yandex',
   'doubleservers',
+  'openrouter',
   'manual',
 ]);
 export type ProviderKind = z.infer<typeof providerKindSchema>;
@@ -35,6 +36,7 @@ export const serviceTypeSchema = z.enum([
   'storage',
   'db',
   'license',
+  'llm',
   'other',
 ]);
 export type ServiceType = z.infer<typeof serviceTypeSchema>;

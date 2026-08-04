@@ -78,6 +78,11 @@ export const providers = {
         'Cloudflare → My Profile → API Tokens → create a token with Registrar: Domains:Read and Billing:Read',
       cloudflareAccountIdDesc: 'Cloudflare account ID (dashboard URL or GET /accounts)',
       apiTokenDescStormwall: 'StormWall personal cabinet → API key, sent as the x-api-key header',
+      managementKey: 'Management API key',
+      apiTokenDescOpenrouter:
+        'Go to openrouter.ai. Open "Home" → "Management Keys" → "New Key", enter any name, then "Create". Copy the key and paste it below.',
+      useCatalogNames: 'Use catalog names',
+      useCatalogNamesDesc: 'Replace model slugs with names from the OpenRouter catalog',
       yandexKey: 'Authorized key (JSON)',
       yandexKeySetup: 'Setup:',
       yandexKeyStep1:
@@ -138,6 +143,7 @@ export const providers = {
       vdsinaToken: 'Enter the VDSina API token',
       cloudflareCreds: 'Enter the Cloudflare account ID and API token',
       stormwallToken: 'Enter the StormWall API key',
+      openrouterToken: 'Enter the OpenRouter Management API key',
       yandexKey: 'Paste the Yandex Cloud service account authorized key (JSON)',
     },
     netcup: {
@@ -241,6 +247,11 @@ export const providers = {
       cloudflareAccountIdDesc: 'Account ID аккаунта Cloudflare (из URL дашборда или GET /accounts)',
       apiTokenDescStormwall:
         'Личный кабинет StormWall → API-ключ (передаётся в заголовке x-api-key)',
+      managementKey: 'Management API-ключ',
+      apiTokenDescOpenrouter:
+        'Зайдите на openrouter.ai. Откройте "Home" → "Management Keys" → "New Key", введите любое имя, затем "Create". Скопируйте ключ и вставьте его ниже.',
+      useCatalogNames: 'Имена из каталога',
+      useCatalogNamesDesc: 'Подставлять названия моделей вместо slug',
       yandexKey: 'Авторизованный ключ (JSON)',
       yandexKeySetup: 'Настройка:',
       yandexKeyStep1:
@@ -301,6 +312,7 @@ export const providers = {
       vdsinaToken: 'Укажите API-токен VDSina',
       cloudflareCreds: 'Укажите account ID и API-токен Cloudflare',
       stormwallToken: 'Укажите API-ключ StormWall',
+      openrouterToken: 'Укажите Management API-ключ OpenRouter',
       yandexKey: 'Вставьте авторизованный ключ сервисного аккаунта Yandex Cloud (JSON)',
     },
     netcup: {

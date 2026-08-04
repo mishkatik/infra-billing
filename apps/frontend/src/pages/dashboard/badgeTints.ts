@@ -21,6 +21,7 @@ const PROVIDER_BRAND: Record<string, string> = {
   stormwall: '#64748B',
   hostbill: '#6366F1',
   billmgr: '#6366F1',
+  openrouter: '#A78BFA',
   manual: '#94A3B8',
 };
 

@@ -123,6 +123,7 @@ export const common = {
         storage: 'Storage',
         db: 'Database',
         license: 'License',
+        llm: 'LLM',
         other: 'Other',
       },
       providerKind: {
@@ -143,6 +144,7 @@ export const common = {
         cloudflare: 'Cloudflare',
         stormwall: 'StormWall',
         doubleservers: 'Double Servers',
+        openrouter: 'OpenRouter',
         manual: 'Manual',
       },
       rateSource: {
@@ -273,6 +275,7 @@ export const common = {
         storage: 'Хранилище',
         db: 'База данных',
         license: 'Лицензия',
+        llm: 'LLM',
         other: 'Другое',
       },
       providerKind: {
@@ -293,6 +296,7 @@ export const common = {
         cloudflare: 'Cloudflare',
         stormwall: 'StormWall',
         doubleservers: 'Double Servers',
+        openrouter: 'OpenRouter',
         manual: 'Ручной',
       },
       rateSource: {
