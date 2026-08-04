@@ -86,7 +86,6 @@ export const ICON_BG_SWATCHES = [
   '#EA580C',
   '#DC2626',
   '#DB2777',
-  '#78716C',
 ] as const;
 
 export type TablerIconEntry = {

@@ -228,6 +228,7 @@ export class SyncService implements OnModuleInit {
         syncedName: sd.name,
         syncedType: sd.type,
         syncedCost: sd.cost != null ? sd.cost.toFixed(2) : null,
+        ...(sd.countryCode ? { syncedCountry: sd.countryCode } : {}),
       } as Prisma.InputJsonValue;
 
       if (!existing) {

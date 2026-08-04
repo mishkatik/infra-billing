@@ -9,8 +9,9 @@ import {
   IconServerBolt,
   IconWorld,
 } from '@tabler/icons-react';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
+import { ServiceMarkerPreview } from './ServiceMarkerField';
 import { resolveLlmVendorIcon } from './llmVendorIcon';
 
 export const LOCATED_TYPES = new Set(['vps', 'dedicated']);
@@ -26,18 +27,35 @@ const TYPE_ICONS: Record<string, Icon> = {
   other: IconBox,
 };
 
-function LlmVendorIcon({ model }: { model?: string | null }) {
+function IconSlot({ size, children }: { size: number; children: ReactNode }) {
+  return (
+    <span
+      className="inline-flex shrink-0 items-center justify-center self-center"
+      style={{ width: size, height: size }}
+    >
+      {children}
+    </span>
+  );
+}
+
+function LlmVendorIcon({ model, size }: { model?: string | null; size: number }) {
   const icon = resolveLlmVendorIcon(model);
   const [failed, setFailed] = useState(false);
   const [ready, setReady] = useState(false);
 
   if (!icon || failed) {
-    return <span className="text-base leading-none">🤖</span>;
+    return (
+      <IconSlot size={size}>
+        <span className="leading-none" style={{ fontSize: Math.round(size * 0.85) }}>
+          🤖
+        </span>
+      </IconSlot>
+    );
   }
 
   if (icon.mode === 'mono') {
     return (
-      <>
+      <IconSlot size={size}>
         <img
           src={icon.src}
           alt=""
@@ -48,10 +66,7 @@ function LlmVendorIcon({ model }: { model?: string | null }) {
         {ready ? (
           <span
             aria-hidden
-            className={cn(
-              'inline-block size-[18px] shrink-0',
-              icon.adaptive && 'bg-foreground',
-            )}
+            className={cn('block size-full', icon.adaptive && 'bg-foreground')}
             style={{
               ...(icon.adaptive ? {} : { backgroundColor: icon.color }),
               WebkitMaskImage: `url(${icon.src})`,
@@ -64,35 +79,64 @@ function LlmVendorIcon({ model }: { model?: string | null }) {
               maskPosition: 'center',
             }}
           />
-        ) : (
-          <span className="inline-block size-[18px] shrink-0" />
-        )}
-      </>
+        ) : null}
+      </IconSlot>
     );
   }
 
   return (
-    <img
-      src={icon.src}
-      alt=""
-      className="size-[18px] shrink-0 object-contain"
-      onError={() => setFailed(true)}
-    />
+    <IconSlot size={size}>
+      <img
+        src={icon.src}
+        alt=""
+        className="block size-full object-contain"
+        onError={() => setFailed(true)}
+      />
+    </IconSlot>
   );
 }
 
-export function ServiceTypeIcon({ type, model }: { type: string; model?: string | null }) {
-  if (type === 'llm') return <LlmVendorIcon model={model} />;
+export function ServiceTypeIcon({
+  type,
+  model,
+  marker,
+  markerBg,
+  size = 18,
+}: {
+  type: string;
+  model?: string | null;
+  marker?: string | null;
+  markerBg?: string | null;
+  size?: number;
+}) {
+  if (type === 'llm') return <LlmVendorIcon model={model} size={size} />;
+  if (marker) return <ServiceMarkerPreview marker={marker} markerBg={markerBg} size={size} />;
   const Cmp = TYPE_ICONS[type] ?? IconBox;
-  return <Cmp size={18} stroke={1.5} className="text-muted-foreground" />;
+  return (
+    <IconSlot size={size}>
+      <Cmp
+        size={Math.max(12, Math.round(size * 0.9))}
+        stroke={1.5}
+        className="block text-muted-foreground"
+      />
+    </IconSlot>
+  );
 }
 
-function serviceModelSlug(meta: unknown): string | null {
+function metaField(meta: unknown, key: string): string | null {
   if (!meta || typeof meta !== 'object') return null;
-  const model = (meta as { model?: unknown }).model;
-  return typeof model === 'string' ? model : null;
+  const v = (meta as Record<string, unknown>)[key];
+  return typeof v === 'string' && v.trim() ? v : null;
 }
 
 export function serviceTypeModel(meta: unknown): string | null {
-  return serviceModelSlug(meta);
+  return metaField(meta, 'model') ?? metaField(meta, 'vendor');
+}
+
+export function serviceTypeMarker(meta: unknown): string | null {
+  return metaField(meta, 'marker');
+}
+
+export function serviceTypeMarkerBg(meta: unknown): string | null {
+  return metaField(meta, 'markerBg');
 }

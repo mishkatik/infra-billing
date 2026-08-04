@@ -45,9 +45,42 @@ export type ResolvedLlmVendorIcon =
   | { mode: 'color'; src: string }
   | { mode: 'mono'; src: string; color: string; adaptive?: boolean };
 
-export function resolveLlmVendorIcon(model?: string | null): ResolvedLlmVendorIcon | null {
-  if (!model) return null;
-  const author = model.split('/')[0]?.replace(/^~/, '').trim().toLowerCase();
+const VENDOR_LABELS: Record<string, string> = {
+  openai: 'OpenAI',
+  anthropic: 'Anthropic',
+  google: 'Google',
+  'meta-llama': 'Meta Llama',
+  meta: 'Meta',
+  mistralai: 'Mistral',
+  'x-ai': 'xAI',
+  deepseek: 'DeepSeek',
+  qwen: 'Qwen',
+  cohere: 'Cohere',
+  perplexity: 'Perplexity',
+  nvidia: 'NVIDIA',
+  amazon: 'Amazon',
+  microsoft: 'Microsoft',
+  voyageai: 'Voyage',
+  openrouter: 'OpenRouter',
+  moonshotai: 'Moonshot',
+  'z-ai': 'Zhipu',
+};
+
+function vendorLabel(slug: string): string {
+  if (VENDOR_LABELS[slug]) return VENDOR_LABELS[slug];
+  return slug
+    .split('-')
+    .map((w) => (w ? w.charAt(0).toUpperCase() + w.slice(1) : w))
+    .join(' ');
+}
+
+export const LLM_VENDOR_OPTIONS = Object.keys(BY_AUTHOR)
+  .sort((a, b) => vendorLabel(a).localeCompare(vendorLabel(b)))
+  .map((value) => ({ value, label: vendorLabel(value) }));
+
+export function resolveLlmVendorIcon(modelOrVendor?: string | null): ResolvedLlmVendorIcon | null {
+  if (!modelOrVendor) return null;
+  const author = modelOrVendor.split('/')[0]?.replace(/^~/, '').trim().toLowerCase();
   if (!author) return null;
   const icon = BY_AUTHOR[author];
   if (!icon) return null;

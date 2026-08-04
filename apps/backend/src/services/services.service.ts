@@ -1,6 +1,6 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@generated/prisma/client';
-import { Service as ServiceDto } from '@infra/shared';
+import { Service as ServiceDto, type ServiceClientMeta } from '@infra/shared';
 import { ProjectsRepository } from '@repositories/projects/projects.repository';
 import { ProvidersRepository } from '@repositories/providers/providers.repository';
 import { ServicesRepository } from '@repositories/services/services.repository';
@@ -9,6 +9,30 @@ import { CreateServiceDto, ServiceQueryDto, UpdateServiceDto } from './dto/servi
 
 /** Decimal money string, as produced by toFixed(2) and accepted by the API. */
 const MONEY_RE = /^-?\d+(\.\d{1,2})?$/;
+
+const CLIENT_META_KEYS = ['vendor', 'marker', 'markerBg'] as const;
+
+function applyClientMeta(
+  meta: Record<string, unknown>,
+  patch: ServiceClientMeta | undefined,
+): boolean {
+  if (!patch) return false;
+  let dirty = false;
+  for (const key of CLIENT_META_KEYS) {
+    if (!(key in patch)) continue;
+    const next = patch[key];
+    if (next === null || next === undefined || next === '') {
+      if (key in meta) {
+        delete meta[key];
+        dirty = true;
+      }
+    } else if (meta[key] !== next) {
+      meta[key] = next;
+      dirty = true;
+    }
+  }
+  return dirty;
+}
 
 @Injectable()
 export class ServicesService {
@@ -26,6 +50,8 @@ export class ServicesService {
   async create(dto: CreateServiceDto): Promise<ServiceDto> {
     await this.ensureProvider(dto.providerUuid);
     await this.ensureProject(dto.projectUuid);
+    const meta: Record<string, unknown> = {};
+    applyClientMeta(meta, dto.meta);
     const s = await this.services.create({
       providerUuid: dto.providerUuid,
       projectUuid: dto.projectUuid,
@@ -38,6 +64,7 @@ export class ServicesService {
       nextBillingAt: dto.nextBillingAt ? new Date(dto.nextBillingAt) : null,
       isActive: dto.isActive ?? true,
       isManaged: false,
+      ...(Object.keys(meta).length > 0 ? { meta: meta as Prisma.InputJsonValue } : {}),
     });
     return mapService(s);
   }
@@ -48,7 +75,7 @@ export class ServicesService {
 
     const data: Prisma.ServiceUpdateInput = {};
     const meta = { ...((existing.meta ?? {}) as Record<string, unknown>) };
-    let metaDirty = false;
+    let metaDirty = applyClientMeta(meta, dto.meta);
 
     const baselineName =
       typeof meta.syncedName === 'string'

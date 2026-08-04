@@ -64,3 +64,8 @@ export function countryBadgeStyle(countryCode: string | null | undefined): CSSPr
   if (!code || code === 'XX') return tintStyle(PROVIDER_BRAND.manual);
   return tintStyle(COUNTRY_TINT[code] ?? PROVIDER_BRAND.manual);
 }
+
+export function colorBadgeStyle(hex: string | null | undefined): CSSProperties {
+  if (!hex) return tintStyle(PROVIDER_BRAND.manual);
+  return tintStyle(hex);
+}

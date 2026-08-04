@@ -1,23 +1,7 @@
 import { useTranslation } from 'react-i18next';
-import {
-  type Period,
-  type ProviderKind,
-  type ServiceType,
-  SUPPORTED_CURRENCIES,
-} from '@infra/shared';
+import { type Period, type ProviderKind, SERVICE_TYPES, SUPPORTED_CURRENCIES } from '@infra/shared';
 
 const PERIODS: Period[] = ['monthly', 'yearly', 'quarterly', 'daily', 'hourly', 'onetime'];
-const SERVICE_TYPES: ServiceType[] = [
-  'vps',
-  'dedicated',
-  'domain',
-  'cdn',
-  'storage',
-  'db',
-  'license',
-  'llm',
-  'other',
-];
 const PROVIDER_KINDS: ProviderKind[] = [
   'timeweb',
   'hetzner',

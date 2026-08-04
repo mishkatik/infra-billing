@@ -26,7 +26,13 @@ import type { SForm } from './serviceForm';
 import { ServiceFormFields } from './ServiceFormFields';
 import { ServiceMetaModal } from './ServiceMetaModal';
 import { ServicePaymentsModal } from './ServicePaymentsModal';
-import { LOCATED_TYPES, ServiceTypeIcon, serviceTypeModel } from './ServiceTypeIcon';
+import {
+  LOCATED_TYPES,
+  ServiceTypeIcon,
+  serviceTypeMarker,
+  serviceTypeMarkerBg,
+  serviceTypeModel,
+} from './ServiceTypeIcon';
 
 interface ServiceDetailModalProps {
   service: Service | null;
@@ -107,7 +113,12 @@ export function ServiceDetailModal({
               {LOCATED_TYPES.has(shown.type) ? (
                 <span>{countryFlag(shown.countryCode)}</span>
               ) : (
-                <ServiceTypeIcon type={shown.type} model={serviceTypeModel(shown.meta)} />
+                <ServiceTypeIcon
+                  type={shown.type}
+                  model={serviceTypeModel(shown.meta)}
+                  marker={serviceTypeMarker(shown.meta)}
+                  markerBg={serviceTypeMarkerBg(shown.meta)}
+                />
               )}
               <span className="truncate">{shown.name}</span>
               {sourceBadge}

@@ -1,7 +1,7 @@
 import { DEFAULT_PROJECT_UUID, type Period, type Service, type ServiceType } from '@infra/shared';
 import { IconPlus } from '@tabler/icons-react';
 import dayjs, { type ManipulateType } from 'dayjs';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { apiErrorMessage } from '@/api/client';
@@ -27,9 +27,10 @@ import { trimMoney } from '@/utils/format';
 import { buildRubMap } from '@/utils/money';
 import { notifyError, notifySuccess } from '@/utils/notify';
 import { BumpNextBillingDialog } from './BumpNextBillingDialog';
-import { type SForm, toIso } from './serviceForm';
 import { ServiceDetailModal } from './ServiceDetailModal';
 import { ServiceFormModal } from './ServiceFormModal';
+import { LOCATED_TYPES } from './ServiceTypeIcon';
+import { clientMetaFromForm, metaString, toIso, type SForm } from './serviceForm';
 import { ServicesFilters } from './ServicesFilters';
 import { SERVICE_SORT_KEYS, serviceSortAccessors } from './servicesSort';
 import { ServicesTable } from './ServicesTable';
@@ -72,6 +73,19 @@ export function ServicesPage() {
   const providerOf = (uuid: string) => providers?.find((p) => p.uuid === uuid);
   const projectOptions = (projects ?? []).map((p) => ({ value: p.uuid, label: p.name }));
   const projectOf = (uuid: string) => projects?.find((p) => p.uuid === uuid);
+  // Built-ins plus any custom types already used on services (GitLab-label style).
+  const typeOptions = useMemo(() => {
+    const seen = new Set<string>(enums.serviceTypeOptions.map((o) => o.value));
+    const extras: { value: string; label: string }[] = [];
+    for (const s of services ?? []) {
+      if (seen.has(s.type)) continue;
+      seen.add(s.type);
+      extras.push({ value: s.type, label: enums.serviceTypeLabel(s.type) });
+    }
+    return extras.length === 0
+      ? enums.serviceTypeOptions
+      : [...enums.serviceTypeOptions, ...extras];
+  }, [enums, services]);
   // Default a new service to the default project (or the first one).
   const defaultProjectUuid =
     projects?.find((p) => p.uuid === DEFAULT_PROJECT_UUID)?.uuid ?? projectOptions[0]?.value ?? '';
@@ -100,6 +114,9 @@ export function ServicesPage() {
       currency: 'RUB',
       period: 'monthly',
       countryCode: '',
+      vendor: '',
+      marker: '',
+      markerBg: '',
       nextBillingAt: '',
     },
     mode: 'onSubmit',
@@ -115,12 +132,16 @@ export function ServicesPage() {
       currency: 'RUB',
       period: 'monthly',
       countryCode: '',
+      vendor: '',
+      marker: '',
+      markerBg: '',
       nextBillingAt: '',
     });
     openCreateModal();
   };
 
   const openDetail = (s: Service) => {
+    const meta = (s.meta ?? {}) as Record<string, unknown>;
     form.reset({
       providerUuid: s.providerUuid,
       projectUuid: s.projectUuid,
@@ -130,12 +151,18 @@ export function ServicesPage() {
       currency: s.currency,
       period: s.period,
       countryCode: s.countryCode ?? '',
+      vendor: metaString(meta, 'vendor'),
+      marker: metaString(meta, 'marker'),
+      markerBg: metaString(meta, 'markerBg'),
       nextBillingAt: s.nextBillingAt ? dayjs(s.nextBillingAt).format('YYYY-MM-DD') : '',
     });
     setDetailUuid(s.uuid);
   };
 
   const submit = form.handleSubmit(async (v) => {
+    const meta = clientMetaFromForm(v);
+    const located = LOCATED_TYPES.has(v.type);
+    const countryCode = located ? v.countryCode || null : undefined;
     try {
       if (selected) {
         await update.mutateAsync({
@@ -148,8 +175,9 @@ export function ServicesPage() {
             cost: trimMoney(v.cost),
             currency: v.currency,
             period: v.period as Period,
-            countryCode: v.countryCode || null,
+            ...(located ? { countryCode } : {}),
             nextBillingAt: toIso(v.nextBillingAt) ?? null,
+            meta,
           },
         });
         setDetailUuid(null);
@@ -163,9 +191,10 @@ export function ServicesPage() {
           cost: trimMoney(v.cost),
           currency: v.currency,
           period: v.period as Period,
-          countryCode: v.countryCode || undefined,
+          ...(located && countryCode ? { countryCode } : {}),
           nextBillingAt: toIso(v.nextBillingAt),
           isActive: true,
+          meta,
         });
         closeCreateModal();
         notifySuccess(t('services.createdToast'));
@@ -250,7 +279,7 @@ export function ServicesPage() {
         setFilter={setFilter}
         providerOptions={providerOptions}
         projectOptions={projectOptions}
-        typeOptions={enums.serviceTypeOptions}
+        typeOptions={typeOptions}
       />
 
       <ServicesTable
@@ -272,7 +301,7 @@ export function ServicesPage() {
         isPending={create.isPending}
         providerOptions={providerOptions}
         projectOptions={projectOptions}
-        typeOptions={enums.serviceTypeOptions}
+        typeOptions={typeOptions}
         periodOptions={enums.periodOptions}
         currencyOptions={enums.currencyOptions}
         countryOptions={countryOptions}
@@ -285,7 +314,7 @@ export function ServicesPage() {
         form={form}
         providerOptions={providerOptions}
         projectOptions={projectOptions}
-        typeOptions={enums.serviceTypeOptions}
+        typeOptions={typeOptions}
         periodOptions={enums.periodOptions}
         currencyOptions={enums.currencyOptions}
         countryOptions={countryOptions}

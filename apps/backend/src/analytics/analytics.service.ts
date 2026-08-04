@@ -19,6 +19,22 @@ interface Agg {
   count: number;
 }
 
+function metaString(meta: unknown, key: string): string | null {
+  if (!meta || typeof meta !== 'object') return null;
+  const v = (meta as Record<string, unknown>)[key];
+  return typeof v === 'string' && v.trim() ? v.trim() : null;
+}
+
+function serviceBadgeFields(s: { type: string; countryCode: string | null; meta: unknown }) {
+  return {
+    type: s.type,
+    countryCode: s.countryCode ?? null,
+    marker: metaString(s.meta, 'marker'),
+    markerBg: metaString(s.meta, 'markerBg'),
+    vendor: metaString(s.meta, 'vendor') ?? metaString(s.meta, 'model'),
+  };
+}
+
 @Injectable()
 export class AnalyticsService {
   constructor(
@@ -176,7 +192,7 @@ export class AnalyticsService {
         providerFaviconLink: provider?.faviconLink ?? null,
         providerIconName: provider?.iconName ?? null,
         providerIconBg: provider?.iconBg ?? null,
-        countryCode: s.countryCode ?? null,
+        ...serviceBadgeFields(s),
         nextBillingAt: s.nextBillingAt!.toISOString(),
         cost: new Decimal(s.cost.toString()).toFixed(2),
         currency: s.currency,
@@ -228,7 +244,7 @@ export class AnalyticsService {
         providerFaviconLink: provider?.faviconLink ?? null,
         providerIconName: provider?.iconName ?? null,
         providerIconBg: provider?.iconBg ?? null,
-        countryCode: s.countryCode ?? null,
+        ...serviceBadgeFields(s),
         nextBillingAt: s.nextBillingAt!.toISOString(),
         cost: new Decimal(s.cost.toString()).toFixed(2),
         currency: s.currency,

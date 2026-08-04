@@ -11,7 +11,11 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { providerFavicon } from '@/utils/favicon';
 import { countryFlag } from '@/utils/format';
-import { countryBadgeStyle, providerBadgeStyle } from './badgeTints';
+import {
+  LOCATED_TYPES,
+  ServiceTypeIcon,
+} from '@/pages/services/ServiceTypeIcon';
+import { colorBadgeStyle, countryBadgeStyle, providerBadgeStyle } from './badgeTints';
 import { createLayoutGate } from './layoutMeasure';
 
 export function ProviderBadge({
@@ -48,16 +52,46 @@ export function ProviderBadge({
   );
 }
 
-export function ServiceBadge({ countryCode, name }: { countryCode?: string | null; name: string }) {
-  const flag = countryFlag(countryCode);
+export function ServiceBadge({
+  name,
+  type,
+  countryCode,
+  marker,
+  markerBg,
+  vendor,
+}: {
+  name: string;
+  type?: string | null;
+  countryCode?: string | null;
+  marker?: string | null;
+  markerBg?: string | null;
+  vendor?: string | null;
+}) {
+  const located = Boolean(type && LOCATED_TYPES.has(type));
+  const flag = located ? countryFlag(countryCode) : null;
+  const tint = located ? countryBadgeStyle(countryCode) : colorBadgeStyle(markerBg);
   return (
     <Badge
       variant="outline"
-      className="gap-1 border font-medium"
-      style={countryBadgeStyle(countryCode)}
+      className="items-center gap-1.5 border py-0.5 pr-2 pl-1 font-normal shadow-none leading-none"
+      style={tint}
     >
-      {flag ? <span className="text-sm leading-none">{flag}</span> : null}
-      {name}
+      {flag ? (
+        <span className="inline-flex size-4 shrink-0 items-center justify-center text-sm leading-none">
+          {flag}
+        </span>
+      ) : (
+        <ServiceTypeIcon
+          type={type ?? 'other'}
+          model={vendor}
+          marker={marker}
+          markerBg={markerBg}
+          size={16}
+        />
+      )}
+      <span className="leading-none" style={{ color: tint.color }}>
+        {name}
+      </span>
     </Badge>
   );
 }
