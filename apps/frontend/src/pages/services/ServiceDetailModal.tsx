@@ -86,7 +86,19 @@ export function ServiceDetailModal({
     }
   }, [service]);
 
+  const formType = form.watch('type');
+  const formVendor = form.watch('vendor');
+  const formMarker = form.watch('marker');
+  const formMarkerBg = form.watch('markerBg');
+  const formCountry = form.watch('countryCode');
+
   if (shown == null) return null;
+
+  const titleType = formType || shown.type;
+  const titleModel =
+    titleType === 'llm'
+      ? formVendor.trim() || serviceTypeModel(shown.meta)
+      : serviceTypeModel(shown.meta);
 
   const sourceBadge = (
     <Badge
@@ -110,14 +122,14 @@ export function ServiceDetailModal({
         >
           <DialogHeader>
             <DialogTitle className="flex min-w-0 items-center gap-2">
-              {LOCATED_TYPES.has(shown.type) ? (
-                <span>{countryFlag(shown.countryCode)}</span>
+              {LOCATED_TYPES.has(titleType) ? (
+                <span>{countryFlag(formCountry || shown.countryCode)}</span>
               ) : (
                 <ServiceTypeIcon
-                  type={shown.type}
-                  model={serviceTypeModel(shown.meta)}
-                  marker={serviceTypeMarker(shown.meta)}
-                  markerBg={serviceTypeMarkerBg(shown.meta)}
+                  type={titleType}
+                  model={titleModel}
+                  marker={formMarker.trim() || serviceTypeMarker(shown.meta)}
+                  markerBg={formMarkerBg.trim() || serviceTypeMarkerBg(shown.meta)}
                 />
               )}
               <span className="truncate">{shown.name}</span>

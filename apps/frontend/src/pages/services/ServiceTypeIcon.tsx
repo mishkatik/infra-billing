@@ -130,7 +130,7 @@ function metaField(meta: unknown, key: string): string | null {
 }
 
 export function serviceTypeModel(meta: unknown): string | null {
-  return metaField(meta, 'model') ?? metaField(meta, 'vendor');
+  return metaField(meta, 'vendor') ?? metaField(meta, 'model');
 }
 
 export function serviceTypeMarker(meta: unknown): string | null {

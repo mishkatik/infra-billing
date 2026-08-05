@@ -78,9 +78,15 @@ export const LLM_VENDOR_OPTIONS = Object.keys(BY_AUTHOR)
   .sort((a, b) => vendorLabel(a).localeCompare(vendorLabel(b)))
   .map((value) => ({ value, label: vendorLabel(value) }));
 
-export function resolveLlmVendorIcon(modelOrVendor?: string | null): ResolvedLlmVendorIcon | null {
+/** Author slug from `vendor` or OpenRouter `author/model` id. */
+export function vendorFromModelSlug(modelOrVendor?: string | null): string | null {
   if (!modelOrVendor) return null;
   const author = modelOrVendor.split('/')[0]?.replace(/^~/, '').trim().toLowerCase();
+  return author || null;
+}
+
+export function resolveLlmVendorIcon(modelOrVendor?: string | null): ResolvedLlmVendorIcon | null {
+  const author = vendorFromModelSlug(modelOrVendor);
   if (!author) return null;
   const icon = BY_AUTHOR[author];
   if (!icon) return null;

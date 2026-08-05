@@ -19,7 +19,7 @@ import { normalizeMoney, trimMoney } from '@/utils/format';
 import { OverriddenMark } from './OverriddenMark';
 import { ServiceMarkerField } from './ServiceMarkerField';
 import { LOCATED_TYPES } from './ServiceTypeIcon';
-import { LLM_VENDOR_OPTIONS } from './llmVendorIcon';
+import { LLM_VENDOR_OPTIONS, vendorFromModelSlug } from './llmVendorIcon';
 import { metaString, type SForm } from './serviceForm';
 
 const TYPE_RE = /^[\p{L}\p{N}][\p{L}\p{N} ._/-]{0,39}$/u;
@@ -75,6 +75,11 @@ export function ServiceFormFields({
   const syncedCost = metaString(editing?.meta, 'syncedCost') || undefined;
   const marker = watch('marker');
   const markerBg = watch('markerBg');
+  const vendor = watch('vendor');
+  const syncedVendor =
+    metaString(editing?.meta, 'syncedVendor') ||
+    vendorFromModelSlug(metaString(editing?.meta, 'model')) ||
+    undefined;
   const restoreOpts = { shouldDirty: true, shouldValidate: true } as const;
   const showNameMark = Boolean(
     editing &&
@@ -83,6 +88,16 @@ export function ServiceFormFields({
   const showTypeMark = Boolean(
     editing &&
       showOverrideMark(type, defaultValues?.type ?? '', editing.typeOverridden, syncedType),
+  );
+  const showVendorMark = Boolean(
+    editing &&
+      type === 'llm' &&
+      showOverrideMark(
+        vendor.trim(),
+        (defaultValues?.vendor ?? '').trim(),
+        false,
+        syncedVendor,
+      ),
   );
 
   const countryBaseline = () => {
@@ -348,6 +363,18 @@ export function ServiceFormFields({
               <>
                 <div className="flex h-4 items-center gap-1">
                   <Label htmlFor="service-vendor">{t('services.fieldVendor')}</Label>
+                  {showVendorMark && (
+                    <OverriddenMark
+                      label={t('services.detail.vendorOverridden')}
+                      onRestore={() =>
+                        setValue(
+                          'vendor',
+                          syncedVendor ?? defaultValues?.vendor ?? '',
+                          restoreOpts,
+                        )
+                      }
+                    />
+                  )}
                 </div>
                 <Controller
                   control={control}
