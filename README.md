@@ -17,14 +17,14 @@
 
 - **Провайдеры с API:** Timeweb Cloud, Hetzner Cloud, Hostkey (InvAPI), netcup, HostBill,
   ISPsystem BILLmanager, Selectel, 4VPS.SU, Netlen, Beget Cloud, Porkbun, Vultr, Linode, Aeza,
-  VDSina, Cloudflare, StormWall, Yandex Cloud, Double Servers. Плюс **Manual** — провайдеры без
-  API ведутся руками.
+  VDSina, Cloudflare, StormWall, Yandex Cloud, Double Servers, OpenRouter. Плюс **Manual** —
+  провайдеры без API ведутся руками.
 - **Автосинк** (по расписанию + кнопкой): баланс + валюта аккаунта, список серверов/услуг, даты
   следующих списаний; история баланса по дням (снапшоты).
 - **Импорт платежей** там, где API отдаёт реестр: пополнения и списания (BILLmanager, Netlen,
   Vultr, Aeza, VDSina, Double Servers), пополнения и счета (Linode), оплаченные счета (HostBill),
-  потребление (Selectel, Yandex Cloud), история биллинга (Cloudflare, best-effort). Ручные
-  платежи — в журнале.
+  потребление (Selectel, Yandex Cloud, OpenRouter), история биллинга (Cloudflare, best-effort).
+  Ручные платежи — в журнале.
 - **Аналитика:** месячные/годовые расходы, разрезы по провайдеру / стране / типу / валюте, прогноз
   по будущим списаниям, ближайшие списания с подсветкой критичности.
 - **Мультивалютность:** суммы в своей валюте, конвертация к базовой; курсы ЦБ РФ или ручные.
@@ -240,6 +240,15 @@ curl -H "Authorization: Bearer ib_…" https://infra-billing/api/providers
   включена 2FA по приложению. Тянет баланс (EUR), VPS (цена, дата продления `expires_at`) и
   историю: пополнения (`/api/billing/history`) + списания по серверам (`/api/servers/{id}/history`).
   Публичного API-токена нет — синк логинится в панель.
+- **OpenRouter** — **Management API key** (openrouter.ai → Settings → Management Keys). Обычный
+  inference-ключ не подойдёт: синк проверяет его через `/key` и отклоняет с явной ошибкой.
+  LLM-агрегатор, серверов у него нет — панель заводит по услуге (`type=llm`) на каждую модель,
+  по которой был трафик. Цена услуги — фактический расход: за текущий месяц, а пока в нём трат
+  нет — за всё окно `/activity` (последние ~30 суток UTC, посуточно). Оттуда же импортируются
+  списания — по записи на «модель + день»; пополнений в API нет, поэтому в журнале только расход.
+  Баланс — остаток купленных кредитов (`/credits`: пополнено − потрачено, USD). Названия моделей
+  подставляются из каталога `/models` (тумблер «Имена из каталога» в форме; выключить — останутся
+  слаги вида `anthropic/claude-sonnet-5`), вендор берётся из слага и показывается иконкой.
 - **Manual** — без API, всё вводится руками.
 
 ## Telegram-уведомления
