@@ -1,7 +1,7 @@
 import { DEFAULT_PROJECT_UUID, type Period, type Service, type ServiceType } from '@infra/shared';
 import { IconPlus } from '@tabler/icons-react';
 import dayjs, { type ManipulateType } from 'dayjs';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { apiErrorMessage } from '@/api/client';
@@ -66,6 +66,8 @@ export function ServicesPage() {
   const del = useDeleteService();
   const [createOpened, { open: openCreateModal, close: closeCreateModal }] = useDisclosure(false);
   const [detailUuid, setDetailUuid] = useState<string | null>(null);
+  // Types created in a combobox this session, before (or besides) a saved service carries them.
+  const [localTypes, setLocalTypes] = useState<string[]>([]);
   // Derived from the query so the detail modal always reflects the freshest list data.
   const selected = services?.find((s) => s.uuid === detailUuid) ?? null;
 
@@ -73,19 +75,6 @@ export function ServicesPage() {
   const providerOf = (uuid: string) => providers?.find((p) => p.uuid === uuid);
   const projectOptions = (projects ?? []).map((p) => ({ value: p.uuid, label: p.name }));
   const projectOf = (uuid: string) => projects?.find((p) => p.uuid === uuid);
-  // Built-ins plus any custom types already used on services (GitLab-label style).
-  const typeOptions = useMemo(() => {
-    const seen = new Set<string>(enums.serviceTypeOptions.map((o) => o.value));
-    const extras: { value: string; label: string }[] = [];
-    for (const s of services ?? []) {
-      if (seen.has(s.type)) continue;
-      seen.add(s.type);
-      extras.push({ value: s.type, label: enums.serviceTypeLabel(s.type) });
-    }
-    return extras.length === 0
-      ? enums.serviceTypeOptions
-      : [...enums.serviceTypeOptions, ...extras];
-  }, [enums, services]);
   // Default a new service to the default project (or the first one).
   const defaultProjectUuid =
     projects?.find((p) => p.uuid === DEFAULT_PROJECT_UUID)?.uuid ?? projectOptions[0]?.value ?? '';
@@ -121,6 +110,45 @@ export function ServicesPage() {
     },
     mode: 'onSubmit',
   });
+  const formType = form.watch('type');
+
+  const formTypeInUse = Boolean(createOpened || detailUuid);
+
+  // Built-ins plus custom types still referenced by services / the open form / session creates.
+  const typeOptions = useMemo(() => {
+    const seen = new Set<string>(enums.serviceTypeOptions.map((o) => o.value));
+    const extras: { value: string; label: string }[] = [];
+    const add = (type: string) => {
+      if (!type || seen.has(type)) return;
+      seen.add(type);
+      extras.push({ value: type, label: enums.serviceTypeLabel(type) });
+    };
+    for (const s of services ?? []) add(s.type);
+    for (const type of localTypes) add(type);
+    if (formTypeInUse) add(formType.trim());
+    return extras.length === 0
+      ? enums.serviceTypeOptions
+      : [...enums.serviceTypeOptions, ...extras];
+  }, [enums, services, localTypes, formType, formTypeInUse]);
+
+  const rememberType = (type: string) => {
+    const next = type.trim();
+    if (!next) return;
+    setLocalTypes((prev) => (prev.includes(next) ? prev : [...prev, next]));
+  };
+
+  // Drop session-only types once nothing uses them (last service deleted / form moved away).
+  useEffect(() => {
+    const used = new Set((services ?? []).map((s) => s.type));
+    if (formTypeInUse) {
+      const open = formType.trim();
+      if (open) used.add(open);
+    }
+    setLocalTypes((prev) => {
+      const next = prev.filter((t) => used.has(t));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [services, formType, formTypeInUse]);
 
   const openCreate = () => {
     form.reset({
@@ -307,6 +335,7 @@ export function ServicesPage() {
         periodOptions={enums.periodOptions}
         currencyOptions={enums.currencyOptions}
         countryOptions={countryOptions}
+        onTypeCreated={rememberType}
         onSubmit={submit}
         onClose={closeCreateModal}
       />
@@ -322,6 +351,7 @@ export function ServicesPage() {
         countryOptions={countryOptions}
         isSaving={update.isPending && !togglingActive}
         isToggling={togglingActive}
+        onTypeCreated={rememberType}
         onSubmit={submit}
         onToggleActive={toggleActive}
         onDelete={doDelete}

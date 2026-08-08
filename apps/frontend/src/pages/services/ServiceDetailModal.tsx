@@ -45,6 +45,7 @@ interface ServiceDetailModalProps {
   countryOptions: { value: string; label: string }[];
   isSaving: boolean;
   isToggling: boolean;
+  onTypeCreated?: (type: string) => void;
   onSubmit: FormEventHandler<HTMLFormElement>;
   onToggleActive: (s: Service) => void;
   onDelete: (s: Service) => void;
@@ -63,6 +64,7 @@ export function ServiceDetailModal({
   countryOptions,
   isSaving,
   isToggling,
+  onTypeCreated,
   onSubmit,
   onToggleActive,
   onDelete,
@@ -154,6 +156,7 @@ export function ServiceDetailModal({
                   periodOptions={periodOptions}
                   currencyOptions={currencyOptions}
                   countryOptions={countryOptions}
+                  onTypeCreated={onTypeCreated}
                 />
               </form>
 

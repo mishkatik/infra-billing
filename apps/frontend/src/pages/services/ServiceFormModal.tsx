@@ -17,6 +17,7 @@ interface ServiceFormModalProps {
   periodOptions: { value: string; label: string }[];
   currencyOptions: { value: string; label: string }[];
   countryOptions: { value: string; label: string }[];
+  onTypeCreated?: (type: string) => void;
   onSubmit: FormEventHandler<HTMLFormElement>;
   onClose: () => void;
 }
@@ -32,6 +33,7 @@ export function ServiceFormModal({
   periodOptions,
   currencyOptions,
   countryOptions,
+  onTypeCreated,
   onSubmit,
   onClose,
 }: ServiceFormModalProps) {
@@ -53,6 +55,7 @@ export function ServiceFormModal({
             periodOptions={periodOptions}
             currencyOptions={currencyOptions}
             countryOptions={countryOptions}
+            onTypeCreated={onTypeCreated}
           />
           <Button type="submit" disabled={isPending} className="w-full">
             {isPending && <IconLoader2 className="size-4 animate-spin" />}

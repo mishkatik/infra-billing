@@ -45,6 +45,7 @@ interface ServiceFormFieldsProps {
   periodOptions: { value: string; label: string }[];
   currencyOptions: { value: string; label: string }[];
   countryOptions: { value: string; label: string }[];
+  onTypeCreated?: (type: string) => void;
 }
 
 // The service form fields, shared between the create modal and the detail modal.
@@ -57,6 +58,7 @@ export function ServiceFormFields({
   periodOptions,
   currencyOptions,
   countryOptions,
+  onTypeCreated,
 }: ServiceFormFieldsProps) {
   const { t } = useTranslation();
   const {
@@ -256,6 +258,7 @@ export function ServiceFormFields({
                     field.onChange(v);
                     applyTypeSideEffects(v);
                   }}
+                  onCreate={onTypeCreated}
                   options={typeOptions}
                 />
               )}

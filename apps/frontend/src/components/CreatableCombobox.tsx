@@ -20,6 +20,8 @@ interface CreatableComboboxProps {
   id?: string;
   /** Normalize a newly created value before commit (default: trim). */
   normalizeCreate?: (raw: string) => string;
+  /** Fired when the user creates a value that was not in `options`. */
+  onCreate?: (value: string) => void;
 }
 
 /** Searchable select that can create a new option from the query (GitLab label style). */
@@ -30,19 +32,26 @@ export function CreatableCombobox({
   placeholder,
   id,
   normalizeCreate = (raw) => raw.trim(),
+  onCreate,
 }: CreatableComboboxProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
-  const selected = options.find((o) => o.value === value);
+  const list = useMemo(() => {
+    if (!value.trim()) return options;
+    if (options.some((o) => o.value === value)) return options;
+    return [...options, { value, label: value }];
+  }, [options, value]);
+  const optionsKey = useMemo(() => list.map((o) => o.value).join('\0'), [list]);
+  const selected = list.find((o) => o.value === value);
   const display = selected?.label ?? (value || placeholder || '');
 
   const canCreate = useMemo(() => {
     const next = normalizeCreate(query);
     if (!next) return false;
     const lower = next.toLowerCase();
-    return !options.some((o) => o.value.toLowerCase() === lower || o.label.toLowerCase() === lower);
-  }, [normalizeCreate, options, query]);
+    return !list.some((o) => o.value.toLowerCase() === lower || o.label.toLowerCase() === lower);
+  }, [normalizeCreate, list, query]);
 
   const pick = (v: string) => {
     onChange(v);
@@ -53,6 +62,7 @@ export function CreatableCombobox({
   const create = () => {
     const next = normalizeCreate(query);
     if (!next) return;
+    onCreate?.(next);
     pick(next);
   };
 
@@ -77,7 +87,7 @@ export function CreatableCombobox({
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-(--radix-popover-trigger-width) p-0" align="start">
-        <Command shouldFilter>
+        <Command key={optionsKey} shouldFilter>
           <CommandInput
             placeholder={t('common.searchPlaceholder')}
             value={query}
@@ -99,7 +109,7 @@ export function CreatableCombobox({
               )}
             </CommandEmpty>
             <CommandGroup>
-              {options.map((o) => (
+              {list.map((o) => (
                 <CommandItem
                   key={o.value}
                   value={o.label}
