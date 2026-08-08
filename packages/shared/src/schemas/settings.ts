@@ -21,15 +21,18 @@ export const settingsSchema = z.object({
   telegramConfigured: z.boolean().describe('Bot token is set'),
   forecastTariffBackfill: z
     .boolean()
-    .describe('Fill forecast history with tariffs for providers without payments'),
+    .describe('Fill forecast history with full portfolio monthly tariffs'),
+  forecastTariffBackfillRespectCreatedAt: z
+    .boolean()
+    .describe('Only include services whose createdAt falls on or before each month'),
+  forecastTariffBackfillBackdateFromPayments: z
+    .boolean()
+    .describe(
+      'If a provider has payments before its services were created, count tariffs from the first payment month',
+    ),
   forecastTariffBackfillForce: z
     .boolean()
-    .describe('Test mode: ignore payments and write tariff fill into actual and estimated'),
-  forecastTariffBackfillFrom: z
-    .string()
-    .regex(/^\d{4}-\d{2}$/)
-    .describe('Inclusive YYYY-MM lower bound for tariff backfill')
-    .nullable(),
+    .describe('Ignore payments and write full tariff total into actual and estimated'),
 });
 export type Settings = z.infer<typeof settingsSchema>;
 
@@ -58,16 +61,21 @@ export const updateSettingsSchema = z.object({
     .optional(),
   forecastTariffBackfill: z
     .boolean()
-    .describe('Fill forecast history with tariffs for providers without payments')
+    .describe('Fill forecast history with full portfolio monthly tariffs')
+    .optional(),
+  forecastTariffBackfillRespectCreatedAt: z
+    .boolean()
+    .describe('Only include services whose createdAt falls on or before each month')
+    .optional(),
+  forecastTariffBackfillBackdateFromPayments: z
+    .boolean()
+    .describe(
+      'If a provider has payments before its services were created, count tariffs from the first payment month',
+    )
     .optional(),
   forecastTariffBackfillForce: z
     .boolean()
-    .describe('Test mode: ignore payments and write tariff fill into actual and estimated')
-    .optional(),
-  // Empty string clears the bound.
-  forecastTariffBackfillFrom: z
-    .union([z.literal(''), z.string().regex(/^\d{4}-\d{2}$/)])
-    .describe('Inclusive YYYY-MM lower bound for tariff backfill (empty clears)')
+    .describe('Ignore payments and write full tariff total into actual and estimated')
     .optional(),
 });
 export type UpdateSettings = z.infer<typeof updateSettingsSchema>;

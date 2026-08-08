@@ -13,10 +13,10 @@ model Settings {
   telegramProxyUrl     String? @map("telegram_proxy_url")
 
   // Forecast chart: fill past/current months with service tariffs where payment history is missing.
-  forecastTariffBackfill      Boolean @default(false) @map("forecast_tariff_backfill")
-  forecastTariffBackfillForce Boolean @default(false) @map("forecast_tariff_backfill_force")
-  // Inclusive YYYY-MM lower bound for tariff fill; null = whole monthsBack window.
-  forecastTariffBackfillFrom  String? @map("forecast_tariff_backfill_from")
+  forecastTariffBackfill                   Boolean @default(false) @map("forecast_tariff_backfill")
+  forecastTariffBackfillRespectCreatedAt   Boolean @default(false) @map("forecast_tariff_backfill_respect_created_at")
+  forecastTariffBackfillBackdateFromPayments Boolean @default(false) @map("forecast_tariff_backfill_backdate_from_payments")
+  forecastTariffBackfillForce              Boolean @default(false) @map("forecast_tariff_backfill_force")
 
   @@map("settings")
 }

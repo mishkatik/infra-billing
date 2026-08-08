@@ -449,8 +449,10 @@ export class AnalyticsService {
     const history = await this.currency.getHistoricalRates(rates);
     const settings = await this.settingsRepo.ensure();
     const backfill = settings.forecastTariffBackfill;
-    const force = settings.forecastTariffBackfillForce;
-    const fromKey = settings.forecastTariffBackfillFrom;
+    const respectCreatedAt = backfill && settings.forecastTariffBackfillRespectCreatedAt;
+    const backdateFromPayments =
+      respectCreatedAt && settings.forecastTariffBackfillBackdateFromPayments;
+    const force = backfill && settings.forecastTariffBackfillForce;
 
     const current = dayjs().startOf('month');
     const currentKey = current.format('YYYY-MM');
@@ -472,19 +474,21 @@ export class AnalyticsService {
     // Actuals: top-ups + manual payments, plus charges for consumption-only providers (no top-ups).
     // Same definition as currentMonthPayments/totalSpent in summary() — keeps "Actual" consistent
     // with the KPI card. Skipped entirely in force mode (tariff fill overwrites actual below).
-    const [payments, topupProviderUuids, providersWithPayments, activeServices, billedServices] =
+    const needTariffs = backfill || force;
+    const needBackdate = needTariffs && respectCreatedAt && backdateFromPayments;
+    const [payments, topupProviderUuids, activeServices, billedServices, earliestPayments] =
       await Promise.all([
         force
           ? Promise.resolve([] as Awaited<ReturnType<PaymentsRepository['listSince']>>)
           : this.paymentsRepo.listSince(windowStart.toDate()),
         force ? Promise.resolve([] as string[]) : this.paymentsRepo.providerUuidsWithTopups(),
-        backfill || force
-          ? this.paymentsRepo.providerUuidsWithAnyPayment()
-          : Promise.resolve([] as string[]),
-        backfill || force
+        needTariffs
           ? this.servicesRepo.listActive()
           : Promise.resolve([] as Awaited<ReturnType<ServicesRepository['listActive']>>),
         this.servicesRepo.listActiveBilled(),
+        needBackdate
+          ? this.paymentsRepo.earliestPaymentDateByProvider()
+          : Promise.resolve(new Map<string, Date>()),
       ]);
     const providersWithTopups = new Set(topupProviderUuids);
     for (const p of payments) {
@@ -501,16 +505,24 @@ export class AnalyticsService {
       actualBuckets.set(key, actualBuckets.get(key)!.add(base));
     }
 
-    if (backfill || force) {
-      const withPayments = new Set(providersWithPayments);
+    if (needTariffs) {
+      // Portfolio monthly cost (same basis as the Monthly expenses KPI) for every past month.
+      // Optional createdAt gate, optionally backdated to the provider's first payment.
+      const earliestPaymentMonth = new Map<string, string>();
+      for (const [providerUuid, date] of earliestPayments) {
+        earliestPaymentMonth.set(providerUuid, dayjs(date).format('YYYY-MM'));
+      }
       for (const key of monthsList) {
         if (key > currentKey) continue;
-        if (fromKey && key < fromKey) continue;
         const amount = tariffForMonth(
           activeServices,
           key,
           (amount, currency) => this.currency.convert(amount, currency, baseCurrency, rates),
-          force ? undefined : (providerUuid) => !withPayments.has(providerUuid),
+          {
+            respectCreatedAt,
+            backdateFromPayments,
+            earliestPaymentMonth,
+          },
         );
         estimatedBuckets.set(key, amount);
         if (force) actualBuckets.set(key, amount);
@@ -575,18 +587,27 @@ function bump(map: Map<string, Agg>, key: string, amount: Decimal): void {
   map.set(key, cur);
 }
 
-/** Sum monthly-normalized service tariffs for monthKey (services created by end of that month). */
+/** Sum monthly-normalized tariffs of the current active services. */
 function tariffForMonth(
   services: TariffService[],
   monthKey: string,
   toBase: (amount: Decimal, currency: string) => Decimal,
-  includeProvider?: (providerUuid: string) => boolean,
+  opts: {
+    respectCreatedAt: boolean;
+    backdateFromPayments: boolean;
+    earliestPaymentMonth: Map<string, string>;
+  },
 ): Decimal {
-  const monthEnd = dayjs(`${monthKey}-01`).endOf('month');
   let total = ZERO();
   for (const s of services) {
-    if (includeProvider && !includeProvider(s.providerUuid)) continue;
-    if (dayjs(s.createdAt).isAfter(monthEnd)) continue;
+    if (opts.respectCreatedAt) {
+      let startKey = dayjs(s.createdAt).format('YYYY-MM');
+      if (opts.backdateFromPayments) {
+        const payKey = opts.earliestPaymentMonth.get(s.providerUuid);
+        if (payKey && payKey < startKey) startKey = payKey;
+      }
+      if (startKey > monthKey) continue;
+    }
     total = total.add(
       toBase(monthlyCost(new Decimal(s.cost.toString()), s.period as Period), s.currency),
     );

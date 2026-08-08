@@ -16,8 +16,9 @@ interface SettingsRow {
   telegramTopicId: string | null;
   telegramProxyUrl: string | null;
   forecastTariffBackfill: boolean;
+  forecastTariffBackfillRespectCreatedAt: boolean;
+  forecastTariffBackfillBackdateFromPayments: boolean;
   forecastTariffBackfillForce: boolean;
-  forecastTariffBackfillFrom: string | null;
 }
 
 @Injectable()
@@ -50,10 +51,12 @@ export class SettingsService {
     if (dto.telegramBotToken) data.telegramBotTokenEnc = this.crypto.encrypt(dto.telegramBotToken);
     if (dto.forecastTariffBackfill !== undefined)
       data.forecastTariffBackfill = dto.forecastTariffBackfill;
+    if (dto.forecastTariffBackfillRespectCreatedAt !== undefined)
+      data.forecastTariffBackfillRespectCreatedAt = dto.forecastTariffBackfillRespectCreatedAt;
+    if (dto.forecastTariffBackfillBackdateFromPayments !== undefined)
+      data.forecastTariffBackfillBackdateFromPayments = dto.forecastTariffBackfillBackdateFromPayments;
     if (dto.forecastTariffBackfillForce !== undefined)
       data.forecastTariffBackfillForce = dto.forecastTariffBackfillForce;
-    if (dto.forecastTariffBackfillFrom !== undefined)
-      data.forecastTariffBackfillFrom = dto.forecastTariffBackfillFrom || null;
 
     const row = await this.settings.update(data);
     // The autosync interval lives here now. Re-arm the scheduler when it changes.
@@ -74,8 +77,9 @@ export class SettingsService {
       telegramProxyUrl: row.telegramProxyUrl,
       telegramConfigured: row.telegramBotTokenEnc != null, // never expose the token itself
       forecastTariffBackfill: row.forecastTariffBackfill,
+      forecastTariffBackfillRespectCreatedAt: row.forecastTariffBackfillRespectCreatedAt,
+      forecastTariffBackfillBackdateFromPayments: row.forecastTariffBackfillBackdateFromPayments,
       forecastTariffBackfillForce: row.forecastTariffBackfillForce,
-      forecastTariffBackfillFrom: row.forecastTariffBackfillFrom,
     };
   }
 }

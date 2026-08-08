@@ -46,13 +46,17 @@ export class PaymentsRepository {
     return rows.map((r) => r.providerUuid);
   }
 
-  /** Provider uuids that have any payment row (top-up or charge) — used by forecast tariff backfill. */
-  async providerUuidsWithAnyPayment(): Promise<string[]> {
-    const rows = await this.prisma.payment.findMany({
-      distinct: ['providerUuid'],
-      select: { providerUuid: true },
+  /** Earliest payment date per provider (any type) — used to backdate tariff estimates. */
+  async earliestPaymentDateByProvider(): Promise<Map<string, Date>> {
+    const rows = await this.prisma.payment.groupBy({
+      by: ['providerUuid'],
+      _min: { paymentDate: true },
     });
-    return rows.map((r) => r.providerUuid);
+    const map = new Map<string, Date>();
+    for (const r of rows) {
+      if (r._min.paymentDate) map.set(r.providerUuid, r._min.paymentDate);
+    }
+    return map;
   }
 
   async listPaginated(
