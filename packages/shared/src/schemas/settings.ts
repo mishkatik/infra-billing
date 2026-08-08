@@ -19,6 +19,17 @@ export const settingsSchema = z.object({
   telegramTopicId: z.string().describe('Telegram topic ID').nullable(),
   telegramProxyUrl: z.string().describe('SOCKS proxy URL for Telegram').nullable(),
   telegramConfigured: z.boolean().describe('Bot token is set'),
+  forecastTariffBackfill: z
+    .boolean()
+    .describe('Fill forecast history with tariffs for providers without payments'),
+  forecastTariffBackfillForce: z
+    .boolean()
+    .describe('Test mode: ignore payments and write tariff fill into actual and estimated'),
+  forecastTariffBackfillFrom: z
+    .string()
+    .regex(/^\d{4}-\d{2}$/)
+    .describe('Inclusive YYYY-MM lower bound for tariff backfill')
+    .nullable(),
 });
 export type Settings = z.infer<typeof settingsSchema>;
 
@@ -44,6 +55,19 @@ export const updateSettingsSchema = z.object({
     .string()
     .regex(/^$|^socks(4a?|5h?)?:\/\/\S+$/)
     .describe('SOCKS proxy URL for Telegram notifications')
+    .optional(),
+  forecastTariffBackfill: z
+    .boolean()
+    .describe('Fill forecast history with tariffs for providers without payments')
+    .optional(),
+  forecastTariffBackfillForce: z
+    .boolean()
+    .describe('Test mode: ignore payments and write tariff fill into actual and estimated')
+    .optional(),
+  // Empty string clears the bound.
+  forecastTariffBackfillFrom: z
+    .union([z.literal(''), z.string().regex(/^\d{4}-\d{2}$/)])
+    .describe('Inclusive YYYY-MM lower bound for tariff backfill (empty clears)')
     .optional(),
 });
 export type UpdateSettings = z.infer<typeof updateSettingsSchema>;

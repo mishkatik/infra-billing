@@ -27,6 +27,31 @@ export const providerKindSchema = z.enum([
 export type ProviderKind = z.infer<typeof providerKindSchema>;
 export const PROVIDER_KINDS = providerKindSchema.options;
 
+/**
+ * Connector kinds that implement `fetchPayments` (payment / charge ledger import on sync).
+ * Keep in sync with apps/backend connectors that define that method.
+ */
+export const PROVIDER_KINDS_WITH_PAYMENT_IMPORT = [
+  'hostbill',
+  'billmgr',
+  'selectel',
+  'netlen',
+  'linode',
+  'aeza',
+  'vultr',
+  'yandex',
+  'vdsina',
+  'doubleservers',
+  'cloudflare',
+] as const satisfies readonly ProviderKind[];
+
+const paymentImportKindSet = new Set<string>(PROVIDER_KINDS_WITH_PAYMENT_IMPORT);
+
+/** Whether this provider kind can import a payment ledger via sync. */
+export function providerKindSupportsPaymentImport(kind: string): boolean {
+  return paymentImportKindSet.has(kind);
+}
+
 /** Built-in presets shown in pickers. API also accepts custom labels (GitLab-style). */
 export const SERVICE_TYPES = [
   'vps',

@@ -181,6 +181,9 @@ export const forecastPointSchema = z.object({
   month: z.string().describe('Month'),
   projected: moneySchema.describe('Projected cost (future months)'),
   actual: moneySchema.describe('Actual charges (past/current months)'),
+  estimated: moneySchema.describe(
+    'Tariff backfill for past/current months (providers without payment history, or force mode)',
+  ),
 });
 export type ForecastPoint = z.infer<typeof forecastPointSchema>;
 

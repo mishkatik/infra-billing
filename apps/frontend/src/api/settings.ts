@@ -15,7 +15,11 @@ export function useUpdateSettings() {
   return useMutation({
     mutationFn: async (dto: UpdateSettings) =>
       (await api.patch<Settings>(API_PATH.SETTINGS, dto)).data,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['settings'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['settings'] });
+      // Forecast series depends on tariff-backfill flags.
+      qc.invalidateQueries({ queryKey: ['analytics'] });
+    },
   });
 }
 

@@ -46,6 +46,15 @@ export class PaymentsRepository {
     return rows.map((r) => r.providerUuid);
   }
 
+  /** Provider uuids that have any payment row (top-up or charge) — used by forecast tariff backfill. */
+  async providerUuidsWithAnyPayment(): Promise<string[]> {
+    const rows = await this.prisma.payment.findMany({
+      distinct: ['providerUuid'],
+      select: { providerUuid: true },
+    });
+    return rows.map((r) => r.providerUuid);
+  }
+
   async listPaginated(
     filters: PaymentFilters,
     page: number,

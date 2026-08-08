@@ -7,6 +7,23 @@ export const settings = {
     syncInterval: 'Sync interval (hours)',
     rateSource: 'Rate source',
     settingsSaved: 'Settings saved',
+    forecast: {
+      title: 'Spend-by-month chart',
+      description:
+        'When providers cannot import a payment ledger, past months on the chart stay incomplete. Tariff projection fills those gaps.',
+      paymentImportWarn:
+        '{{missing}} of {{total}} providers do not support payment import. Past spend on the chart may differ from real costs — enable tariff projection below for a fuller picture.',
+      paymentImportOk:
+        'All {{total}} providers support payment import. Chart history is based on imported payments, so tariff projection is usually unnecessary.',
+      backfill: 'Project tariffs onto past months',
+      backfillDescription:
+        'Adds an Estimated series for providers with no payment history (services counted from their creation month).',
+      force: 'Force tariff fill (test)',
+      forceDescription:
+        'Ignores payments and writes the same tariff fill into Actual and Estimated for testing.',
+      from: 'Project from month',
+      fromDescription: 'Inclusive lower bound (YYYY-MM). Empty — whole history window on the chart.',
+    },
     telegram: {
       title: 'Telegram notifications',
       tokenSet: 'token set',
@@ -63,6 +80,23 @@ export const settings = {
     syncInterval: 'Интервал синхронизации (часы)',
     rateSource: 'Источник курсов',
     settingsSaved: 'Настройки сохранены',
+    forecast: {
+      title: 'График расходов по месяцам',
+      description:
+        'Если у провайдера нет импорта платежей, прошлые месяцы на графике остаются неполными. Проецирование тарифов закрывает эти пробелы.',
+      paymentImportWarn:
+        'У {{missing}} из {{total}} провайдеров нет импорта платежей. Фактический расход за прошлые месяцы на графике может отличаться от реальной картины. Включите проецирование тарифов ниже для более полной статистики.',
+      paymentImportOk:
+        'Все {{total}} провайдеров поддерживают импорт платежей. История графика строится по фактическим платежам, проецирование тарифов обычно не нужно.',
+      backfill: 'Проецировать тарифы на прошлые месяцы',
+      backfillDescription:
+        'Добавляет серию «Оценка» для провайдеров без истории платежей (сервис учитывается с месяца создания).',
+      force: 'Принудительное заполнение (тест)',
+      forceDescription:
+        'Игнорирует платежи и записывает одно и то же тарифное заполнение в Actual и Estimated для проверки.',
+      from: 'Проецировать с месяца',
+      fromDescription: 'Нижняя граница включительно (YYYY-MM). Пусто — всё окно истории на графике.',
+    },
     telegram: {
       title: 'Telegram-уведомления',
       tokenSet: 'токен задан',

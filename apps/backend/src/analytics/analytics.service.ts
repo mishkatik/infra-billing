@@ -7,6 +7,7 @@ import { PaymentsRepository } from '@repositories/payments/payments.repository';
 import { ProjectsRepository } from '@repositories/projects/projects.repository';
 import { ProvidersRepository } from '@repositories/providers/providers.repository';
 import { ServicesRepository } from '@repositories/services/services.repository';
+import { SettingsRepository } from '@repositories/settings/settings.repository';
 import { CurrencyService } from '../currency/currency.service';
 import { monthlyCost } from '@common/money';
 import { overdueDays } from '@common/overdue';
@@ -35,6 +36,14 @@ function serviceBadgeFields(s: { type: string; countryCode: string | null; meta:
   };
 }
 
+interface TariffService {
+  providerUuid: string;
+  cost: { toString(): string };
+  currency: string;
+  period: string;
+  createdAt: Date;
+}
+
 @Injectable()
 export class AnalyticsService {
   constructor(
@@ -43,6 +52,7 @@ export class AnalyticsService {
     private readonly servicesRepo: ServicesRepository,
     private readonly paymentsRepo: PaymentsRepository,
     private readonly snapshotsRepo: BalanceSnapshotsRepository,
+    private readonly settingsRepo: SettingsRepository,
     private readonly currency: CurrencyService,
   ) {}
 
@@ -437,6 +447,10 @@ export class AnalyticsService {
     const { baseCurrency } = await this.currency.getEffectiveSettings();
     const rates = await this.currency.getRubRates();
     const history = await this.currency.getHistoricalRates(rates);
+    const settings = await this.settingsRepo.ensure();
+    const backfill = settings.forecastTariffBackfill;
+    const force = settings.forecastTariffBackfillForce;
+    const fromKey = settings.forecastTariffBackfillFrom;
 
     const current = dayjs().startOf('month');
     const currentKey = current.format('YYYY-MM');
@@ -445,21 +459,33 @@ export class AnalyticsService {
 
     const monthsList: string[] = [];
     const actualBuckets = new Map<string, Decimal>();
+    const estimatedBuckets = new Map<string, Decimal>();
     const projBuckets = new Map<string, Decimal>();
     for (let i = 0; i < totalMonths; i += 1) {
       const key = windowStart.add(i, 'month').format('YYYY-MM');
       monthsList.push(key);
       actualBuckets.set(key, ZERO());
+      estimatedBuckets.set(key, ZERO());
       projBuckets.set(key, ZERO());
     }
 
     // Actuals: top-ups + manual payments, plus charges for consumption-only providers (no top-ups).
     // Same definition as currentMonthPayments/totalSpent in summary() — keeps "Actual" consistent
-    // with the KPI card.
-    const [payments, topupProviderUuids] = await Promise.all([
-      this.paymentsRepo.listSince(windowStart.toDate()),
-      this.paymentsRepo.providerUuidsWithTopups(),
-    ]);
+    // with the KPI card. Skipped entirely in force mode (tariff fill overwrites actual below).
+    const [payments, topupProviderUuids, providersWithPayments, activeServices, billedServices] =
+      await Promise.all([
+        force
+          ? Promise.resolve([] as Awaited<ReturnType<PaymentsRepository['listSince']>>)
+          : this.paymentsRepo.listSince(windowStart.toDate()),
+        force ? Promise.resolve([] as string[]) : this.paymentsRepo.providerUuidsWithTopups(),
+        backfill || force
+          ? this.paymentsRepo.providerUuidsWithAnyPayment()
+          : Promise.resolve([] as string[]),
+        backfill || force
+          ? this.servicesRepo.listActive()
+          : Promise.resolve([] as Awaited<ReturnType<ServicesRepository['listActive']>>),
+        this.servicesRepo.listActiveBilled(),
+      ]);
     const providersWithTopups = new Set(topupProviderUuids);
     for (const p of payments) {
       if (p.type === 'charge' && providersWithTopups.has(p.providerUuid)) continue;
@@ -475,11 +501,26 @@ export class AnalyticsService {
       actualBuckets.set(key, actualBuckets.get(key)!.add(base));
     }
 
+    if (backfill || force) {
+      const withPayments = new Set(providersWithPayments);
+      for (const key of monthsList) {
+        if (key > currentKey) continue;
+        if (fromKey && key < fromKey) continue;
+        const amount = tariffForMonth(
+          activeServices,
+          key,
+          (amount, currency) => this.currency.convert(amount, currency, baseCurrency, rates),
+          force ? undefined : (providerUuid) => !withPayments.has(providerUuid),
+        );
+        estimatedBuckets.set(key, amount);
+        if (force) actualBuckets.set(key, amount);
+      }
+    }
+
     // Projection: recurring services billed strictly in the future (current month shows actuals only).
-    const services = await this.servicesRepo.listActiveBilled();
     const projStart = current.add(1, 'month');
     const projEnd = current.add(months + 1, 'month');
-    for (const s of services) {
+    for (const s of billedServices) {
       const charge = this.currency.convert(
         new Decimal(s.cost.toString()),
         s.currency,
@@ -512,6 +553,7 @@ export class AnalyticsService {
     return monthsList.map((m) => ({
       month: m,
       actual: actualBuckets.get(m)!.toFixed(2),
+      estimated: estimatedBuckets.get(m)!.toFixed(2),
       projected: projBuckets.get(m)!.toFixed(2),
     }));
   }
@@ -531,6 +573,25 @@ function bump(map: Map<string, Agg>, key: string, amount: Decimal): void {
   cur.monthly = cur.monthly.add(amount);
   cur.count += 1;
   map.set(key, cur);
+}
+
+/** Sum monthly-normalized service tariffs for monthKey (services created by end of that month). */
+function tariffForMonth(
+  services: TariffService[],
+  monthKey: string,
+  toBase: (amount: Decimal, currency: string) => Decimal,
+  includeProvider?: (providerUuid: string) => boolean,
+): Decimal {
+  const monthEnd = dayjs(`${monthKey}-01`).endOf('month');
+  let total = ZERO();
+  for (const s of services) {
+    if (includeProvider && !includeProvider(s.providerUuid)) continue;
+    if (dayjs(s.createdAt).isAfter(monthEnd)) continue;
+    total = total.add(
+      toBase(monthlyCost(new Decimal(s.cost.toString()), s.period as Period), s.currency),
+    );
+  }
+  return total;
 }
 
 function periodStep(period: string): { n: number; u: dayjs.ManipulateType } | null {

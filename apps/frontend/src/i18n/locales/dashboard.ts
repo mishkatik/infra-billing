@@ -36,6 +36,7 @@ export const dashboard = {
       forecast: 'Spend by month ({{base}})',
       forecastSeries: 'Forecast',
       actualSeries: 'Actual',
+      estimatedSeries: 'Estimated',
     },
     byProject: {
       title: 'Spending by project ({{base}})',
@@ -113,6 +114,7 @@ export const dashboard = {
       forecast: 'Расходы по месяцам ({{base}})',
       forecastSeries: 'Прогноз',
       actualSeries: 'Списано',
+      estimatedSeries: 'Оценка',
     },
     byProject: {
       title: 'Расходы по проектам ({{base}})',
