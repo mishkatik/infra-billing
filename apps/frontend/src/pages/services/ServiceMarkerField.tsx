@@ -142,8 +142,7 @@ export function ServiceMarkerField({
                   aria-label={swatch}
                   className={cn(
                     'aspect-square w-full rounded-sm border border-black/10 shadow-xs',
-                    color.toLowerCase() === swatch.toLowerCase() &&
-                      'ring-2 ring-inset ring-ring',
+                    color.toLowerCase() === swatch.toLowerCase() && 'ring-2 ring-inset ring-ring',
                   )}
                   style={{ backgroundColor: swatch }}
                   onClick={() => {
@@ -189,11 +188,7 @@ export function ServiceMarkerField({
             className="flex h-9 min-w-0 flex-1 items-center justify-between gap-2 rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30"
           >
             <span className={cn('truncate', !selected && !emojiMode && 'text-muted-foreground')}>
-              {selected
-                ? selected.label
-                : emojiMode
-                  ? marker
-                  : t('services.markerPlaceholder')}
+              {selected ? selected.label : emojiMode ? marker : t('services.markerPlaceholder')}
             </span>
             <IconChevronDown className="size-4 shrink-0 text-muted-foreground opacity-50" />
           </button>
@@ -220,7 +215,10 @@ export function ServiceMarkerField({
                   {t('services.markerClear')}
                 </CommandItem>
                 {searchEmoji ? (
-                  <CommandItem value={`emoji:${searchEmoji}`} onSelect={() => pickEmoji(searchEmoji)}>
+                  <CommandItem
+                    value={`emoji:${searchEmoji}`}
+                    onSelect={() => pickEmoji(searchEmoji)}
+                  >
                     <span className="text-base leading-none">{searchEmoji}</span>
                     <span className="truncate">{t('services.markerUseEmoji')}</span>
                   </CommandItem>
@@ -244,7 +242,13 @@ export function ServiceMarkerField({
       </Popover>
 
       {marker ? (
-        <Button type="button" variant="ghost" size="icon" className="size-9 shrink-0" onClick={clear}>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="size-9 shrink-0"
+          onClick={clear}
+        >
           <IconX className="size-4" />
           <span className="sr-only">{t('services.markerClear')}</span>
         </Button>

@@ -240,9 +240,7 @@ export class SyncService implements OnModuleInit {
       const vendorOverridden =
         Boolean(prevVendor) &&
         ((prevSyncedVendor != null && prevVendor !== prevSyncedVendor) ||
-          (prevSyncedVendor == null &&
-            incomingVendor != null &&
-            prevVendor !== incomingVendor));
+          (prevSyncedVendor == null && incomingVendor != null && prevVendor !== incomingVendor));
 
       const meta = {
         ...incomingMeta,

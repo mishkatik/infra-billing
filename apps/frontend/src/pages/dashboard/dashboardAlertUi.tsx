@@ -11,10 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { providerFavicon } from '@/utils/favicon';
 import { countryFlag } from '@/utils/format';
-import {
-  LOCATED_TYPES,
-  ServiceTypeIcon,
-} from '@/pages/services/ServiceTypeIcon';
+import { LOCATED_TYPES, ServiceTypeIcon } from '@/pages/services/ServiceTypeIcon';
 import { colorBadgeStyle, countryBadgeStyle, providerBadgeStyle } from './badgeTints';
 import { createLayoutGate } from './layoutMeasure';
 

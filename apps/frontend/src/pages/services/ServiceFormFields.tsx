@@ -94,12 +94,7 @@ export function ServiceFormFields({
   const showVendorMark = Boolean(
     editing &&
       type === 'llm' &&
-      showOverrideMark(
-        vendor.trim(),
-        (defaultValues?.vendor ?? '').trim(),
-        false,
-        syncedVendor,
-      ),
+      showOverrideMark(vendor.trim(), (defaultValues?.vendor ?? '').trim(), false, syncedVendor),
   );
 
   const countryBaseline = () => {
@@ -370,11 +365,7 @@ export function ServiceFormFields({
                     <OverriddenMark
                       label={t('services.detail.vendorOverridden')}
                       onRestore={() =>
-                        setValue(
-                          'vendor',
-                          syncedVendor ?? defaultValues?.vendor ?? '',
-                          restoreOpts,
-                        )
+                        setValue('vendor', syncedVendor ?? defaultValues?.vendor ?? '', restoreOpts)
                       }
                     />
                   )}

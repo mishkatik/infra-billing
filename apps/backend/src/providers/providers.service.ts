@@ -299,9 +299,7 @@ export class ProvidersService {
       const creds: OpenRouterCredentials = {
         token,
         useCatalogNames:
-          dto.useCatalogNames !== undefined
-            ? dto.useCatalogNames
-            : base.useCatalogNames !== false,
+          dto.useCatalogNames !== undefined ? dto.useCatalogNames : base.useCatalogNames !== false,
       };
       return this.crypto.encrypt(JSON.stringify(creds));
     }

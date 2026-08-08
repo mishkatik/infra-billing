@@ -54,7 +54,8 @@ export class SettingsService {
     if (dto.forecastTariffBackfillRespectCreatedAt !== undefined)
       data.forecastTariffBackfillRespectCreatedAt = dto.forecastTariffBackfillRespectCreatedAt;
     if (dto.forecastTariffBackfillBackdateFromPayments !== undefined)
-      data.forecastTariffBackfillBackdateFromPayments = dto.forecastTariffBackfillBackdateFromPayments;
+      data.forecastTariffBackfillBackdateFromPayments =
+        dto.forecastTariffBackfillBackdateFromPayments;
     if (dto.forecastTariffBackfillForce !== undefined)
       data.forecastTariffBackfillForce = dto.forecastTariffBackfillForce;
 

@@ -12,9 +12,7 @@ import {
 export const serviceClientMetaSchema = z.object({
   vendor: z.union([z.string().trim().min(1).max(64), z.null()]).optional(),
   marker: z.union([z.string().trim().min(1).max(64), z.null()]).optional(),
-  markerBg: z
-    .union([z.string().regex(/^#[0-9A-Fa-f]{6}$/), z.null()])
-    .optional(),
+  markerBg: z.union([z.string().regex(/^#[0-9A-Fa-f]{6}$/), z.null()]).optional(),
 });
 export type ServiceClientMeta = z.infer<typeof serviceClientMetaSchema>;
 

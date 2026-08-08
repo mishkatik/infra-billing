@@ -128,7 +128,8 @@ export function validateProviderCredentials(
     return t('providers.err.cloudflareCreds');
   if (requireCreds && v.kind === 'stormwall' && !v.token) return t('providers.err.stormwallToken');
   if (requireCreds && v.kind === 'yandex' && !v.token) return t('providers.err.yandexKey');
-  if (requireCreds && v.kind === 'openrouter' && !v.token) return t('providers.err.openrouterToken');
+  if (requireCreds && v.kind === 'openrouter' && !v.token)
+    return t('providers.err.openrouterToken');
   return null;
 }
 
