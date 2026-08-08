@@ -13,6 +13,10 @@ import {
   normalizeAezaBaseUrl,
   parseAezaCredentials,
 } from '@connectors/aeza/aeza.types';
+import {
+  OpenRouterCredentials,
+  parseOpenRouterCredentials,
+} from '@connectors/openrouter/openrouter.types';
 import { VDSINA_BASE_URLS } from '@connectors/vdsina/vdsina.types';
 import { YandexConnector } from '../connectors/yandex/yandex.connector';
 import type { YandexCredentials } from '../connectors/yandex/yandex.types';
@@ -71,6 +75,12 @@ export class ProvidersService {
     if (kind === 'aeza') {
       return { baseUrl: this.decodeAezaCredentials(enc).baseUrl ?? null };
     }
+    if (kind === 'openrouter') {
+      const c = this.decodeOpenRouterCredentials(enc);
+      return {
+        useCatalogNames: c.useCatalogNames !== false,
+      };
+    }
     if (kind === 'beget' || kind === 'doubleservers') {
       const c = this.decodeCredentials(enc);
       return { username: c.username ?? null };
@@ -107,6 +117,9 @@ export class ProvidersService {
       kind === 'stormwall'
     ) {
       return { hasToken: true };
+    }
+    if (kind === 'openrouter') {
+      return { hasToken: Boolean(this.decodeOpenRouterCredentials(enc).token) };
     }
     if (kind === 'aeza') return { hasToken: Boolean(this.decodeAezaCredentials(enc).token) };
     const c = this.decodeCredentials(enc);
@@ -155,6 +168,11 @@ export class ProvidersService {
       kind === 'stormwall'
     ) {
       const token = this.decryptRaw(enc);
+      return token ? { token } : {};
+    }
+
+    if (kind === 'openrouter') {
+      const token = this.decodeOpenRouterCredentials(enc).token;
       return token ? { token } : {};
     }
 
@@ -267,9 +285,26 @@ export class ProvidersService {
       panelId?: string;
       apiPassword?: string;
       secretKey?: string;
+      useCatalogNames?: boolean;
     },
     existingEnc?: Uint8Array | null,
   ): Uint8Array<ArrayBuffer> | null {
+    if (kind === 'openrouter') {
+      if (!dto.token && dto.useCatalogNames === undefined) {
+        return null;
+      }
+      const base = this.decodeOpenRouterCredentials(existingEnc);
+      const token = dto.token ?? base.token;
+      if (!token) throw new BadRequestException('Provide the OpenRouter Management API key');
+      const creds: OpenRouterCredentials = {
+        token,
+        useCatalogNames:
+          dto.useCatalogNames !== undefined
+            ? dto.useCatalogNames
+            : base.useCatalogNames !== false,
+      };
+      return this.crypto.encrypt(JSON.stringify(creds));
+    }
     if (kind === '4vps') {
       // JSON { token, panelId? }; merge so a panel-id-only edit keeps the token.
       if (!dto.token && !dto.panelId) return null;
@@ -512,6 +547,12 @@ export class ProvidersService {
     if (!enc) return {};
     const raw = this.decryptRaw(enc);
     return raw ? parseAezaCredentials(raw) : {};
+  }
+
+  private decodeOpenRouterCredentials(enc?: Uint8Array | null): Partial<OpenRouterCredentials> {
+    if (!enc) return {};
+    const raw = this.decryptRaw(enc);
+    return raw ? parseOpenRouterCredentials(raw) : {};
   }
 
   private decryptRaw(enc: Uint8Array): string | null {

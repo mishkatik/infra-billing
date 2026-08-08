@@ -21,6 +21,7 @@ const PROVIDER_BRAND: Record<string, string> = {
   stormwall: '#64748B',
   hostbill: '#6366F1',
   billmgr: '#6366F1',
+  openrouter: '#A78BFA',
   manual: '#94A3B8',
 };
 
@@ -62,4 +63,9 @@ export function countryBadgeStyle(countryCode: string | null | undefined): CSSPr
   const code = (countryCode ?? '').toUpperCase();
   if (!code || code === 'XX') return tintStyle(PROVIDER_BRAND.manual);
   return tintStyle(COUNTRY_TINT[code] ?? PROVIDER_BRAND.manual);
+}
+
+export function colorBadgeStyle(hex: string | null | undefined): CSSProperties {
+  if (!hex) return tintStyle(PROVIDER_BRAND.manual);
+  return tintStyle(hex);
 }

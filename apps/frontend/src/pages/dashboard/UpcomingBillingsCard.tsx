@@ -49,7 +49,14 @@ export function UpcomingBillingsCard({ upcoming }: UpcomingBillingsCardProps) {
                     iconName={ub.providerIconName}
                     iconBg={ub.providerIconBg}
                   />
-                  <ServiceBadge countryCode={ub.countryCode} name={ub.name} />
+                  <ServiceBadge
+                    name={ub.name}
+                    type={ub.type}
+                    countryCode={ub.countryCode}
+                    marker={ub.marker}
+                    markerBg={ub.markerBg}
+                    vendor={ub.vendor}
+                  />
                 </>
               }
               balance={

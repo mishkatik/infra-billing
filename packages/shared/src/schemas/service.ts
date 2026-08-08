@@ -8,6 +8,16 @@ import {
   uuidSchema,
 } from './common';
 
+/** Client-writable display fields merged into service.meta (sync keys untouched). */
+export const serviceClientMetaSchema = z.object({
+  vendor: z.union([z.string().trim().min(1).max(64), z.null()]).optional(),
+  marker: z.union([z.string().trim().min(1).max(64), z.null()]).optional(),
+  markerBg: z
+    .union([z.string().regex(/^#[0-9A-Fa-f]{6}$/), z.null()])
+    .optional(),
+});
+export type ServiceClientMeta = z.infer<typeof serviceClientMetaSchema>;
+
 export const serviceSchema = z.object({
   uuid: uuidSchema.describe('Service UUID'),
   providerUuid: uuidSchema.describe('Provider UUID'),
@@ -43,6 +53,7 @@ export const createServiceSchema = z.object({
   countryCode: countryCodeSchema.describe('ISO country code').optional(),
   nextBillingAt: isoDateSchema.describe('Next billing date').optional(),
   isActive: z.boolean().describe('Counted in current expenses').optional(),
+  meta: serviceClientMetaSchema.describe('Display marker fields').optional(),
 });
 export type CreateService = z.infer<typeof createServiceSchema>;
 
@@ -59,5 +70,6 @@ export const updateServiceSchema = z.object({
   countryCode: countryCodeSchema.describe('ISO country code').nullable().optional(),
   nextBillingAt: isoDateSchema.describe('Next billing date').nullable().optional(),
   isActive: z.boolean().describe('Counted in current expenses').optional(),
+  meta: serviceClientMetaSchema.describe('Display marker fields').optional(),
 });
 export type UpdateService = z.infer<typeof updateServiceSchema>;

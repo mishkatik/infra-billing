@@ -26,7 +26,13 @@ import type { SForm } from './serviceForm';
 import { ServiceFormFields } from './ServiceFormFields';
 import { ServiceMetaModal } from './ServiceMetaModal';
 import { ServicePaymentsModal } from './ServicePaymentsModal';
-import { LOCATED_TYPES, ServiceTypeIcon } from './ServiceTypeIcon';
+import {
+  LOCATED_TYPES,
+  ServiceTypeIcon,
+  serviceTypeMarker,
+  serviceTypeMarkerBg,
+  serviceTypeModel,
+} from './ServiceTypeIcon';
 
 interface ServiceDetailModalProps {
   service: Service | null;
@@ -39,6 +45,7 @@ interface ServiceDetailModalProps {
   countryOptions: { value: string; label: string }[];
   isSaving: boolean;
   isToggling: boolean;
+  onTypeCreated?: (type: string) => void;
   onSubmit: FormEventHandler<HTMLFormElement>;
   onToggleActive: (s: Service) => void;
   onDelete: (s: Service) => void;
@@ -57,6 +64,7 @@ export function ServiceDetailModal({
   countryOptions,
   isSaving,
   isToggling,
+  onTypeCreated,
   onSubmit,
   onToggleActive,
   onDelete,
@@ -80,7 +88,19 @@ export function ServiceDetailModal({
     }
   }, [service]);
 
+  const formType = form.watch('type');
+  const formVendor = form.watch('vendor');
+  const formMarker = form.watch('marker');
+  const formMarkerBg = form.watch('markerBg');
+  const formCountry = form.watch('countryCode');
+
   if (shown == null) return null;
+
+  const titleType = formType || shown.type;
+  const titleModel =
+    titleType === 'llm'
+      ? formVendor.trim() || serviceTypeModel(shown.meta)
+      : serviceTypeModel(shown.meta);
 
   const sourceBadge = (
     <Badge
@@ -104,10 +124,15 @@ export function ServiceDetailModal({
         >
           <DialogHeader>
             <DialogTitle className="flex min-w-0 items-center gap-2">
-              {LOCATED_TYPES.has(shown.type) ? (
-                <span>{countryFlag(shown.countryCode)}</span>
+              {LOCATED_TYPES.has(titleType) ? (
+                <span>{countryFlag(formCountry || shown.countryCode)}</span>
               ) : (
-                <ServiceTypeIcon type={shown.type} />
+                <ServiceTypeIcon
+                  type={titleType}
+                  model={titleModel}
+                  marker={formMarker.trim() || serviceTypeMarker(shown.meta)}
+                  markerBg={formMarkerBg.trim() || serviceTypeMarkerBg(shown.meta)}
+                />
               )}
               <span className="truncate">{shown.name}</span>
               {sourceBadge}
@@ -131,6 +156,7 @@ export function ServiceDetailModal({
                   periodOptions={periodOptions}
                   currencyOptions={currencyOptions}
                   countryOptions={countryOptions}
+                  onTypeCreated={onTypeCreated}
                 />
               </form>
 

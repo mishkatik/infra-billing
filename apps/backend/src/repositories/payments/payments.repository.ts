@@ -46,6 +46,19 @@ export class PaymentsRepository {
     return rows.map((r) => r.providerUuid);
   }
 
+  /** Earliest payment date per provider (any type) — used to backdate tariff estimates. */
+  async earliestPaymentDateByProvider(): Promise<Map<string, Date>> {
+    const rows = await this.prisma.payment.groupBy({
+      by: ['providerUuid'],
+      _min: { paymentDate: true },
+    });
+    const map = new Map<string, Date>();
+    for (const r of rows) {
+      if (r._min.paymentDate) map.set(r.providerUuid, r._min.paymentDate);
+    }
+    return map;
+  }
+
   async listPaginated(
     filters: PaymentFilters,
     page: number,

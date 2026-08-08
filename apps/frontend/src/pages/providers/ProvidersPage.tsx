@@ -80,6 +80,7 @@ export function ProvidersPage() {
       projectName: p.projectName ?? '',
       panelId: p.panelId ?? '',
       isPostpaid: p.isPostpaid,
+      useCatalogNames: p.useCatalogNames !== false,
     });
     setDetailUuid(p.uuid);
   };
@@ -198,6 +199,7 @@ export function ProvidersPage() {
         sort={sort}
         onToggleSort={toggleSort}
         onRowClick={openDetail}
+        onSync={doSync}
       />
 
       <ProviderFormModal

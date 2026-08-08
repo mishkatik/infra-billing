@@ -41,6 +41,7 @@ export const providerSchema = z.object({
   hasTotpSecret: z.boolean().describe('Stored TOTP secret present').optional(),
   hasApiPassword: z.boolean().describe('Stored API password present').optional(),
   hasSecretKey: z.boolean().describe('Stored secret API key present').optional(),
+  useCatalogNames: z.boolean().describe('OpenRouter: use catalog display names').optional(),
   createdAt: isoDateSchema.describe('Creation time'),
   updatedAt: isoDateSchema.describe('Last update time'),
 });
@@ -79,6 +80,7 @@ const credentialFields = {
   apiPassword: z.string().min(1).describe('Beget API password').optional(),
   // Porkbun: the secret API key, paired with `token` (the API key).
   secretKey: z.string().min(1).describe('Secret API key').optional(),
+  useCatalogNames: z.boolean().describe('OpenRouter: use catalog display names').optional(),
 };
 
 export const createProviderSchema = z.object({

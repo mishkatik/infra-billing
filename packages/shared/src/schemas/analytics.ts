@@ -75,7 +75,11 @@ export const upcomingBillingSchema = z.object({
   providerFaviconLink: z.string().describe('Provider favicon URL').nullable(),
   providerIconName: z.string().describe('Provider Tabler icon name').nullable(),
   providerIconBg: z.string().describe('Provider icon tile background').nullable(),
+  type: z.string().describe('Service type'),
   countryCode: z.string().describe('Service country code').nullable(),
+  marker: z.string().describe('Custom type marker').nullable(),
+  markerBg: z.string().describe('Custom type marker color').nullable(),
+  vendor: z.string().describe('LLM vendor slug').nullable(),
   nextBillingAt: isoDateSchema.describe('Next billing date'),
   cost: moneySchema.describe('Cost in service currency'),
   currency: currencySchema.describe('Service currency'),
@@ -115,7 +119,11 @@ export const overdueBillingSchema = z.object({
   providerFaviconLink: z.string().describe('Provider favicon URL').nullable(),
   providerIconName: z.string().describe('Provider Tabler icon name').nullable(),
   providerIconBg: z.string().describe('Provider icon tile background').nullable(),
+  type: z.string().describe('Service type'),
   countryCode: z.string().describe('Service country code').nullable(),
+  marker: z.string().describe('Custom type marker').nullable(),
+  markerBg: z.string().describe('Custom type marker color').nullable(),
+  vendor: z.string().describe('LLM vendor slug').nullable(),
   nextBillingAt: isoDateSchema.describe('Missed billing date'),
   cost: moneySchema.describe('Cost in service currency'),
   currency: currencySchema.describe('Service currency'),
@@ -173,6 +181,9 @@ export const forecastPointSchema = z.object({
   month: z.string().describe('Month'),
   projected: moneySchema.describe('Projected cost (future months)'),
   actual: moneySchema.describe('Actual charges (past/current months)'),
+  estimated: moneySchema.describe(
+    'Tariff backfill for past/current months (providers without payment history, or force mode)',
+  ),
 });
 export type ForecastPoint = z.infer<typeof forecastPointSchema>;
 

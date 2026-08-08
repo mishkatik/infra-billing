@@ -325,7 +325,14 @@ export function DashboardAlerts({ overdue, upcoming, runway, topUps }: Dashboard
                       iconName={b.providerIconName}
                       iconBg={b.providerIconBg}
                     />
-                    <ServiceBadge countryCode={b.countryCode} name={b.name} />
+                    <ServiceBadge
+                      name={b.name}
+                      type={b.type}
+                      countryCode={b.countryCode}
+                      marker={b.marker}
+                      markerBg={b.markerBg}
+                      vendor={b.vendor}
+                    />
                   </>
                 }
                 badge={
@@ -443,7 +450,14 @@ export function DashboardAlerts({ overdue, upcoming, runway, topUps }: Dashboard
                         iconName={b.providerIconName}
                         iconBg={b.providerIconBg}
                       />
-                      <ServiceBadge countryCode={b.countryCode} name={b.name} />
+                      <ServiceBadge
+                        name={b.name}
+                        type={b.type}
+                        countryCode={b.countryCode}
+                        marker={b.marker}
+                        markerBg={b.markerBg}
+                        vendor={b.vendor}
+                      />
                     </>
                   }
                   badge={

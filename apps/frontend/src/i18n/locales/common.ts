@@ -18,6 +18,7 @@ export const common = {
       moreActions: 'More actions',
       searchPlaceholder: 'Search…',
       nothingFound: 'Nothing found',
+      createOption: 'Create "{{name}}"',
       iconAppearance: 'Custom icon (optional)',
       iconAppearanceHint: 'Alternative to the favicon from the link — pick a Tabler icon and color',
       iconPick: 'Choose icon…',
@@ -98,6 +99,7 @@ export const common = {
     validation: {
       enterName: 'Enter a name',
       selectProvider: 'Select a provider',
+      serviceTypeInvalid: 'Use 1-40 characters: letters, digits, spaces, . _ / -',
       amountFormat: 'Amount like 100 or 100.50',
       enterDate: 'Enter a date',
       currencyCode: '3 or 4 letter code',
@@ -123,6 +125,7 @@ export const common = {
         storage: 'Storage',
         db: 'Database',
         license: 'License',
+        llm: 'LLM',
         other: 'Other',
       },
       providerKind: {
@@ -143,6 +146,7 @@ export const common = {
         cloudflare: 'Cloudflare',
         stormwall: 'StormWall',
         doubleservers: 'Double Servers',
+        openrouter: 'OpenRouter',
         manual: 'Manual',
       },
       rateSource: {
@@ -168,6 +172,7 @@ export const common = {
       moreActions: 'Другие действия',
       searchPlaceholder: 'Поиск…',
       nothingFound: 'Ничего не найдено',
+      createOption: 'Создать "{{name}}"',
       iconAppearance: 'Своя иконка (необязательно)',
       iconAppearanceHint: 'Альтернатива favicon по ссылке - иконка Tabler и цвет фона',
       iconPick: 'Выбрать иконку…',
@@ -248,6 +253,7 @@ export const common = {
     validation: {
       enterName: 'Укажите имя',
       selectProvider: 'Выберите провайдера',
+      serviceTypeInvalid: '1-40 символов: буквы, цифры, пробелы, . _ / -',
       amountFormat: 'Сумма вида 100 или 100.50',
       enterDate: 'Укажите дату',
       currencyCode: 'Код из 3-4 букв',
@@ -273,6 +279,7 @@ export const common = {
         storage: 'Хранилище',
         db: 'База данных',
         license: 'Лицензия',
+        llm: 'LLM',
         other: 'Другое',
       },
       providerKind: {
@@ -293,6 +300,7 @@ export const common = {
         cloudflare: 'Cloudflare',
         stormwall: 'StormWall',
         doubleservers: 'Double Servers',
+        openrouter: 'OpenRouter',
         manual: 'Ручной',
       },
       rateSource: {

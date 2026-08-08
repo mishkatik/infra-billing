@@ -7,6 +7,27 @@ export const settings = {
     syncInterval: 'Sync interval (hours)',
     rateSource: 'Rate source',
     settingsSaved: 'Settings saved',
+    forecast: {
+      title: 'Spend-by-month chart',
+      description:
+        'Past months on the chart normally show imported payments only. Some providers have no payment ledger, so history can look too low compared with Monthly expenses.',
+      paymentImportWarn:
+        'Out of your {{total}} providers, {{missing}} do not support payment import. Past bars may understate real spend. Enable tariff projection below for full portfolio cost.',
+      paymentImportOk:
+        'All {{total}} providers support payment import. Chart history is based on imported payments, so tariff projection is usually unnecessary.',
+      backfill: 'Show tariff estimate on past months',
+      backfillDescription:
+        'Past and current months use Estimated = full portfolio monthly cost (same basis as Monthly expenses). It replaces the bar height. Actual payments stay visible in the tooltip.',
+      respectCreatedAt: 'Only count services created by that month',
+      respectCreatedAtDescription:
+        'For each past month, Estimated includes only services whose Created date is in that month or earlier. Turn off if Created is from the first sync rather than the real start.',
+      backdateFromPayments: 'Backdate from earlier payments',
+      backdateFromPaymentsDescription:
+        'If a provider has payments before its services were Created, count that provider from the first payment month instead.',
+      force: 'Force estimate into actual',
+      forceDescription:
+        'Ignores imported payments and writes the same full tariff total into both Actual and Estimated. Useful when integrations need tariff-based history in Actual.',
+    },
     telegram: {
       title: 'Telegram notifications',
       tokenSet: 'token set',
@@ -63,6 +84,27 @@ export const settings = {
     syncInterval: 'Интервал синхронизации (часы)',
     rateSource: 'Источник курсов',
     settingsSaved: 'Настройки сохранены',
+    forecast: {
+      title: 'График расходов по месяцам',
+      description:
+        'Прошлые месяцы на графике по умолчанию показывают только импортированные платежи. У части провайдеров нет ledger, поэтому история может быть заметно ниже, чем «Расходы в месяц».',
+      paymentImportWarn:
+        'У ваших {{missing}} из {{total}} провайдеров нет импорта платежей. Столбцы за прошлые месяцы могут занижать реальный расход. Включите проецирование тарифов ниже для полной стоимости портфеля.',
+      paymentImportOk:
+        'Все {{total}} провайдеров поддерживают импорт платежей. История графика строится по фактическим платежам, проецирование тарифов обычно не нужно.',
+      backfill: 'Показывать оценку по тарифам на прошлых месяцах',
+      backfillDescription:
+        'Для прошлых и текущего месяца серия «Оценка» = полная месячная стоимость портфеля (как в «Расходы в месяц»). Она задает высоту столбца. Фактические платежи остаются в подсказке.',
+      respectCreatedAt: 'Учитывать только сервисы, созданные к этому месяцу',
+      respectCreatedAtDescription:
+        'В каждом прошлом месяце Estimated включает только сервисы, у которых Created в этом месяце или раньше. Выключите, если Created - дата первого синка, а не реальный старт.',
+      backdateFromPayments: 'Откатывать к более ранним платежам',
+      backdateFromPaymentsDescription:
+        'Если у провайдера есть платежи раньше Created сервисов, считать этого провайдера с месяца первого платежа.',
+      force: 'Записать оценку в actual',
+      forceDescription:
+        'Игнорирует импортированные платежи и пишет одну и ту же полную сумму тарифов и в Actual, и в Estimated. Удобно, когда интеграциям нужна тарифная история именно в Actual.',
+    },
     telegram: {
       title: 'Telegram-уведомления',
       tokenSet: 'токен задан',

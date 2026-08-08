@@ -19,6 +19,20 @@ export const settingsSchema = z.object({
   telegramTopicId: z.string().describe('Telegram topic ID').nullable(),
   telegramProxyUrl: z.string().describe('SOCKS proxy URL for Telegram').nullable(),
   telegramConfigured: z.boolean().describe('Bot token is set'),
+  forecastTariffBackfill: z
+    .boolean()
+    .describe('Fill forecast history with full portfolio monthly tariffs'),
+  forecastTariffBackfillRespectCreatedAt: z
+    .boolean()
+    .describe('Only include services whose createdAt falls on or before each month'),
+  forecastTariffBackfillBackdateFromPayments: z
+    .boolean()
+    .describe(
+      'If a provider has payments before its services were created, count tariffs from the first payment month',
+    ),
+  forecastTariffBackfillForce: z
+    .boolean()
+    .describe('Ignore payments and write full tariff total into actual and estimated'),
 });
 export type Settings = z.infer<typeof settingsSchema>;
 
@@ -44,6 +58,24 @@ export const updateSettingsSchema = z.object({
     .string()
     .regex(/^$|^socks(4a?|5h?)?:\/\/\S+$/)
     .describe('SOCKS proxy URL for Telegram notifications')
+    .optional(),
+  forecastTariffBackfill: z
+    .boolean()
+    .describe('Fill forecast history with full portfolio monthly tariffs')
+    .optional(),
+  forecastTariffBackfillRespectCreatedAt: z
+    .boolean()
+    .describe('Only include services whose createdAt falls on or before each month')
+    .optional(),
+  forecastTariffBackfillBackdateFromPayments: z
+    .boolean()
+    .describe(
+      'If a provider has payments before its services were created, count tariffs from the first payment month',
+    )
+    .optional(),
+  forecastTariffBackfillForce: z
+    .boolean()
+    .describe('Ignore payments and write full tariff total into actual and estimated')
     .optional(),
 });
 export type UpdateSettings = z.infer<typeof updateSettingsSchema>;

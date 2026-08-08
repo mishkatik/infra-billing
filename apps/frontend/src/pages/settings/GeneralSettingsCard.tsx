@@ -1,8 +1,8 @@
+import type { RateSource } from '@infra/shared';
 import { IconLoader2 } from '@tabler/icons-react';
 import { useEffect } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import type { RateSource } from '@infra/shared';
 import { apiErrorMessage } from '@/api/client';
 import { useSettings, useUpdateSettings } from '@/api/settings';
 import { Button } from '@/components/ui/button';
