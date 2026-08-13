@@ -22,7 +22,8 @@ const PER_PAGE = 500;
 const MAX_PAGES = 50; // safety cap so a misbehaving cursor contract can't loop forever
 
 // Vultr v2 (https://api.vultr.com/v2): no npm SDK -> thin axios client, Bearer <API key>, money USD.
-// Balance: GET /account (wrapped in `account`, negative = credit). Services: /instances priced via
+// Balance: GET /account (wrapped in `account`, negative = credit -> normalised, see fetchAccount).
+// Services: /instances priced via
 // /plans (`monthly_cost`). Payments: /billing/history rows -> topup/charge. Cursor pagination via
 // `meta.links.next`. Key may be IP-allowlisted (Access Control) -> off-list IP gives 403 (surfaced).
 export class VultrConnector implements Connector {
@@ -50,7 +51,13 @@ export class VultrConnector implements Connector {
 
   async fetchAccount(signal: AbortSignal): Promise<Account> {
     const { data } = await this.http.get<VultrAccountResponse>('/account', { signal });
-    return { balance: new Decimal(data.account?.balance ?? 0), currency: VULTR_CURRENCY };
+    // Prepaid: Vultr reports `balance` from its own ledger (negative = credit held by the customer)
+    // and bills `pending_charges` for the current period out of that credit. Mirror the console's
+    // "Remaining Credit" so stored credit is positive, consistent with the other connectors
+    // (cf. Linode, where the same sign flip is applied).
+    const credit = new Decimal(String(data.account?.balance ?? 0)).neg();
+    const pendingCharges = new Decimal(String(data.account?.pending_charges ?? 0));
+    return { balance: credit.minus(pendingCharges), currency: VULTR_CURRENCY };
   }
 
   async fetchServices(signal: AbortSignal): Promise<ServiceData[]> {
