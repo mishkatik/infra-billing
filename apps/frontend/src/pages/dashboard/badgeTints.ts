@@ -18,6 +18,7 @@ const PROVIDER_BRAND: Record<string, string> = {
   netlen: '#E11D48',
   '4vps': '#14B8A6',
   porkbun: '#EC4899',
+  spaceship: '#38BDF8',
   stormwall: '#64748B',
   hostbill: '#6366F1',
   billmgr: '#6366F1',

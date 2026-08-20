@@ -41,6 +41,7 @@ export const DEFAULT_LOGIN_URLS: Record<string, string> = {
   vdsina: 'https://cp.vdsina.ru',
   cloudflare: 'https://dash.cloudflare.com',
   porkbun: 'https://porkbun.com/account',
+  spaceship: 'https://www.spaceship.com/application/',
   yandex: 'https://console.yandex.cloud',
   doubleservers: 'https://doubleservers.com/dashboard',
   openrouter: 'https://openrouter.ai',
@@ -116,6 +117,8 @@ export function validateProviderCredentials(
   if (requireCreds && v.kind === 'vultr' && !v.token) return t('providers.err.vultrToken');
   if (requireCreds && v.kind === 'porkbun' && !(v.token && v.secretKey))
     return t('providers.err.porkbunCreds');
+  if (requireCreds && v.kind === 'spaceship' && !(v.token && v.secretKey))
+    return t('providers.err.spaceshipCreds');
   if (requireCreds && v.kind === 'linode' && !v.token) return t('providers.err.linodeToken');
   if (requireCreds && v.kind === 'aeza' && !v.token) return t('providers.err.aezaToken');
   if (v.kind === 'hostkey') {

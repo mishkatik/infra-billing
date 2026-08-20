@@ -16,9 +16,9 @@
 ## Возможности
 
 - **Провайдеры с API:** Timeweb Cloud, Hetzner Cloud, Hostkey (InvAPI), netcup, HostBill,
-  ISPsystem BILLmanager, Selectel, 4VPS.SU, Netlen, Beget Cloud, Porkbun, Vultr, Linode, Aeza,
-  VDSina, Cloudflare, StormWall, Yandex Cloud, Double Servers, OpenRouter. Плюс **Manual** —
-  провайдеры без API ведутся руками.
+  ISPsystem BILLmanager, Selectel, 4VPS.SU, Netlen, Beget Cloud, Porkbun, Spaceship, Vultr,
+  Linode, Aeza, VDSina, Cloudflare, StormWall, Yandex Cloud, Double Servers, OpenRouter. Плюс
+  **Manual** — провайдеры без API ведутся руками.
 - **Автосинк** (по расписанию + кнопкой): баланс + валюта аккаунта, список серверов/услуг, даты
   следующих списаний; история баланса по дням (снапшоты).
 - **Импорт платежей** там, где API отдаёт реестр: пополнения и списания (BILLmanager, Netlen,
@@ -207,6 +207,9 @@ curl -H "Authorization: Bearer ib_…" https://infra-billing/api/providers
 - **Porkbun** — API key + Secret API key (Account → API Access; ключ нужно включить на каждом домене).
   Регистратор доменов: тянет домены (`type=domain`, дата продления = дата истечения), баланс (USD)
   и цену продления по TLD. Истории платежей в API нет.
+- **Spaceship** — API key + secret (API manager). Регистратор доменов: тянет домены (`type=domain`,
+  дата продления = дата истечения). Баланса, цен продления и истории платежей в API нет — цену
+  домена можно проставить руками.
 - **Vultr** — API-ключ (Account → API). Если на ключе включён Access Control — добавьте IP сервера
   в whitelist, иначе запросы отклоняются (403). Тянет баланс (USD), серверы (цена из тарифа) и
   реестр billing-history (пополнения и списания); страна определяется по региону.

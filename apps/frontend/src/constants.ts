@@ -14,6 +14,7 @@ const PROVIDER_KINDS: ProviderKind[] = [
   'netlen',
   'beget',
   'porkbun',
+  'spaceship',
   'vultr',
   'linode',
   'aeza',

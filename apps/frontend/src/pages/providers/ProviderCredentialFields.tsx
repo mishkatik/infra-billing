@@ -1114,6 +1114,36 @@ export function ProviderCredentialFields({
     );
   }
 
+  if (kind === 'spaceship') {
+    return (
+      <>
+        <Field
+          id="cred-token"
+          label={t('providers.field.spaceshipApiKey')}
+          description={t('providers.field.spaceshipApiKeyDesc')}
+          link="https://www.spaceship.com/application/api-manager/"
+        >
+          <SecretFormField
+            form={form}
+            name="token"
+            id="cred-token"
+            hasStored={storedSecrets?.hasToken}
+            reveal={reveal}
+          />
+        </Field>
+        <Field id="cred-secret-key" label={t('providers.field.spaceshipApiSecret')}>
+          <SecretFormField
+            form={form}
+            name="secretKey"
+            id="cred-secret-key"
+            hasStored={storedSecrets?.hasSecretKey}
+            reveal={reveal}
+          />
+        </Field>
+      </>
+    );
+  }
+
   if (kind === 'yandex') {
     return (
       <>
