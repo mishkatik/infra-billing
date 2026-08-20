@@ -128,6 +128,9 @@ export class ProvidersService {
     if (kind === 'porkbun') {
       return { hasToken: Boolean(c.apiKey), hasSecretKey: Boolean(c.secretApiKey) };
     }
+    if (kind === 'spaceship') {
+      return { hasToken: Boolean(c.apiKey), hasSecretKey: Boolean(c.apiSecret) };
+    }
     if (kind === 'yandex') {
       return { hasToken: Boolean(c.keyId && c.serviceAccountId && c.privateKey) };
     }
@@ -192,6 +195,12 @@ export class ProvidersService {
       const out: ProviderCredentialsReveal = {};
       if (c.apiKey) out.token = c.apiKey;
       if (c.secretApiKey) out.secretKey = c.secretApiKey;
+      return out;
+    }
+    if (kind === 'spaceship') {
+      const out: ProviderCredentialsReveal = {};
+      if (c.apiKey) out.token = c.apiKey;
+      if (c.apiSecret) out.secretKey = c.apiSecret;
       return out;
     }
     if (kind === 'yandex') {
@@ -439,6 +448,17 @@ export class ProvidersService {
         throw new BadRequestException('Provide both the Porkbun API key and secret key');
       }
       return this.crypto.encrypt(JSON.stringify({ apiKey, secretApiKey }));
+    }
+    if (kind === 'spaceship') {
+      // JSON { apiKey, apiSecret }. `token` carries the API key. Merge so a partial edit works.
+      if (!dto.token && !dto.secretKey) return null;
+      const base = this.decodeCredentials(existingEnc);
+      const apiKey = dto.token ?? base.apiKey;
+      const apiSecret = dto.secretKey ?? base.apiSecret;
+      if (!apiKey || !apiSecret) {
+        throw new BadRequestException('Provide both the Spaceship API key and secret');
+      }
+      return this.crypto.encrypt(JSON.stringify({ apiKey, apiSecret }));
     }
     if (kind === 'yandex') {
       // `token` carries the service-account authorized key (JSON); parse it into { keyId,
