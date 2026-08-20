@@ -40,7 +40,8 @@ export function CountryCombobox({
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    // modal: without it a parent dialog's scroll lock swallows wheel events over the list.
+    <Popover open={open} onOpenChange={setOpen} modal>
       <PopoverTrigger asChild>
         <button
           id={id}

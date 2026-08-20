@@ -29,6 +29,7 @@ import {
 } from './ServiceTypeIcon';
 
 const NAME_MAX_LENGTH = 40;
+const DESCRIPTION_MAX_LENGTH = 60;
 
 interface ServicesTableProps {
   services: Service[] | undefined;
@@ -132,6 +133,19 @@ export function ServicesTable({
                         </Badge>
                       )}
                     </div>
+                    {s.description &&
+                      (s.description.length > DESCRIPTION_MAX_LENGTH ? (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <p className="mt-1 pl-6 text-xs text-muted-foreground">
+                              {truncate(s.description, DESCRIPTION_MAX_LENGTH)}
+                            </p>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">{s.description}</TooltipContent>
+                        </Tooltip>
+                      ) : (
+                        <p className="mt-1 pl-6 text-xs text-muted-foreground">{s.description}</p>
+                      ))}
                   </TableCell>
                   <TableCell>
                     <EntityLabel

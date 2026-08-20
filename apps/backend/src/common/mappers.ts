@@ -57,6 +57,7 @@ export function mapService(s: Service & { _count?: { payments: number } }): Serv
     providerUuid: s.providerUuid,
     projectUuid: s.projectUuid,
     name: s.name,
+    description: s.description,
     type: s.type as ServiceType,
     externalId: s.externalId,
     countryCode: s.countryCode,

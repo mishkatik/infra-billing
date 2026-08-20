@@ -5,6 +5,7 @@ export interface SForm {
   providerUuid: string;
   projectUuid: string;
   name: string;
+  description: string;
   type: string;
   cost: string;
   currency: string;

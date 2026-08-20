@@ -73,6 +73,8 @@ export function CreatableCombobox({
         setOpen(next);
         if (!next) setQuery('');
       }}
+      // Without modal a parent dialog's scroll lock swallows wheel events over the list.
+      modal
     >
       <PopoverTrigger asChild>
         <button
