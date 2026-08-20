@@ -1,5 +1,5 @@
+import { toDecimal } from '@common/money';
 import axios, { type AxiosInstance } from 'axios';
-import Decimal from 'decimal.js';
 import { REQUEST_TIMEOUT_MS } from '../common/http';
 import { Account, Connector, PaymentData, ServiceData } from '../connector.interface';
 import { VULTR_CURRENCY, mapVultrInstance, mapVultrPayment } from './vultr.mapper';
@@ -22,9 +22,10 @@ const PER_PAGE = 500;
 const MAX_PAGES = 50; // safety cap so a misbehaving cursor contract can't loop forever
 
 // Vultr v2 (https://api.vultr.com/v2): no npm SDK -> thin axios client, Bearer <API key>, money USD.
-// Balance: GET /account (wrapped in `account`, negative = credit). Services: /instances priced via
-// /plans (`monthly_cost`). Payments: /billing/history rows -> topup/charge. Cursor pagination via
-// `meta.links.next`. Key may be IP-allowlisted (Access Control) -> off-list IP gives 403 (surfaced).
+// Balance: GET /account (negative = credit -> normalised, see fetchAccount).
+// Services: /instances priced via /plans (`monthly_cost`).
+// Payments: /billing/history rows -> topup/charge. Cursor pagination via `meta.links.next`.
+// Key may be IP-allowlisted (Access Control) -> off-list IP gives 403 (surfaced).
 export class VultrConnector implements Connector {
   private readonly http: AxiosInstance;
 
@@ -50,7 +51,14 @@ export class VultrConnector implements Connector {
 
   async fetchAccount(signal: AbortSignal): Promise<Account> {
     const { data } = await this.http.get<VultrAccountResponse>('/account', { signal });
-    return { balance: new Decimal(data.account?.balance ?? 0), currency: VULTR_CURRENCY };
+    const account = data?.account;
+    if (!account) throw new Error('Vultr: unexpected /account response (no `account` object)');
+    // Prepaid: credit comes as a negative `balance`, `pending_charges` bills out of it. Store the
+    // console's positive "Remaining Credit" (same sign convention as Linode).
+    return {
+      balance: toDecimal(account.balance).neg().minus(toDecimal(account.pending_charges)),
+      currency: VULTR_CURRENCY,
+    };
   }
 
   async fetchServices(signal: AbortSignal): Promise<ServiceData[]> {
