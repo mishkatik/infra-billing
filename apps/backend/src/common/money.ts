@@ -4,6 +4,11 @@ import { Period } from '@infra/shared';
 const HOURS_PER_MONTH = 730;
 const DAYS_PER_MONTH = new Decimal(HOURS_PER_MONTH).div(24); // ≈30.42, consistent with hourly
 
+/** Money field from a provider API where absent/null means zero. */
+export function toDecimal(value: Decimal.Value | null | undefined): Decimal {
+  return new Decimal(value ?? 0);
+}
+
 /**
  * Normalize a per-period cost to a monthly cost (same currency, no FX).
  * onetime → 0 (capital expense, excluded from recurring totals).
