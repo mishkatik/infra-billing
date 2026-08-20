@@ -227,6 +227,16 @@ export function ServiceFormFields({
           {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
         </div>
 
+        <div className="space-y-2">
+          <Label htmlFor="service-description">{t('services.fieldDescription')}</Label>
+          <Input
+            id="service-description"
+            maxLength={500}
+            placeholder={t('services.descriptionPlaceholder')}
+            {...register('description')}
+          />
+        </div>
+
         <div className="grid grid-cols-2 gap-4">
           <div className="min-w-0 space-y-2">
             <div className="flex h-4 items-center gap-1">

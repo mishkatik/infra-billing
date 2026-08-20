@@ -4,6 +4,7 @@ model Service {
   providerUuid   String    @map("provider_uuid")
   projectUuid    String    @map("project_uuid")
   name           String    @map("name")
+  description    String?   @map("description")
   type           String    @map("type")
   externalId     String?   @map("external_id")
   countryCode    String?   @default("XX") @map("country_code")

@@ -56,6 +56,7 @@ export class ServicesService {
       providerUuid: dto.providerUuid,
       projectUuid: dto.projectUuid,
       name: dto.name,
+      description: dto.description || null,
       type: dto.type,
       cost: dto.cost,
       currency: dto.currency,
@@ -140,6 +141,7 @@ export class ServicesService {
       }
     }
     if (metaDirty) data.meta = meta as Prisma.InputJsonValue;
+    if (dto.description !== undefined) data.description = dto.description || null;
     if (dto.currency !== undefined) data.currency = dto.currency;
     if (dto.period !== undefined) data.period = dto.period;
     if (dto.countryCode !== undefined) data.countryCode = dto.countryCode;

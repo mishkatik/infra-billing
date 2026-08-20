@@ -71,7 +71,8 @@ export function IconAppearanceFields({
           size={32}
         />
 
-        <Popover open={open} onOpenChange={setOpen}>
+        {/* modal: without it a parent dialog's scroll lock swallows wheel events over the list. */}
+        <Popover open={open} onOpenChange={setOpen} modal>
           <PopoverTrigger asChild>
             <button
               type="button"
