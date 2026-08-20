@@ -178,7 +178,6 @@ export function ServiceMarkerField({
           setOpen(next);
           if (!next) setSearch('');
         }}
-
         modal
       >
         <PopoverTrigger asChild>
