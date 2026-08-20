@@ -44,4 +44,9 @@ export interface Connector {
   fetchServices(signal: AbortSignal): Promise<ServiceData[]>;
   /** Optional payment/expense ledger, for providers that expose one (e.g. BILLmanager). */
   fetchPayments?(signal: AbortSignal): Promise<PaymentData[]>;
+  /**
+   * Optional direct favicon URL, for self-hosted panels whose icon domain-based favicon
+   * services can't discover (e.g. BILLmanager keeps it behind a per-install skin path).
+   */
+  fetchFaviconUrl?(signal: AbortSignal): Promise<string | null>;
 }

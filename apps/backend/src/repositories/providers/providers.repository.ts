@@ -69,6 +69,10 @@ export class ProvidersRepository {
     });
   }
 
+  async updateFaviconLink(uuid: string, url: string): Promise<void> {
+    await this.prisma.provider.update({ where: { uuid }, data: { faviconLink: url } });
+  }
+
   async markSynced(uuid: string): Promise<void> {
     await this.prisma.provider.update({
       where: { uuid },

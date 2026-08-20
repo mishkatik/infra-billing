@@ -30,25 +30,37 @@ export function faviconRootFallback(src: string | null): string | null {
   }
 }
 
-/** Resolve a provider's favicon from its login URL (the provider's dashboard link). */
+/** True for s2 URLs — the service answers "no favicon" with a 16px globe callers filter out. */
+export function isFaviconServiceUrl(src: string): boolean {
+  return src.startsWith(S2_PREFIX);
+}
+
+/**
+ * A direct image URL (has a path, e.g. .../logo.png) is used as-is; a bare domain is resolved
+ * to its site favicon (Google s2).
+ */
+function faviconFromLink(link: string): string | null {
+  try {
+    const url = new URL(link.startsWith('http') ? link : `https://${link}`);
+    if (url.pathname && url.pathname !== '/') return url.href;
+    return faviconResolver(link);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * A provider's icon. faviconLink (when the sync resolved one from the panel itself, e.g. a
+ * BILLmanager skin icon) wins over the loginUrl-derived site favicon.
+ */
 export function providerFavicon(p: {
   faviconLink: string | null;
   loginUrl: string | null;
 }): string | null {
-  return faviconResolver(p.faviconLink || p.loginUrl);
+  return p.faviconLink ? faviconFromLink(p.faviconLink) : faviconResolver(p.loginUrl);
 }
 
-/**
- * A project's icon. A direct image URL (has a path, e.g. .../logo.png) is used as-is; a bare domain
- * is resolved to its site favicon (Google s2), like providers.
- */
+/** A project's icon. */
 export function projectFavicon(faviconLink: string | null): string | null {
-  if (!faviconLink) return null;
-  try {
-    const url = new URL(faviconLink.startsWith('http') ? faviconLink : `https://${faviconLink}`);
-    if (url.pathname && url.pathname !== '/') return url.href;
-    return faviconResolver(faviconLink);
-  } catch {
-    return null;
-  }
+  return faviconLink ? faviconFromLink(faviconLink) : null;
 }
