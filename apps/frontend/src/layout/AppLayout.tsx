@@ -1,18 +1,8 @@
-import {
-  IconFolders,
-  IconKey,
-  IconLayoutDashboard,
-  IconLogout,
-  IconReceipt2,
-  IconServer2,
-  IconSettings,
-  IconShieldLock,
-  IconStack2,
-  type Icon,
-} from '@tabler/icons-react';
+import { IconLogout } from '@tabler/icons-react';
 import { useTranslation } from 'react-i18next';
 import { NavLink as RouterNavLink, Outlet, useLocation } from 'react-router-dom';
 import { useLogout, useMe } from '@/api/auth';
+import { type AppPage, APP_PAGES, pageAllowed } from '@/auth/pages';
 import { BrandWordmark } from '@/components/BrandWordmark';
 import { BuildInfo } from '@/components/BuildInfo';
 import { DocsLink } from '@/components/DocsLink';
@@ -40,60 +30,39 @@ import {
 } from '@/components/ui/sidebar';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
-interface NavItem {
-  to: string;
-  labelKey: string;
-  icon: Icon;
-  end?: boolean;
-}
-
-const NAV: { sectionKey: string; items: NavItem[] }[] = [
-  {
-    sectionKey: 'nav.overview',
-    items: [{ to: '/', labelKey: 'nav.dashboard', icon: IconLayoutDashboard, end: true }],
-  },
-  {
-    sectionKey: 'nav.infrastructure',
-    items: [
-      { to: '/providers', labelKey: 'nav.providers', icon: IconServer2 },
-      { to: '/projects', labelKey: 'nav.projects', icon: IconFolders },
-      { to: '/services', labelKey: 'nav.services', icon: IconStack2 },
-      { to: '/payments', labelKey: 'nav.payments', icon: IconReceipt2 },
-    ],
-  },
-  {
-    sectionKey: 'nav.settings',
-    items: [
-      { to: '/settings', labelKey: 'nav.settingsItem', icon: IconSettings, end: true },
-      { to: '/settings/auth', labelKey: 'nav.authItem', icon: IconShieldLock },
-      { to: '/settings/tokens', labelKey: 'nav.tokensItem', icon: IconKey },
-    ],
-  },
-];
-
 function NavGroups() {
   const { pathname } = useLocation();
   const { t } = useTranslation();
   const { setOpenMobile } = useSidebar();
+  const me = useMe();
+
+  const groups: { sectionKey: AppPage['section']; items: AppPage[] }[] = [];
+  for (const page of APP_PAGES) {
+    if (!pageAllowed(me.data, page)) continue;
+    const group = groups.find((g) => g.sectionKey === page.section);
+    if (group) group.items.push(page);
+    else groups.push({ sectionKey: page.section, items: [page] });
+  }
 
   return (
     <>
-      {NAV.map((group) => (
+      {groups.map((group) => (
         <SidebarGroup key={group.sectionKey}>
           <SidebarGroupLabel className="section-label">{t(group.sectionKey)}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {group.items.map((it) => {
-                const active = it.end ? pathname === it.to : pathname.startsWith(it.to);
+                const to = `/${it.path}`;
+                const active = it.end ? pathname === to : pathname.startsWith(to);
                 const ItemIcon = it.icon;
                 return (
-                  <SidebarMenuItem key={it.to}>
+                  <SidebarMenuItem key={to}>
                     <SidebarMenuButton
                       asChild
                       isActive={active}
                       className="h-10 gap-2.5 px-3 text-[15px] data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground data-[active=true]:font-semibold"
                     >
-                      <RouterNavLink to={it.to} end={it.end} onClick={() => setOpenMobile(false)}>
+                      <RouterNavLink to={to} end={it.end} onClick={() => setOpenMobile(false)}>
                         <ItemIcon className="size-5" stroke={1.5} />
                         <span>{t(it.labelKey)}</span>
                       </RouterNavLink>
@@ -124,7 +93,9 @@ function UserBlock() {
         </Avatar>
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold">{me.data?.username ?? '—'}</p>
-          <p className="truncate text-xs text-muted-foreground">{t('app.singleUser')}</p>
+          <p className="truncate text-xs text-muted-foreground">
+            {me.data?.role === 'member' ? t('app.roleMember') : t('app.roleAdmin')}
+          </p>
         </div>
       </div>
       <Tooltip>

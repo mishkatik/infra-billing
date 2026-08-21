@@ -3,6 +3,7 @@ import { useLayoutEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import type { Passkey } from '@infra/shared';
+import { useMe } from '@/api/auth';
 import {
   useAuthConfig,
   useDeletePasskey,
@@ -12,6 +13,7 @@ import {
 } from '@/api/authSettings';
 import { apiErrorMessage } from '@/api/client';
 import { mapPasskeyError, passkeySupported } from '@/api/webauthn';
+import { isAdmin } from '@/auth/permissions';
 import { PageHeader } from '@/components/PageHeader';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { notifyError, notifySuccess } from '@/utils/notify';
@@ -19,6 +21,58 @@ import { AuthMethodsCard, type MethodsFormValues } from './AuthMethodsCard';
 import { PasskeysCard } from './PasskeysCard';
 
 export function AuthSettingsPage() {
+  const me = useMe();
+  if (me.isLoading) return null;
+  return isAdmin(me.data) ? <AdminAuthSettings /> : <MemberAuthSettings />;
+}
+
+/** Members keep password login and skip GET /auth/config, which 403s for non-admins. */
+function MemberAuthSettings() {
+  const { t } = useTranslation();
+  const { data: passkeys } = usePasskeys();
+  const registerPasskey = useRegisterPasskey();
+  const deletePasskey = useDeletePasskey();
+  const canPasskey = passkeySupported();
+
+  const addPasskey = async () => {
+    try {
+      await registerPasskey.mutateAsync(undefined);
+      notifySuccess(t('auth.passkeys.added'));
+    } catch (e) {
+      const m = mapPasskeyError(e);
+      if (!m.cancelled) notifyError(apiErrorMessage(e, m.message));
+    }
+  };
+
+  const removePasskey = async (pk: Passkey) => {
+    const label = pk.name ?? t('auth.passkeys.unnamed');
+    if (!window.confirm(t('auth.passkeys.confirmDelete', { name: label }))) return;
+    try {
+      await deletePasskey.mutateAsync(pk.uuid);
+      notifySuccess(t('common.deleted'));
+    } catch (e) {
+      notifyError(apiErrorMessage(e));
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title={t('auth.title')} subtitle={t('auth.subtitle')} />
+      <div className="grid items-start gap-4 lg:grid-cols-2">
+        <PasskeysCard
+          passkeys={passkeys}
+          canPasskey={canPasskey}
+          adding={registerPasskey.isPending}
+          removing={deletePasskey.isPending}
+          onAdd={addPasskey}
+          onRemove={removePasskey}
+        />
+      </div>
+    </div>
+  );
+}
+
+function AdminAuthSettings() {
   const { t } = useTranslation();
   const { data: config } = useAuthConfig();
   const { data: passkeys } = usePasskeys();

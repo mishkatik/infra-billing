@@ -5,6 +5,8 @@ import { PrismaService } from '../../prisma/prisma.service';
 export interface ServiceFilters {
   providerUuid?: string;
   projectUuid?: string;
+  /** Hard scope for member accounts; empty array yields no rows. */
+  projectUuids?: string[];
   type?: string;
   isActive?: boolean;
 }
@@ -17,6 +19,7 @@ export class ServicesRepository {
     const where: Prisma.ServiceWhereInput = {};
     if (filters.providerUuid) where.providerUuid = filters.providerUuid;
     if (filters.projectUuid) where.projectUuid = filters.projectUuid;
+    if (filters.projectUuids) where.projectUuid = { in: [...filters.projectUuids] };
     if (filters.type) where.type = filters.type;
     if (filters.isActive !== undefined) where.isActive = filters.isActive;
     return this.prisma.service.findMany({

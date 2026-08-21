@@ -7,6 +7,7 @@ import {
 import { randomBytes } from 'node:crypto';
 import { Prisma } from '@generated/prisma/client';
 import type { AuthConfig as AuthConfigDto, SetupStatus, UpdateAuthConfig } from '@infra/shared';
+import { AccountsRepository } from '@repositories/accounts/accounts.repository';
 import { AuthConfigRepository } from '@repositories/auth-config/auth-config.repository';
 import { PasskeysRepository } from '@repositories/passkeys/passkeys.repository';
 import { CryptoService } from '../crypto/crypto.service';
@@ -23,6 +24,7 @@ export class AuthConfigService {
   constructor(
     private readonly repo: AuthConfigRepository,
     private readonly passkeys: PasskeysRepository,
+    private readonly accounts: AccountsRepository,
     private readonly crypto: CryptoService,
   ) {}
 
@@ -44,11 +46,25 @@ export class AuthConfigService {
   /** Public bootstrap status driving the login/setup screen. */
   async getStatus(): Promise<SetupStatus> {
     const row = await this.getRow();
-    if (!row) return { needsSetup: true, passwordEnabled: false, passkeyEnabled: false };
+    if (!row) {
+      return {
+        needsSetup: true,
+        passwordEnabled: false,
+        passkeyEnabled: false,
+        memberPasswordLogin: false,
+        memberPasskeys: false,
+      };
+    }
+    const [enabledAccounts, memberPasskeys] = await Promise.all([
+      this.accounts.countEnabled(),
+      this.passkeys.countMembers(),
+    ]);
     return {
       needsSetup: false,
       passwordEnabled: row.passwordEnabled,
       passkeyEnabled: row.passkeyEnabled,
+      memberPasswordLogin: enabledAccounts > 0,
+      memberPasskeys: memberPasskeys > 0,
     };
   }
 
@@ -90,7 +106,7 @@ export class AuthConfigService {
     if (!passwordEnabled && !passkeyEnabled) {
       throw new BadRequestException('At least one login method must remain enabled');
     }
-    if (!passwordEnabled && (await this.passkeys.count()) === 0) {
+    if (!passwordEnabled && (await this.passkeys.countByOwner(null)) === 0) {
       throw new BadRequestException('Add a passkey before disabling password login');
     }
 

@@ -1,0 +1,12 @@
+model AccountProject {
+  accountUuid String @map("account_uuid")
+  projectUuid String @map("project_uuid")
+
+  account Account @relation(fields: [accountUuid], references: [uuid], onDelete: Cascade)
+  project Project @relation(fields: [projectUuid], references: [uuid], onDelete: Cascade)
+
+  @@id([accountUuid, projectUuid])
+  // accountUuid is covered by the composite PK's leftmost column; projectUuid needs its own.
+  @@index([projectUuid], map: "account_projects_project_uuid_idx")
+  @@map("account_projects")
+}

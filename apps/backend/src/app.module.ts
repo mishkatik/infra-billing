@@ -23,6 +23,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { SettingsModule } from './settings/settings.module';
 import { ApiTokensModule } from './api-tokens/api-tokens.module';
+import { AccountsModule } from './accounts/accounts.module';
 import { AllExceptionsFilter } from '@common/all-exceptions.filter';
 
 // Built SPA lives at apps/frontend/dist; from compiled backend (apps/backend/dist)
@@ -50,6 +51,7 @@ const FRONTEND_DIST = join(__dirname, '..', '..', 'frontend', 'dist');
     NotificationsModule,
     SettingsModule,
     ApiTokensModule,
+    AccountsModule,
     // SPA fallback for all non-API routes.
     ServeStaticModule.forRoot({
       rootPath: FRONTEND_DIST,

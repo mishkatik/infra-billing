@@ -21,7 +21,16 @@ function httpUrl(u: string): string | null {
 
 // netcup OAuth2 device flow in-panel: shows verification link + user code, polls until the
 // owner approves, then hands the minted refresh token to the parent form via onToken.
-export function NetcupAuthorizeButton({ onToken }: { onToken: (token: string) => void }) {
+export function NetcupAuthorizeButton({
+  onToken,
+  disabled,
+}: {
+  onToken: (token: string) => void;
+  // Device-flow endpoints are admin-only server-side — members with providers:edit keep the
+  // button visible (the description below still points at it) but disabled, same as the
+  // credentials-reveal eye button; they fall back to pasting a refresh token manually.
+  disabled?: boolean;
+}) {
   const { t } = useTranslation();
   const startMut = useNetcupDeviceStart();
   const pollMut = useNetcupDevicePoll();
@@ -74,6 +83,7 @@ export function NetcupAuthorizeButton({ onToken }: { onToken: (token: string) =>
   };
 
   const authorize = async () => {
+    if (disabled) return;
     setErrMsg('');
     setPhase('waiting');
     try {
@@ -136,7 +146,7 @@ export function NetcupAuthorizeButton({ onToken }: { onToken: (token: string) =>
         type="button"
         variant="ghost"
         className="w-full bg-brand/10 text-brand hover:bg-brand/20 hover:text-brand"
-        disabled={phase === 'waiting'}
+        disabled={disabled || phase === 'waiting'}
         onClick={authorize}
       >
         {phase === 'waiting' ? (

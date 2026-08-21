@@ -3,10 +3,11 @@ import type { Settings, UpdateSettings } from '@infra/shared';
 import { api } from './client';
 import { API_PATH } from '@infra/shared';
 
-export function useSettings() {
+export function useSettings(opts?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ['settings'],
     queryFn: async () => (await api.get<Settings>(API_PATH.SETTINGS)).data,
+    enabled: opts?.enabled ?? true,
   });
 }
 

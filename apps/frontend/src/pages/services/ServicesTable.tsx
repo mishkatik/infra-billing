@@ -40,8 +40,10 @@ interface ServicesTableProps {
   periodLabel: (period: string) => string;
   sort: SortState<ServiceSortKey> | null;
   onToggleSort: (key: ServiceSortKey) => void;
-  onRowClick: (s: Service) => void;
-  onBumpNextBilling: (s: Service) => void;
+  // Absent for members without services:edit — rows render inert (no edit/delete entry point).
+  onRowClick?: (s: Service) => void;
+  // Absent for members without services:edit — no bump button rendered.
+  onBumpNextBilling?: (s: Service) => void;
 }
 
 export function ServicesTable({
@@ -87,17 +89,22 @@ export function ServicesTable({
               return (
                 <TableRow
                   key={s.uuid}
-                  tabIndex={0}
-                  onClick={() => onRowClick(s)}
-                  onKeyDown={(e) => {
-                    // Keyboard access: rows act as buttons opening the detail modal.
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      onRowClick(s);
-                    }
-                  }}
+                  tabIndex={onRowClick ? 0 : undefined}
+                  onClick={onRowClick ? () => onRowClick(s) : undefined}
+                  onKeyDown={
+                    onRowClick
+                      ? (e) => {
+                          // Keyboard access: rows act as buttons opening the detail modal.
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            onRowClick(s);
+                          }
+                        }
+                      : undefined
+                  }
                   className={cn(
-                    'cursor-pointer focus-visible:bg-muted/50 focus-visible:outline-none',
+                    onRowClick &&
+                      'cursor-pointer focus-visible:bg-muted/50 focus-visible:outline-none',
                     !s.isActive && 'opacity-50',
                   )}
                 >
@@ -148,12 +155,17 @@ export function ServicesTable({
                       ))}
                   </TableCell>
                   <TableCell>
-                    <EntityLabel
-                      name={provider?.name ?? ''}
-                      src={providerFavicon(provider ?? { faviconLink: null, loginUrl: null })}
-                      iconName={provider?.iconName}
-                      iconBg={provider?.iconBg}
-                    />
+                    {provider ? (
+                      <EntityLabel
+                        name={provider.name}
+                        src={providerFavicon(provider)}
+                        iconName={provider.iconName}
+                        iconBg={provider.iconBg}
+                      />
+                    ) : (
+                      // Missing providers:read (member) or a dangling reference — either way, no name to show.
+                      <span className="text-muted-foreground">—</span>
+                    )}
                   </TableCell>
                   <TableCell>
                     <EntityLabel
@@ -169,7 +181,7 @@ export function ServicesTable({
                   <TableCell>
                     <div className="flex items-center gap-1">
                       {formatDateShort(s.nextBillingAt)}
-                      {s.nextBillingAt && (
+                      {s.nextBillingAt && onBumpNextBilling && (
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button

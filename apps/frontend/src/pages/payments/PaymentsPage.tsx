@@ -3,6 +3,7 @@ import dayjs from 'dayjs';
 import { type Dispatch, type SetStateAction, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
+import { useMe } from '@/api/auth';
 import { apiErrorMessage } from '@/api/client';
 import {
   type PaymentFilter,
@@ -12,6 +13,7 @@ import {
 } from '@/api/payments';
 import { useProviders } from '@/api/providers';
 import { useServices } from '@/api/services';
+import { can } from '@/auth/permissions';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { useEnums } from '@/constants';
@@ -28,7 +30,11 @@ const PAGE_SIZE = 50;
 export function PaymentsPage() {
   const { t } = useTranslation();
   const enums = useEnums();
-  const { data: providers } = useProviders();
+  const me = useMe();
+  const canEdit = can(me.data, 'payments:edit');
+  const canReadProviders = can(me.data, 'providers:read');
+  const canReadServices = can(me.data, 'services:read');
+  const { data: providers } = useProviders({ enabled: canReadProviders });
   const [filter, setFilterState] = useState<PaymentFilter>({});
   const [rawPage, setRawPage] = useState(1);
   // A new filter always lands on page 1 — reset in the same event that changes the filter, so we
@@ -66,7 +72,10 @@ export function PaymentsPage() {
   });
 
   const providerUuid = form.watch('providerUuid');
-  const formServices = useServices({ providerUuid: providerUuid || undefined });
+  const formServices = useServices(
+    { providerUuid: providerUuid || undefined },
+    { enabled: canReadServices },
+  );
   const serviceOptions = (formServices.data ?? []).map((s) => ({ value: s.uuid, label: s.name }));
 
   const openCreate = () => {
@@ -114,10 +123,13 @@ export function PaymentsPage() {
         title={t('payments.title')}
         subtitle={t('payments.subtitle')}
         actions={
-          <Button onClick={openCreate} disabled={providerOptions.length === 0}>
-            <IconPlus className="size-4" />
-            {t('common.add')}
-          </Button>
+          canEdit &&
+          canReadProviders && (
+            <Button onClick={openCreate} disabled={providerOptions.length === 0}>
+              <IconPlus className="size-4" />
+              {t('common.add')}
+            </Button>
+          )
         }
       />
 
@@ -128,7 +140,7 @@ export function PaymentsPage() {
         isLoading={isLoading}
         total={total}
         providerOf={providerOf}
-        onDelete={doDelete}
+        onDelete={canEdit ? doDelete : undefined}
       />
 
       {total > PAGE_SIZE && (

@@ -90,8 +90,10 @@ export function KpiCards({ summary, base }: KpiCardsProps) {
         });
       };
 
-      let next: Cols = 1;
-      for (const n of [4, 2, 1] as const) {
+      // Never pick a column count that leaves dead tracks past the rendered card count.
+      const candidates = ([4, 2, 1] as const).filter((n) => n <= cards.length);
+      let next: Cols = candidates[candidates.length - 1] ?? 1;
+      for (const n of candidates) {
         // Expand only with spare room so zoom subpixels cannot flip columns.
         const slack = n > current ? 32 : 4;
         if (fits(n, slack)) {
@@ -133,18 +135,22 @@ export function KpiCards({ summary, base }: KpiCardsProps) {
         icon={IconChartBar}
         color="blue"
       />
-      <StatCard
-        label={t('dashboard.kpi.currentMonthPayments')}
-        value={formatMoney(summary?.currentMonthPayments ?? '0', base)}
-        icon={IconCash}
-        color="teal"
-      />
-      <StatCard
-        label={t('dashboard.kpi.totalSpent')}
-        value={formatMoney(summary?.totalSpent ?? '0', base)}
-        icon={IconCalendarDollar}
-        color="grape"
-      />
+      {(summary == null || summary.currentMonthPayments != null) && (
+        <StatCard
+          label={t('dashboard.kpi.currentMonthPayments')}
+          value={formatMoney(summary?.currentMonthPayments ?? '0', base)}
+          icon={IconCash}
+          color="teal"
+        />
+      )}
+      {(summary == null || summary.totalSpent != null) && (
+        <StatCard
+          label={t('dashboard.kpi.totalSpent')}
+          value={formatMoney(summary?.totalSpent ?? '0', base)}
+          icon={IconCalendarDollar}
+          color="grape"
+        />
+      )}
     </div>
   );
 }

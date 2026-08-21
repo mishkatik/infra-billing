@@ -4,6 +4,7 @@ import dayjs, { type ManipulateType } from 'dayjs';
 import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
+import { useMe } from '@/api/auth';
 import { apiErrorMessage } from '@/api/client';
 import { useCreatePayment } from '@/api/payments';
 import { useProjects } from '@/api/projects';
@@ -17,6 +18,7 @@ import {
   useUpdateService,
 } from '@/api/services';
 import { useSettings } from '@/api/settings';
+import { can, isAdmin } from '@/auth/permissions';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { useEnums } from '@/constants';
@@ -55,10 +57,14 @@ export function ServicesPage() {
   const { t, i18n } = useTranslation();
   const enums = useEnums();
   const countryOptions = useCountryOptions();
-  const { data: providers } = useProviders();
+  const me = useMe();
+  const canEditServices = can(me.data, 'services:edit');
+  const canReadProviders = can(me.data, 'providers:read');
+  const isAdminUser = isAdmin(me.data);
+  const { data: providers } = useProviders({ enabled: canReadProviders });
   const { data: projects } = useProjects();
-  const { data: rates } = useRates();
-  const { data: settings } = useSettings();
+  const { data: rates } = useRates({ enabled: isAdminUser });
+  const { data: settings } = useSettings({ enabled: isAdminUser });
   const [filter, setFilter] = useState<ServiceFilter>({});
   const { data: services, isLoading } = useServices(filter);
   const create = useCreateService();
@@ -302,10 +308,13 @@ export function ServicesPage() {
         title={t('services.title')}
         subtitle={t('services.subtitle')}
         actions={
-          <Button onClick={openCreate} disabled={providerOptions.length === 0}>
-            <IconPlus className="size-4" />
-            {t('common.add')}
-          </Button>
+          canEditServices &&
+          canReadProviders && (
+            <Button onClick={openCreate} disabled={providerOptions.length === 0}>
+              <IconPlus className="size-4" />
+              {t('common.add')}
+            </Button>
+          )
         }
       />
 
@@ -326,8 +335,8 @@ export function ServicesPage() {
         periodLabel={enums.periodLabel}
         sort={sort}
         onToggleSort={toggleSort}
-        onRowClick={openDetail}
-        onBumpNextBilling={setBumpTarget}
+        onRowClick={canEditServices ? openDetail : undefined}
+        onBumpNextBilling={canEditServices ? setBumpTarget : undefined}
       />
 
       <ServiceFormModal

@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@generated/prisma/client';
 import { BulkMoveResult, DEFAULT_PROJECT_UUID, Project as ProjectDto } from '@infra/shared';
+import type { Principal } from '../auth/principal';
 import { ProjectsRepository } from '@repositories/projects/projects.repository';
 import { ServicesRepository } from '@repositories/services/services.repository';
 import { mapProject } from '@common/mappers';
@@ -13,9 +14,13 @@ export class ProjectsService {
     private readonly services: ServicesRepository,
   ) {}
 
-  async list(): Promise<ProjectDto[]> {
+  async list(principal: Principal): Promise<ProjectDto[]> {
     const rows = await this.projects.listWithCounts();
-    return rows.map(mapProject);
+    const visible =
+      principal.kind === 'member'
+        ? rows.filter((p) => principal.projectUuids.includes(p.uuid))
+        : rows;
+    return visible.map(mapProject);
   }
 
   async create(dto: CreateProjectDto): Promise<ProjectDto> {

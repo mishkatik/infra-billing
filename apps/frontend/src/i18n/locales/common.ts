@@ -29,7 +29,8 @@ export const common = {
     },
     app: {
       brand: 'Infra Billing',
-      singleUser: 'root',
+      roleAdmin: 'Owner',
+      roleMember: 'Member',
       logout: 'Log out',
       starOnGithub: 'Star on GitHub',
       apiDocs: 'API docs',
@@ -59,6 +60,7 @@ export const common = {
       settingsItem: 'Settings',
       authItem: 'Sign-in',
       tokensItem: 'API tokens',
+      accountsItem: 'Accounts',
     },
     login: {
       username: 'Username',
@@ -104,6 +106,8 @@ export const common = {
       enterDate: 'Enter a date',
       currencyCode: '3 or 4 letter code',
       ratePositive: 'Rate must be a positive number',
+      usernameLength: 'Use 1-64 characters',
+      passwordLength: 'Use 8-128 characters',
     },
     placeholder: {
       wip: 'Section under construction.',
@@ -184,7 +188,8 @@ export const common = {
     },
     app: {
       brand: 'Infra Billing',
-      singleUser: 'root',
+      roleAdmin: 'Владелец',
+      roleMember: 'Участник',
       logout: 'Выйти',
       starOnGithub: 'Звезда на GitHub',
       apiDocs: 'Документация API',
@@ -214,6 +219,7 @@ export const common = {
       settingsItem: 'Настройки',
       authItem: 'Вход в систему',
       tokensItem: 'API токены',
+      accountsItem: 'Аккаунты',
     },
     login: {
       username: 'Логин',
@@ -259,6 +265,8 @@ export const common = {
       enterDate: 'Укажите дату',
       currencyCode: 'Код из 3-4 букв',
       ratePositive: 'Курс — положительное число',
+      usernameLength: 'От 1 до 64 символов',
+      passwordLength: 'От 8 до 128 символов',
     },
     placeholder: {
       wip: 'Раздел в разработке.',

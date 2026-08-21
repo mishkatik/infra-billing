@@ -34,13 +34,18 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     if (status >= 500) {
       this.logger.error(
-        `${req.method} ${req.originalUrl} -> ${status}`,
+        `${req.method} ${redactInviteToken(req.originalUrl)} -> ${status}`,
         exception instanceof Error ? exception.stack : String(exception),
       );
     }
 
     res.status(status).json({ error: { code: statusToCode(status), message } });
   }
+}
+
+/** The raw invite/reset token must never land in logs — only the path shape, not the secret. */
+function redactInviteToken(url: string): string {
+  return url.replace(/(\/accounts\/invite\/)[^/?]+/, '$1<redacted>');
 }
 
 function statusToCode(status: number): string {

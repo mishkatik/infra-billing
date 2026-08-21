@@ -25,6 +25,7 @@ export const API = {
   SETTINGS: 'settings',
   NOTIFICATIONS: 'notifications',
   TOKENS: 'tokens',
+  ACCOUNTS: 'accounts',
 } as const;
 
 /** Method sub-paths within a controller (NestJS-style; `:uuid` for route params). */
@@ -60,6 +61,11 @@ export const API_SUB = {
   RATES_BACKFILL: 'backfill',
   NOTIFICATIONS_CHECK: 'check',
   NOTIFICATIONS_TEST: 'test',
+  // Invite/reset one-time links. Static-prefixed ('invite/…', 'invites') — the controller must
+  // declare these before the `:uuid` routes so Express doesn't try to match 'invites' as a uuid.
+  ACCOUNT_INVITES: 'invites',
+  ACCOUNT_INVITE_LINK: `${ID}/invite-link`,
+  ACCOUNT_INVITE_BY_TOKEN: 'invite/:token',
 } as const;
 
 const path = (controller: string, sub?: string): string =>
@@ -130,5 +136,12 @@ export const API_PATH = {
   TOKENS: {
     ROOT: path(API.TOKENS),
     BY_ID: (uuid: string) => pathId(API.TOKENS, API_SUB.BY_ID, uuid),
+  },
+  ACCOUNTS: {
+    ROOT: path(API.ACCOUNTS),
+    BY_ID: (uuid: string) => pathId(API.ACCOUNTS, API_SUB.BY_ID, uuid),
+    INVITES: path(API.ACCOUNTS, API_SUB.ACCOUNT_INVITES),
+    INVITE_LINK: (uuid: string) => pathId(API.ACCOUNTS, API_SUB.ACCOUNT_INVITE_LINK, uuid),
+    INVITE_BY_TOKEN: (token: string) => `/${API.ACCOUNTS}/invite/${encodeURIComponent(token)}`,
   },
 } as const;

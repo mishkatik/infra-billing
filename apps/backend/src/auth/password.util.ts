@@ -22,3 +22,11 @@ export function verifyPassword(plain: string, stored: string | null | undefined)
   const actual = scryptSync(plain, Buffer.from(saltHex, 'hex'), expected.length, { N, r: R, p: P });
   return expected.length === actual.length && timingSafeEqual(expected, actual);
 }
+
+// Computed once at module load; burning against a real hash keeps every login
+// path at exactly one scrypt call, so timing can't reveal whether a username exists.
+const DUMMY_HASH = hashPassword(randomBytes(32).toString('hex'));
+
+export function burnKdf(plain: string): void {
+  verifyPassword(plain, DUMMY_HASH);
+}

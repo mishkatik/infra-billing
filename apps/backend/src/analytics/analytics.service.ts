@@ -12,6 +12,7 @@ import { CurrencyService } from '../currency/currency.service';
 import { monthlyCost } from '@common/money';
 import { overdueDays } from '@common/overdue';
 import { burnFromMonthlyCost, burnFromSnapshots, daysOfRunway } from '@common/runway';
+import { type AnalyticsScope, relevantProviderUuids, UNRESTRICTED } from './scope.util';
 
 const ZERO = () => new Decimal(0);
 
@@ -56,7 +57,7 @@ export class AnalyticsService {
     private readonly currency: CurrencyService,
   ) {}
 
-  async summary(): Promise<AnalyticsSummary> {
+  async summary(scope: AnalyticsScope = UNRESTRICTED): Promise<AnalyticsSummary> {
     const { baseCurrency } = await this.currency.getEffectiveSettings();
     const rates = await this.currency.getRubRates();
     // Past spend uses the rate of its payment date; everything else uses today's.
@@ -66,10 +67,17 @@ export class AnalyticsService {
       this.providersRepo.listAll(),
       this.projectsRepo.listAll(),
       this.servicesRepo.listActive(),
-      this.paymentsRepo.listAll(),
+      scope.includePayments ? this.paymentsRepo.listAll() : Promise.resolve([]),
     ]);
     const providerName = new Map(providers.map((p) => [p.uuid, p.name]));
     const providerByUuid = new Map(providers.map((p) => [p.uuid, p]));
+    const scopedServices = scope.projectUuids
+      ? services.filter((s) => scope.projectUuids!.includes(s.projectUuid))
+      : services;
+    const scopedProjects = scope.projectUuids
+      ? projects.filter((p) => scope.projectUuids!.includes(p.uuid))
+      : projects;
+    const relevantProviders = relevantProviderUuids(scope, scopedServices);
 
     let monthlyTotal = ZERO();
     const byProvider = new Map<string, Agg>();
@@ -78,7 +86,7 @@ export class AnalyticsService {
     const byType = new Map<string, Agg>();
     const byCurrency = new Map<string, { original: Decimal; base: Decimal; count: number }>();
 
-    for (const s of services) {
+    for (const s of scopedServices) {
       const monthlyOrig = monthlyCost(new Decimal(s.cost.toString()), s.period as Period);
       const monthlyBase = this.currency.convert(monthlyOrig, s.currency, baseCurrency, rates);
       monthlyTotal = monthlyTotal.add(monthlyBase);
@@ -106,6 +114,7 @@ export class AnalyticsService {
       payments.filter((p) => p.type !== 'charge').map((p) => p.providerUuid),
     );
     for (const p of payments) {
+      if (relevantProviders && !relevantProviders.has(p.providerUuid)) continue;
       if (p.type === 'charge' && providersWithTopups.has(p.providerUuid)) continue;
       const base = this.currency.convert(
         new Decimal(p.amount.toString()),
@@ -126,7 +135,9 @@ export class AnalyticsService {
 
     const horizon = now.add(14, 'day');
     const today = now.startOf('day');
-    // Services billing within 14 days, sorted soonest-first.
+    // Services billing within 14 days, sorted soonest-first. Deliberately unscoped: a provider's
+    // balance is shared by all projects, so coverage must be simulated over every charge on it —
+    // only the emitted rows below are scope-filtered.
     const upcomingSorted = services
       .filter(
         (s) =>
@@ -152,7 +163,8 @@ export class AnalyticsService {
     const runningBalance = new Map<string, Decimal | null>();
     const runningBalanceNative = new Map<string, Decimal | null>();
     for (const p of providers) {
-      const hasPrepaid = p.balance != null && p.balanceCurrency && !p.isPostpaid;
+      const hasPrepaid =
+        scope.includeBalances && p.balance != null && p.balanceCurrency && !p.isPostpaid;
       runningBalance.set(
         p.uuid,
         hasPrepaid
@@ -167,7 +179,8 @@ export class AnalyticsService {
       runningBalanceNative.set(p.uuid, hasPrepaid ? new Decimal(p.balance!.toString()) : null);
     }
 
-    const upcomingBillings = upcomingSorted.map(({ s, date, costBase }) => {
+    const upcomingBillings: AnalyticsSummary['upcomingBillings'] = [];
+    for (const { s, date, costBase } of upcomingSorted) {
       const bal = runningBalance.get(s.providerUuid) ?? null;
       const provider = providerByUuid.get(s.providerUuid);
       let covered: boolean | null;
@@ -187,12 +200,14 @@ export class AnalyticsService {
           runningBalanceNative.set(s.providerUuid, native.sub(costNative));
         }
       }
+      // Out-of-scope charges deplete the running balance above but are never emitted.
+      if (scope.projectUuids && !scope.projectUuids.includes(s.projectUuid)) continue;
       const daysUntil = Math.max(0, date.startOf('day').diff(today, 'day'));
       let severity: 'critical' | 'warning' | 'ok';
       if (covered === false && daysUntil <= 7) severity = 'critical';
       else if (covered === false || daysUntil <= 3) severity = 'warning';
       else severity = 'ok';
-      return {
+      upcomingBillings.push({
         serviceUuid: s.uuid,
         name: s.name,
         providerUuid: s.providerUuid,
@@ -208,40 +223,43 @@ export class AnalyticsService {
         currency: s.currency,
         costBase: costBase.toFixed(2),
         daysUntil,
-        providerBalance: provider?.balance != null ? provider.balance.toFixed(2) : null,
-        providerBalanceCurrency: provider?.balanceCurrency ?? null,
+        providerBalance:
+          scope.includeBalances && provider?.balance != null ? provider.balance.toFixed(2) : null,
+        providerBalanceCurrency: scope.includeBalances ? (provider?.balanceCurrency ?? null) : null,
         covered,
         severity,
-      };
-    });
+      });
+    }
 
     // Top-up = shortfall after simulating upcoming charges. Only for providers that already have
     // a critical (uncovered + due within a week) line — matches the dashboard critical banner.
-    const criticalProviderUuids = new Set(
-      upcomingBillings.filter((b) => b.severity === 'critical').map((b) => b.providerUuid),
-    );
     const balanceTopUps: AnalyticsSummary['balanceTopUps'] = [];
-    for (const p of providers) {
-      if (!criticalProviderUuids.has(p.uuid) || !p.balanceCurrency) continue;
-      const native = runningBalanceNative.get(p.uuid);
-      if (native == null || native.gte(0)) continue;
-      balanceTopUps.push({
-        providerUuid: p.uuid,
-        providerName: p.name,
-        providerKind: p.kind,
-        providerLoginUrl: p.loginUrl ?? null,
-        providerFaviconLink: p.faviconLink ?? null,
-        providerIconName: p.iconName ?? null,
-        providerIconBg: p.iconBg ?? null,
-        amount: native.abs().toFixed(2),
-        currency: p.balanceCurrency,
-      });
+    if (scope.includeBalances) {
+      const criticalProviderUuids = new Set(
+        upcomingBillings.filter((b) => b.severity === 'critical').map((b) => b.providerUuid),
+      );
+      for (const p of providers) {
+        if (!criticalProviderUuids.has(p.uuid) || !p.balanceCurrency) continue;
+        const native = runningBalanceNative.get(p.uuid);
+        if (native == null || native.gte(0)) continue;
+        balanceTopUps.push({
+          providerUuid: p.uuid,
+          providerName: p.name,
+          providerKind: p.kind,
+          providerLoginUrl: p.loginUrl ?? null,
+          providerFaviconLink: p.faviconLink ?? null,
+          providerIconName: p.iconName ?? null,
+          providerIconBg: p.iconBg ?? null,
+          amount: native.abs().toFixed(2),
+          currency: p.balanceCurrency,
+        });
+      }
+      balanceTopUps.sort((a, b) => new Decimal(b.amount).cmp(new Decimal(a.amount)));
     }
-    balanceTopUps.sort((a, b) => new Decimal(b.amount).cmp(new Decimal(a.amount)));
 
     // Dated charges already in the past: pay-or-fix reminders, most overdue first.
     const overdueBillings: AnalyticsSummary['overdueBillings'] = [];
-    for (const s of services) {
+    for (const s of scopedServices) {
       const daysOverdue = overdueDays(s.nextBillingAt, now);
       if (daysOverdue == null) continue;
       const provider = providerByUuid.get(s.providerUuid);
@@ -270,95 +288,105 @@ export class AnalyticsService {
     // Estimate days-left from snapshot decline (fallback: monthly service cost), and reuse the
     // charge-coverage severity model. A provider with any dated service is governed by the dated
     // logic above (even if the date is beyond the upcoming window), so it's not a runway candidate.
-    const datedProviderUuids = new Set(
-      services.filter((s) => s.nextBillingAt != null).map((s) => s.providerUuid),
-    );
-    const runwayWindowStart = now.subtract(30, 'day').toDate();
-    const snapshots = await this.snapshotsRepo.listSince(runwayWindowStart);
-    const snapsByProvider = new Map<string, typeof snapshots>();
-    for (const snap of snapshots) {
-      const list = snapsByProvider.get(snap.providerUuid);
-      if (list) list.push(snap);
-      else snapsByProvider.set(snap.providerUuid, [snap]);
-    }
-
     const balanceRunway: AnalyticsSummary['balanceRunway'] = [];
-    for (const p of providers) {
-      if (p.balance == null || !p.balanceCurrency) continue;
-      if (p.isPostpaid) continue; // invoice-billed → balance isn't prepaid funds
-      if (datedProviderUuids.has(p.uuid)) continue;
-      const balance = new Decimal(p.balance.toString());
-
-      // Primary: actual decline measured from snapshots (in the provider's balance currency).
-      const points = (snapsByProvider.get(p.uuid) ?? [])
-        .filter((snap) => snap.currency === p.balanceCurrency)
-        .map((snap) => ({
-          balance: new Decimal(snap.balance.toString()),
-          capturedAt: snap.capturedAt,
-        }));
-      let burn = burnFromSnapshots(points);
-      let basis: 'snapshots' | 'services' = 'snapshots';
-      if (burn == null) {
-        // Fallback: sum the provider's active services' monthly cost in the balance currency.
-        let monthly = ZERO();
-        for (const s of services) {
-          if (s.providerUuid !== p.uuid) continue;
-          monthly = monthly.add(
-            this.currency.convert(
-              monthlyCost(new Decimal(s.cost.toString()), s.period as Period),
-              s.currency,
-              p.balanceCurrency,
-              rates,
-            ),
-          );
-        }
-        burn = burnFromMonthlyCost(monthly);
-        basis = 'services';
+    if (scope.includeBalances) {
+      // All services, not scoped ones: dated billing anywhere means the provider's spend is
+      // covered by the upcoming simulation, and a filter must not flip it into runway.
+      const datedProviderUuids = new Set(
+        services.filter((s) => s.nextBillingAt != null).map((s) => s.providerUuid),
+      );
+      const runwayWindowStart = now.subtract(30, 'day').toDate();
+      const snapshots = await this.snapshotsRepo.listSince(runwayWindowStart);
+      const snapsByProvider = new Map<string, typeof snapshots>();
+      for (const snap of snapshots) {
+        const list = snapsByProvider.get(snap.providerUuid);
+        if (list) list.push(snap);
+        else snapsByProvider.set(snap.providerUuid, [snap]);
       }
-      if (burn == null) continue; // no measurable spend → can't estimate
 
-      const daysLeft = daysOfRunway(balance, burn);
-      let severity: 'critical' | 'warning' | 'ok';
-      if (daysLeft <= 3) severity = 'critical';
-      else if (daysLeft <= 7) severity = 'warning';
-      else severity = 'ok';
-      if (severity === 'ok') continue; // > 7 days of runway → not surfaced
+      for (const p of providers) {
+        if (relevantProviders && !relevantProviders.has(p.uuid)) continue;
+        if (p.balance == null || !p.balanceCurrency) continue;
+        if (p.isPostpaid) continue; // invoice-billed → balance isn't prepaid funds
+        if (datedProviderUuids.has(p.uuid)) continue;
+        const balance = new Decimal(p.balance.toString());
 
-      balanceRunway.push({
-        providerUuid: p.uuid,
-        providerName: p.name,
-        providerKind: p.kind,
-        providerLoginUrl: p.loginUrl ?? null,
-        providerFaviconLink: p.faviconLink ?? null,
-        providerIconName: p.iconName ?? null,
-        providerIconBg: p.iconBg ?? null,
-        balance: balance.toFixed(2),
-        currency: p.balanceCurrency,
-        burnPerDay: burn.toFixed(2),
-        daysLeft,
-        depletionAt: now.add(daysLeft, 'day').toISOString(),
-        basis,
-        severity,
-      });
+        // Primary: actual decline measured from snapshots (in the provider's balance currency).
+        const points = (snapsByProvider.get(p.uuid) ?? [])
+          .filter((snap) => snap.currency === p.balanceCurrency)
+          .map((snap) => ({
+            balance: new Decimal(snap.balance.toString()),
+            capturedAt: snap.capturedAt,
+          }));
+        let burn = burnFromSnapshots(points);
+        let basis: 'snapshots' | 'services' = 'snapshots';
+        if (burn == null) {
+          // Fallback: sum the provider's active services' monthly cost in the balance currency.
+          let monthly = ZERO();
+          for (const s of scopedServices) {
+            if (s.providerUuid !== p.uuid) continue;
+            monthly = monthly.add(
+              this.currency.convert(
+                monthlyCost(new Decimal(s.cost.toString()), s.period as Period),
+                s.currency,
+                p.balanceCurrency,
+                rates,
+              ),
+            );
+          }
+          burn = burnFromMonthlyCost(monthly);
+          basis = 'services';
+        }
+        if (burn == null) continue; // no measurable spend → can't estimate
+
+        const daysLeft = daysOfRunway(balance, burn);
+        let severity: 'critical' | 'warning' | 'ok';
+        if (daysLeft <= 3) severity = 'critical';
+        else if (daysLeft <= 7) severity = 'warning';
+        else severity = 'ok';
+        if (severity === 'ok') continue; // > 7 days of runway → not surfaced
+
+        balanceRunway.push({
+          providerUuid: p.uuid,
+          providerName: p.name,
+          providerKind: p.kind,
+          providerLoginUrl: p.loginUrl ?? null,
+          providerFaviconLink: p.faviconLink ?? null,
+          providerIconName: p.iconName ?? null,
+          providerIconBg: p.iconBg ?? null,
+          balance: balance.toFixed(2),
+          currency: p.balanceCurrency,
+          burnPerDay: burn.toFixed(2),
+          daysLeft,
+          depletionAt: now.add(daysLeft, 'day').toISOString(),
+          basis,
+          severity,
+        });
+      }
+      balanceRunway.sort((a, b) => a.daysLeft - b.daysLeft);
     }
-    balanceRunway.sort((a, b) => a.daysLeft - b.daysLeft);
 
     return {
       baseCurrency,
       monthlyTotal: monthlyTotal.toFixed(2),
       yearlyProjection: monthlyTotal.mul(12).toFixed(2),
-      currentMonthPayments: currentMonthPayments.toFixed(2),
-      totalSpent: totalSpent.toFixed(2),
-      byProvider: providers.map((p) => ({
+      currentMonthPayments: scope.includePayments ? currentMonthPayments.toFixed(2) : undefined,
+      totalSpent: scope.includePayments ? totalSpent.toFixed(2) : undefined,
+      byProvider: (scope.projectUuids
+        ? providers.filter((p) => (byProvider.get(p.uuid)?.count ?? 0) > 0)
+        : providers
+      ).map((p) => ({
         providerUuid: p.uuid,
         name: p.name,
         monthlyCost: (byProvider.get(p.uuid)?.monthly ?? ZERO()).toFixed(2),
-        spent: (spentByProvider.get(p.uuid) ?? ZERO()).toFixed(2),
-        balance: p.balance ? p.balance.toFixed(2) : null,
-        balanceCurrency: p.balanceCurrency,
+        spent: scope.includePayments
+          ? (spentByProvider.get(p.uuid) ?? ZERO()).toFixed(2)
+          : undefined,
+        balance: scope.includeBalances && p.balance ? p.balance.toFixed(2) : null,
+        balanceCurrency: scope.includeBalances ? p.balanceCurrency : null,
         servicesCount: byProvider.get(p.uuid)?.count ?? 0,
       })),
-      byProject: projects.map((p) => ({
+      byProject: scopedProjects.map((p) => ({
         projectUuid: p.uuid,
         name: p.name,
         monthlyCost: (byProject.get(p.uuid)?.monthly ?? ZERO()).toFixed(2),
@@ -443,7 +471,11 @@ export class AnalyticsService {
     };
   }
 
-  async forecast(months: number, monthsBack: number): Promise<ForecastPoint[]> {
+  async forecast(
+    months: number,
+    monthsBack: number,
+    scope: AnalyticsScope = UNRESTRICTED,
+  ): Promise<ForecastPoint[]> {
     const { baseCurrency } = await this.currency.getEffectiveSettings();
     const rates = await this.currency.getRubRates();
     const history = await this.currency.getHistoricalRates(rates);
@@ -478,11 +510,13 @@ export class AnalyticsService {
     const needBackdate = needTariffs && respectCreatedAt && backdateFromPayments;
     const [payments, topupProviderUuids, activeServices, billedServices, earliestPayments] =
       await Promise.all([
-        force
+        force || !scope.includePayments
           ? Promise.resolve([] as Awaited<ReturnType<PaymentsRepository['listSince']>>)
           : this.paymentsRepo.listSince(windowStart.toDate()),
-        force ? Promise.resolve([] as string[]) : this.paymentsRepo.providerUuidsWithTopups(),
-        needTariffs
+        force || !scope.includePayments
+          ? Promise.resolve([] as string[])
+          : this.paymentsRepo.providerUuidsWithTopups(),
+        needTariffs || scope.explicitFilter
           ? this.servicesRepo.listActive()
           : Promise.resolve([] as Awaited<ReturnType<ServicesRepository['listActive']>>),
         this.servicesRepo.listActiveBilled(),
@@ -491,7 +525,15 @@ export class AnalyticsService {
           : Promise.resolve(new Map<string, Date>()),
       ]);
     const providersWithTopups = new Set(topupProviderUuids);
+    const scopedActive = scope.projectUuids
+      ? activeServices.filter((s) => scope.projectUuids!.includes(s.projectUuid))
+      : activeServices;
+    const scopedBilled = scope.projectUuids
+      ? billedServices.filter((s) => scope.projectUuids!.includes(s.projectUuid))
+      : billedServices;
+    const relevantProviders = relevantProviderUuids(scope, scopedActive);
     for (const p of payments) {
+      if (relevantProviders && !relevantProviders.has(p.providerUuid)) continue;
       if (p.type === 'charge' && providersWithTopups.has(p.providerUuid)) continue;
       const key = dayjs(p.paymentDate).format('YYYY-MM');
       if (!actualBuckets.has(key) || key > currentKey) continue; // future-dated payments ignored
@@ -515,7 +557,7 @@ export class AnalyticsService {
       for (const key of monthsList) {
         if (key > currentKey) continue;
         const amount = tariffForMonth(
-          activeServices,
+          scopedActive,
           key,
           (amount, currency) => this.currency.convert(amount, currency, baseCurrency, rates),
           {
@@ -532,7 +574,7 @@ export class AnalyticsService {
     // Projection: recurring services billed strictly in the future (current month shows actuals only).
     const projStart = current.add(1, 'month');
     const projEnd = current.add(months + 1, 'month');
-    for (const s of billedServices) {
+    for (const s of scopedBilled) {
       const charge = this.currency.convert(
         new Decimal(s.cost.toString()),
         s.currency,
@@ -564,7 +606,7 @@ export class AnalyticsService {
 
     return monthsList.map((m) => ({
       month: m,
-      actual: actualBuckets.get(m)!.toFixed(2),
+      actual: scope.includePayments ? actualBuckets.get(m)!.toFixed(2) : undefined,
       estimated: estimatedBuckets.get(m)!.toFixed(2),
       projected: projBuckets.get(m)!.toFixed(2),
     }));

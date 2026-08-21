@@ -1,9 +1,15 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '@generated/prisma/client';
 import { Service as ServiceDto, type ServiceClientMeta } from '@infra/shared';
+import type { Principal } from '../auth/principal';
 import { ProjectsRepository } from '@repositories/projects/projects.repository';
 import { ProvidersRepository } from '@repositories/providers/providers.repository';
-import { ServicesRepository } from '@repositories/services/services.repository';
+import { ServiceFilters, ServicesRepository } from '@repositories/services/services.repository';
 import { mapService } from '@common/mappers';
 import { CreateServiceDto, ServiceQueryDto, UpdateServiceDto } from './dto/service.dto';
 
@@ -42,12 +48,24 @@ export class ServicesService {
     private readonly projects: ProjectsRepository,
   ) {}
 
-  async list(query: ServiceQueryDto): Promise<ServiceDto[]> {
-    const rows = await this.services.listFiltered(query);
+  async list(query: ServiceQueryDto, principal: Principal): Promise<ServiceDto[]> {
+    const filters: ServiceFilters = { ...query };
+    if (principal.kind === 'member') {
+      const scope = principal.projectUuids;
+      filters.projectUuids =
+        query.projectUuid && !scope.includes(query.projectUuid)
+          ? []
+          : query.projectUuid
+            ? [query.projectUuid]
+            : [...scope];
+      filters.projectUuid = undefined;
+    }
+    const rows = await this.services.listFiltered(filters);
     return rows.map(mapService);
   }
 
-  async create(dto: CreateServiceDto): Promise<ServiceDto> {
+  async create(dto: CreateServiceDto, principal: Principal): Promise<ServiceDto> {
+    this.ensureProjectInScope(dto.projectUuid, principal);
     await this.ensureProvider(dto.providerUuid);
     await this.ensureProject(dto.projectUuid);
     const meta: Record<string, unknown> = {};
@@ -70,9 +88,13 @@ export class ServicesService {
     return mapService(s);
   }
 
-  async update(uuid: string, dto: UpdateServiceDto): Promise<ServiceDto> {
+  async update(uuid: string, dto: UpdateServiceDto, principal: Principal): Promise<ServiceDto> {
     const existing = await this.services.findByUuid(uuid);
     if (!existing) throw new NotFoundException('Service not found');
+    if (principal.kind === 'member' && !principal.projectUuids.includes(existing.projectUuid)) {
+      throw new NotFoundException('Service not found');
+    }
+    if (dto.projectUuid !== undefined) this.ensureProjectInScope(dto.projectUuid, principal);
 
     const data: Prisma.ServiceUpdateInput = {};
     const meta = { ...((existing.meta ?? {}) as Record<string, unknown>) };
@@ -171,8 +193,12 @@ export class ServicesService {
     return mapService(s);
   }
 
-  async remove(uuid: string): Promise<void> {
-    if (!(await this.services.exists(uuid))) throw new NotFoundException('Service not found');
+  async remove(uuid: string, principal: Principal): Promise<void> {
+    const existing = await this.services.findByUuid(uuid);
+    if (!existing) throw new NotFoundException('Service not found');
+    if (principal.kind === 'member' && !principal.projectUuids.includes(existing.projectUuid)) {
+      throw new NotFoundException('Service not found');
+    }
     await this.services.delete(uuid);
   }
 
@@ -182,5 +208,11 @@ export class ServicesService {
 
   private async ensureProject(uuid: string): Promise<void> {
     if (!(await this.projects.exists(uuid))) throw new NotFoundException('Project not found');
+  }
+
+  private ensureProjectInScope(projectUuid: string, principal: Principal): void {
+    if (principal.kind === 'member' && !principal.projectUuids.includes(projectUuid)) {
+      throw new ForbiddenException('Project is outside your scope');
+    }
   }
 }

@@ -14,7 +14,7 @@
         const dark =
           s === 'dark' || (s !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
         if (dark) document.documentElement.classList.add('dark');
-        if (location.pathname === '/login') {
+        if (location.pathname === '/login' || location.pathname.startsWith('/invite/')) {
           document.documentElement.style.backgroundColor = '#0a0a0c';
         }
       } catch {}

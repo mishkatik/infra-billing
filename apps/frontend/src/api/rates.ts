@@ -3,10 +3,11 @@ import type { CreateRate, Rate, RateBackfill } from '@infra/shared';
 import { api } from './client';
 import { API_PATH } from '@infra/shared';
 
-export function useRates() {
+export function useRates(opts?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ['rates'],
     queryFn: async () => (await api.get<Rate[]>(API_PATH.RATES.ROOT)).data,
+    enabled: opts?.enabled ?? true,
   });
 }
 
