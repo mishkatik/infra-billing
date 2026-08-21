@@ -21,6 +21,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { useEnums } from '@/constants';
 import { useDisclosure } from '@/hooks/useDisclosure';
+import { useSelectedParam } from '@/hooks/useSelectedParam';
 import { sortRows, useTableSort } from '@/hooks/useTableSort';
 import { useCountryOptions } from '@/utils/countries';
 import { trimMoney } from '@/utils/format';
@@ -191,6 +192,7 @@ export function ServicesPage() {
     });
     setDetailUuid(s.uuid);
   };
+  useSelectedParam(services, openDetail);
 
   const submit = form.handleSubmit(async (v) => {
     const meta = clientMetaFromForm(v);

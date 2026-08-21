@@ -18,6 +18,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { useEnums } from '@/constants';
 import { useDisclosure } from '@/hooks/useDisclosure';
+import { useSelectedParam } from '@/hooks/useSelectedParam';
 import { sortRows, useTableSort } from '@/hooks/useTableSort';
 import { formatDate } from '@/utils/format';
 import { buildRubMap } from '@/utils/money';
@@ -84,6 +85,7 @@ export function ProvidersPage() {
     });
     setDetailUuid(p.uuid);
   };
+  useSelectedParam(providers, openDetail);
 
   const doSync = async (uuid: string) => {
     try {

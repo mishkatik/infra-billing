@@ -44,6 +44,7 @@ export function UpcomingBillingsCard({ upcoming }: UpcomingBillingsCardProps) {
                   <ProviderBadge
                     name={ub.providerName}
                     kind={ub.providerKind}
+                    uuid={ub.providerUuid}
                     faviconLink={ub.providerFaviconLink}
                     loginUrl={ub.providerLoginUrl}
                     iconName={ub.providerIconName}
@@ -51,6 +52,7 @@ export function UpcomingBillingsCard({ upcoming }: UpcomingBillingsCardProps) {
                   />
                   <ServiceBadge
                     name={ub.name}
+                    uuid={ub.serviceUuid}
                     type={ub.type}
                     countryCode={ub.countryCode}
                     marker={ub.marker}

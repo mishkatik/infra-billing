@@ -113,6 +113,7 @@ export type BalanceTopUp = z.infer<typeof balanceTopUpSchema>;
 export const overdueBillingSchema = z.object({
   serviceUuid: uuidSchema.describe('Service UUID'),
   name: z.string().describe('Service name'),
+  providerUuid: uuidSchema.describe('Provider UUID'),
   providerName: z.string().describe('Provider name'),
   providerKind: z.string().describe('Provider connector kind'),
   providerLoginUrl: z.string().describe('Provider cabinet link').nullable(),

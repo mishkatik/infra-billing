@@ -248,6 +248,7 @@ export class AnalyticsService {
       overdueBillings.push({
         serviceUuid: s.uuid,
         name: s.name,
+        providerUuid: s.providerUuid,
         providerName: providerName.get(s.providerUuid) ?? '',
         providerKind: provider?.kind ?? 'manual',
         providerLoginUrl: provider?.loginUrl ?? null,

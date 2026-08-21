@@ -1,3 +1,4 @@
+import { IconExternalLink } from '@tabler/icons-react';
 import {
   createContext,
   useContext,
@@ -6,6 +7,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { Link } from 'react-router-dom';
 import { ProviderIcon } from '@/components/ProviderIcon';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -18,6 +20,7 @@ import { createLayoutGate } from './layoutMeasure';
 export function ProviderBadge({
   name,
   kind,
+  uuid,
   faviconLink,
   loginUrl,
   iconName,
@@ -25,32 +28,65 @@ export function ProviderBadge({
 }: {
   name: string;
   kind?: string | null;
+  uuid?: string | null;
   faviconLink?: string | null;
   loginUrl?: string | null;
   iconName?: string | null;
   iconBg?: string | null;
 }) {
   const tint = providerBadgeStyle(kind);
+  const icon = (
+    <ProviderIcon
+      name={name}
+      src={providerFavicon({ faviconLink: faviconLink ?? null, loginUrl: loginUrl ?? null })}
+      iconName={iconName}
+      iconBg={iconBg}
+      size={16}
+    />
+  );
+  const label = (
+    <span className={cn(uuid && 'group-hover/chip:underline')} style={{ color: tint.color }}>
+      {name}
+    </span>
+  );
   return (
     <Badge
       variant="outline"
       className="gap-1.5 border py-0.5 pr-2 pl-1 font-normal shadow-none"
       style={tint}
     >
-      <ProviderIcon
-        name={name}
-        src={providerFavicon({ faviconLink: faviconLink ?? null, loginUrl: loginUrl ?? null })}
-        iconName={iconName}
-        iconBg={iconBg}
-        size={16}
-      />
-      <span style={{ color: tint.color }}>{name}</span>
+      {uuid ? (
+        // Anchors don't nest and the cabinet link below is a real <a>, hence the chip
+        // itself stays plain and in-app navigation hangs off the icon + name.
+        <Link to={`/providers?selected=${uuid}`} className="group/chip flex items-center gap-1.5">
+          {icon}
+          {label}
+        </Link>
+      ) : (
+        <>
+          {icon}
+          {label}
+        </>
+      )}
+      {loginUrl && (
+        <a
+          href={loginUrl}
+          target="_blank"
+          rel="noreferrer"
+          aria-label={loginUrl}
+          className="inline-flex shrink-0 opacity-60 transition-opacity hover:opacity-100"
+          style={{ color: tint.color }}
+        >
+          <IconExternalLink className="size-3" />
+        </a>
+      )}
     </Badge>
   );
 }
 
 export function ServiceBadge({
   name,
+  uuid,
   type,
   countryCode,
   marker,
@@ -58,6 +94,7 @@ export function ServiceBadge({
   vendor,
 }: {
   name: string;
+  uuid?: string | null;
   type?: string | null;
   countryCode?: string | null;
   marker?: string | null;
@@ -67,12 +104,8 @@ export function ServiceBadge({
   const located = Boolean(type && LOCATED_TYPES.has(type));
   const flag = located ? countryFlag(countryCode) : null;
   const tint = located ? countryBadgeStyle(countryCode) : colorBadgeStyle(markerBg);
-  return (
-    <Badge
-      variant="outline"
-      className="items-center gap-1.5 border py-0.5 pr-2 pl-1 font-normal shadow-none leading-none"
-      style={tint}
-    >
+  const content = (
+    <>
       {flag ? (
         <span className="inline-flex size-4 shrink-0 items-center justify-center text-sm leading-none">
           {flag}
@@ -86,9 +119,26 @@ export function ServiceBadge({
           size={16}
         />
       )}
-      <span className="leading-none" style={{ color: tint.color }}>
+      <span
+        className={cn('leading-none', uuid && 'group-hover/chip:underline')}
+        style={{ color: tint.color }}
+      >
         {name}
       </span>
+    </>
+  );
+  const className =
+    'items-center gap-1.5 border py-0.5 pr-2 pl-1 font-normal shadow-none leading-none';
+  if (!uuid) {
+    return (
+      <Badge variant="outline" className={className} style={tint}>
+        {content}
+      </Badge>
+    );
+  }
+  return (
+    <Badge asChild variant="outline" className={cn(className, 'group/chip')} style={tint}>
+      <Link to={`/services?selected=${uuid}`}>{content}</Link>
     </Badge>
   );
 }
