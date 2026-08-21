@@ -21,13 +21,16 @@ import {
  * HostBill User API connector (https://hostbill.atlassian.net/wiki/...). Each install
  * lives on its own domain and the API base path varies (e.g. /api), so the base URL is
  * configured per provider. Auth: JWT, POST /login (username=email + password) → token,
- * then Bearer on each request (Basic auth isn't enabled on all installs). No npm SDK.
+ * then Bearer on each request. Some installs have a broken JWT issuer but working Basic
+ * auth (e.g. Clouvider answers /login with internal_error_0); on any login failure other
+ * than bad credentials we probe /details with Basic and switch to it. No npm SDK.
  * Balance: GET /balance (acc_credit). Services: GET /service. Billing is per-cycle.
  */
 export class HostbillConnector implements Connector {
   private readonly http: AxiosInstance;
   private readonly creds: HostbillCredentials;
   private token: string | null = null;
+  private useBasic = false;
 
   constructor(creds: HostbillCredentials) {
     this.creds = creds;
@@ -41,8 +44,9 @@ export class HostbillConnector implements Connector {
     return 'hostbill';
   }
 
-  /** Obtain (and cache) a JWT via POST /login, returning the Bearer auth header. */
+  /** Auth header for requests: cached JWT via POST /login, or Basic once fallen back. */
   private async authHeaders(signal: AbortSignal): Promise<Record<string, string>> {
+    if (this.useBasic) return this.basicHeader();
     if (!this.token) {
       const { data } = await this.http.post<LoginResponse>(
         'login',
@@ -51,14 +55,38 @@ export class HostbillConnector implements Connector {
       );
       // HostBill returns 200 with { error: [...] } on bad credentials.
       if (data?.error) {
-        throw new Error(
-          `HostBill: ${Array.isArray(data.error) ? data.error.join(', ') : String(data.error)}`,
-        );
+        const errors = Array.isArray(data.error) ? data.error : [data.error];
+        const loginError = new Error(`HostBill: ${errors.join(', ')}`);
+        // wronglogin = bad credentials, Basic would fail the same way.
+        if (errors.includes('wronglogin')) throw loginError;
+        return this.basicFallback(signal, loginError);
       }
       this.token = data?.token ?? data?.access_token ?? null;
-      if (!this.token) throw new Error('HostBill login: token was not obtained');
+      if (!this.token) {
+        return this.basicFallback(signal, new Error('HostBill login: token was not obtained'));
+      }
     }
     return { Authorization: `Bearer ${this.token}` };
+  }
+
+  /** Probe /details with Basic auth; on success switch to it, otherwise surface the login error. */
+  private async basicFallback(
+    signal: AbortSignal,
+    loginError: Error,
+  ): Promise<Record<string, string>> {
+    const headers = this.basicHeader();
+    try {
+      await this.http.get('details', { headers, signal });
+    } catch {
+      throw loginError;
+    }
+    this.useBasic = true;
+    return headers;
+  }
+
+  private basicHeader(): Record<string, string> {
+    const encoded = Buffer.from(`${this.creds.username}:${this.creds.password}`).toString('base64');
+    return { Authorization: `Basic ${encoded}` };
   }
 
   async fetchAccount(signal: AbortSignal): Promise<Account> {
