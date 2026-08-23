@@ -1,12 +1,12 @@
 import { createElement, useEffect, useState } from 'react';
 import { DEFAULT_ICON_BG, iconFgForBg, resolveTablerIcon } from '@/components/tablerIconCatalog';
-import { faviconRootFallback } from '@/utils/favicon';
+import { faviconRootFallback, isFaviconServiceUrl } from '@/utils/favicon';
 
 // Neutral initial avatar, swapped for the favicon only once it loads. Google's "no favicon"
-// placeholder is a ~16px globe, so reject anything that small to avoid the blurry globe. When the
-// primary favicon 404s or is too small (some dashboard subdomains have none), fall back to the
-// registrable domain's icon before settling on the initial. A custom Tabler icon + bg overrides
-// the favicon path entirely.
+// placeholder is a ~16px globe: s2 candidates that small are rejected. Direct favicon URLs
+// skip the gate — a panel's own icon may legitimately be 16px (BILLmanager .ico). When the
+// primary favicon 404s or is rejected, fall back to the registrable domain's icon before
+// settling on the initial. A custom Tabler icon + bg overrides the favicon path entirely.
 export function ProviderIcon({
   name,
   src,
@@ -44,8 +44,11 @@ export function ProviderIcon({
       const img = new Image();
       img.onload = () => {
         if (cancelled) return;
-        if (img.naturalWidth > 16) setResolved({ key, src: candidates[i] });
-        else tryAt(i + 1);
+        if (!isFaviconServiceUrl(candidates[i]) || img.naturalWidth > 16) {
+          setResolved({ key, src: candidates[i] });
+        } else {
+          tryAt(i + 1);
+        }
       };
       img.onerror = () => {
         if (!cancelled) tryAt(i + 1);

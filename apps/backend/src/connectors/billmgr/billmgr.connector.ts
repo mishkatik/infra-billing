@@ -350,6 +350,26 @@ export class BillmgrConnector implements Connector {
     );
   }
 
+  /**
+   * The panel favicon sits behind a per-install skin path (/manimg/<skin>/local_<hash>/…) that
+   * domain-based favicon services never find. The public login page names it in
+   * <link rel="shortcut icon">; no session needed.
+   */
+  async fetchFaviconUrl(signal: AbortSignal): Promise<string | null> {
+    const { data } = await this.http.get<unknown>('', { signal });
+    if (typeof data !== 'string') return null;
+    const tag = /<link[^>]*rel=["'][^"']*icon[^"']*["'][^>]*>/i.exec(data.slice(0, 16_384))?.[0];
+    const href = tag ? /href=["']([^"']+)["']/i.exec(tag)?.[1] : undefined;
+    if (!href) return null;
+    try {
+      // The URL persists to the DB and ships in provider API responses — http(s) only.
+      const url = new URL(href, this.http.defaults.baseURL);
+      return /^https?:$/.test(url.protocol) ? url.href : null;
+    } catch {
+      return null;
+    }
+  }
+
   async fetchAccount(signal: AbortSignal): Promise<Account> {
     await this.ensureSession(signal);
     // ensureSession already fetched (and validated) whoami; reuse it instead of a 2nd request.

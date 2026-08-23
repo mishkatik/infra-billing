@@ -125,6 +125,21 @@ export class SyncService implements OnModuleInit {
       const token = this.crypto.decrypt(provider.credentialsEnc);
       const connector = this.connectors.create(provider.kind, token);
 
+      // Needs no auth (reads the public login page) and runs before fetchAccount: the icon
+      // resolves even when the credentials are wrong. Non-fatal; null keeps the stored link.
+      if (connector.fetchFaviconUrl) {
+        try {
+          const url = await connector.fetchFaviconUrl(controller.signal);
+          if (url && url !== provider.faviconLink) {
+            await this.providers.updateFaviconLink(uuid, url);
+          }
+        } catch (e) {
+          this.logger.warn(
+            `Favicon fetch for "${provider.name}" (${uuid}) skipped: ${e instanceof Error ? e.message : String(e)}`,
+          );
+        }
+      }
+
       const account = await this.withRetry(
         `fetchAccount "${provider.name}"`,
         controller.signal,
