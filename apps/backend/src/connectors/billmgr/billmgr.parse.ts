@@ -54,6 +54,22 @@ export function parseBillmgrDate(s: string | undefined): Date | undefined {
   return Number.isNaN(d.getTime()) ? undefined : d;
 }
 
+/**
+ * Some installs (FirstVDS) guard func=auth with BILLmanager's own CAPTCHA: HTTP 200 with a
+ * doc.error like { $type: 'captcha_verification_failed', msg: {$: 'Error passing captcha, …'} }.
+ * $type/$object are locale-independent; the message is localized (ru: «…капч…»), so match across
+ * all of them. Credential errors ($type: 'auth', "Incorrect username or password") never match —
+ * the authinfo fallback must not re-try bad credentials.
+ */
+export function isCaptchaError(err: unknown): boolean {
+  if (!err || typeof err !== 'object') return false;
+  const e = err as Record<string, unknown>;
+  const hay = [e.$type, e.$object, val(e.msg), val(e.detail)]
+    .filter((s): s is string => typeof s === 'string')
+    .join(' ');
+  return /captcha|капч/i.test(hay);
+}
+
 // BILLmanager error → short human message (msg/detail/$object), not the raw JSON.
 export function billmgrError(err: unknown): string {
   if (err && typeof err === 'object') {

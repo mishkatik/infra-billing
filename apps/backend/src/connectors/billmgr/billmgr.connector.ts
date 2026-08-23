@@ -10,6 +10,7 @@ import {
   billmgrError,
   currencyFromAmount,
   firstNumber,
+  isCaptchaError,
   isPaymentCredited,
   parseBillmgrDate,
   val,
@@ -40,6 +41,13 @@ const TWO_FACTOR_MESSAGE =
 const TOTP_FAILED_MESSAGE =
   'BILLmanager: failed to confirm login via OTP — check the TOTP secret (the same one as in your authenticator app) ' +
   'and the server clock synchronization.';
+
+// A CAPTCHA-gated func=auth forces the stateless authinfo fallback, and a stateless request has
+// no session for totp.confirm to confirm — a stored TOTP secret cannot help here. Kept short so
+// it survives the notification's 200-char clamp.
+const AUTHINFO_TWO_FACTOR_MESSAGE =
+  'BILLmanager: func=auth is CAPTCHA-gated and 2FA cannot be confirmed via stateless authinfo — ' +
+  'disable 2FA for this account, or ask the hoster to allow API auth for this server IP.';
 
 // Some panels sit behind Cloudflare (senko), which rejects Node's TLS fingerprint outright: no header set
 // gets through (verified — curl passes from the same IP, axios and node:https do not), so there is nothing
@@ -117,7 +125,9 @@ export function billmgrHttpError(e: unknown): Error {
 /**
  * ISPsystem BILLmanager (https://docs.ispsystem.com/billmanager). CGI API at
  * `{base}/billmgr?func=...&out=json`, responses wrapped in `doc`, scalars as {"$":...}. No npm SDK.
- * Auth: POST func=auth → session (doc.auth.$id, ~1h) reused via `auth` param.
+ * Auth: POST func=auth → session (doc.auth.$id, ~1h) reused via `auth` param. Installs that gate
+ * func=auth with BILLmanager's own CAPTCHA (FirstVDS) fall back to the documented stateless
+ * `authinfo=user:password` auth, carried on every request instead of a session.
  * Balance/currency: func=whoami → doc.user.$balance/$currency. Services: per-type list funcs
  * (vds/dedic/vhost/domain/...) → doc.elem[]. 2FA: func=auth still returns a session but it stays
  * unconfirmed (data funcs return `doc.ok` instead of payload); detected on first whoami, then we
@@ -127,8 +137,10 @@ export class BillmgrConnector implements Connector {
   private readonly logger = new Logger(BillmgrConnector.name);
   private readonly http: AxiosInstance;
   private readonly creds: BillmgrCredentials;
-  private session: string | null = null;
-  private whoamiDoc: BillmgrDoc | null = null; // cached by ensureSession's auth-verification probe
+  // { auth: <session id> } normally, { authinfo: "user:password" } once fallen back — spread into
+  // every request's params (GET) or form body (filter POSTs).
+  private authParams: Record<string, string> | null = null;
+  private whoamiDoc: BillmgrDoc | null = null; // cached by ensureAuth's auth-verification probe
 
   constructor(creds: BillmgrCredentials) {
     this.creds = creds;
@@ -160,8 +172,8 @@ export class BillmgrConnector implements Connector {
     return 'billmgr';
   }
 
-  private async ensureSession(signal: AbortSignal): Promise<string> {
-    if (this.session) return this.session;
+  private async ensureAuth(signal: AbortSignal): Promise<Record<string, string>> {
+    if (this.authParams) return this.authParams;
     const body = new URLSearchParams({
       func: 'auth',
       username: this.creds.username,
@@ -172,7 +184,13 @@ export class BillmgrConnector implements Connector {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       signal,
     });
-    if (data?.doc?.error) throw new Error(`BILLmanager: ${billmgrError(data.doc.error)}`);
+    if (data?.doc?.error) {
+      // Some installs (FirstVDS) gate func=auth with BILLmanager's own CAPTCHA while the
+      // stateless authinfo auth still works — fall back on exactly that error. Anything else
+      // (e.g. bad credentials) would fail authinfo the same way, so it surfaces as-is.
+      if (isCaptchaError(data.doc.error)) return this.authinfoFallback(signal);
+      throw new Error(`BILLmanager: ${billmgrError(data.doc.error)}`);
+    }
     const id = data?.doc?.auth?.$id ?? data?.doc?.session?.$id;
     // A 200 that isn't a doc and isn't a challenge (the interceptor caught those) is almost
     // always a base URL pointing at a web page instead of the /billmgr CGI endpoint.
@@ -212,9 +230,46 @@ export class BillmgrConnector implements Connector {
       if (!doc?.user) throw new Error(TOTP_FAILED_MESSAGE);
     }
 
-    this.session = sessionId;
+    this.authParams = { auth: sessionId };
     this.whoamiDoc = probe.data ?? null;
-    return sessionId;
+    return this.authParams;
+  }
+
+  /**
+   * Stateless fallback for a CAPTCHA-gated func=auth: `authinfo=user:password` authenticates each
+   * request on its own, no session involved (docs.ispsystem: hosters may pin it to an IP allowlist
+   * via RestrictAuthinfo — FirstVDS exposes that as "API access"). The whoami probe both validates
+   * the credentials and doubles as fetchAccount's answer, like the session path's 2FA probe.
+   */
+  private async authinfoFallback(signal: AbortSignal): Promise<Record<string, string>> {
+    const authinfo = `${this.creds.username}:${this.creds.password}`;
+    const probe = await this.http.get<BillmgrDoc>('', {
+      params: { func: 'whoami', authinfo, out: 'json' },
+      signal,
+    });
+    const doc = probe.data?.doc;
+    if (doc?.error) {
+      // The human message is generic ("Authorization error"); the $object code names the actual
+      // cause — verified live on FirstVDS: an IP outside the panel's API allowlist answers
+      // `forbidden_auth_method` before credentials are even checked, and the allowlist is a
+      // self-service panel setting, not a support ticket. Credentials must never enter the
+      // message — it persists to lastSyncError, the log and Telegram.
+      const code = (doc.error as Record<string, unknown>).$object;
+      const detail = billmgrError(doc.error) + (typeof code === 'string' ? ` / ${code}` : '');
+      throw new Error(
+        `BILLmanager: func=auth is CAPTCHA-gated and the authinfo fallback failed (${detail}) — ` +
+          "add this server's IP to the API access allowlist in the panel settings (or ask the hoster).",
+      );
+    }
+    if (doc?.user) {
+      this.logger.log('func=auth is CAPTCHA-gated, switching to stateless authinfo auth');
+      this.authParams = { authinfo };
+      this.whoamiDoc = probe.data ?? null;
+      return this.authParams;
+    }
+    // doc.ok without user = an unconfirmed-2FA redirect, unresolvable without a session.
+    if (doc?.ok !== undefined) throw new Error(AUTHINFO_TWO_FACTOR_MESSAGE);
+    throw new Error('BILLmanager: authinfo fallback returned no user');
   }
 
   /**
@@ -245,9 +300,9 @@ export class BillmgrConnector implements Connector {
     signal: AbortSignal,
     extra?: Record<string, string>,
   ): Promise<BillmgrDoc> {
-    const auth = await this.ensureSession(signal);
+    const auth = await this.ensureAuth(signal);
     const { data } = await this.http.get<BillmgrDoc>('', {
-      params: { func, auth, out: 'json', ...extra },
+      params: { func, ...auth, out: 'json', ...extra },
       signal,
     });
     if (data?.doc?.error) throw new Error(`BILLmanager (${func}): ${billmgrError(data.doc.error)}`);
@@ -293,8 +348,10 @@ export class BillmgrConnector implements Connector {
     signal: AbortSignal,
   ): Promise<void> {
     try {
-      const auth = await this.ensureSession(signal);
-      const body = new URLSearchParams({ func, auth, sok: 'ok', ...fields });
+      // The CGI merges query and form-body params, so the auth pair (session id or authinfo)
+      // rides in the body exactly like the form fields.
+      const auth = await this.ensureAuth(signal);
+      const body = new URLSearchParams({ func, ...auth, sok: 'ok', ...fields });
       await this.http.post('', body.toString(), {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         signal,
@@ -371,8 +428,8 @@ export class BillmgrConnector implements Connector {
   }
 
   async fetchAccount(signal: AbortSignal): Promise<Account> {
-    await this.ensureSession(signal);
-    // ensureSession already fetched (and validated) whoami; reuse it instead of a 2nd request.
+    await this.ensureAuth(signal);
+    // ensureAuth already fetched (and validated) whoami; reuse it instead of a 2nd request.
     const data = this.whoamiDoc ?? (await this.call('whoami', signal));
     const u = data?.doc?.user ?? {};
     const balanceStr = firstNumber(u.$balance == null ? undefined : String(u.$balance));
@@ -410,9 +467,9 @@ export class BillmgrConnector implements Connector {
   }
 
   async fetchServices(signal: AbortSignal): Promise<ServiceData[]> {
-    // Establish (and validate) the session up front so an auth/2FA failure propagates,
+    // Establish (and validate) auth up front so an auth/2FA failure propagates,
     // otherwise the per-func catch below would swallow it and silently return 0 services.
-    await this.ensureSession(signal);
+    await this.ensureAuth(signal);
     const out: ServiceData[] = [];
     // An item could show up under both the base func and its subtype; item ids are
     // install-wide, so dedupe by externalId.
@@ -442,7 +499,7 @@ export class BillmgrConnector implements Connector {
    * service's charges come through, not just the one the panel was last filtered to.
    */
   async fetchPayments(signal: AbortSignal): Promise<PaymentData[]> {
-    await this.ensureSession(signal);
+    await this.ensureAuth(signal);
     const out: PaymentData[] = [];
     const seen = new Set<string>();
     const add = (p: PaymentData) => {
