@@ -159,6 +159,7 @@ export function sampleMessages(): string[] {
   const sampleOverdue: OverdueBilling = {
     serviceUuid: '00000000-0000-0000-0000-000000000000',
     name: 'demo-vps',
+    providerUuid: '00000000-0000-0000-0000-000000000000',
     providerName: 'Тестовый провайдер',
     providerKind: 'manual',
     providerLoginUrl: 'https://example.com',

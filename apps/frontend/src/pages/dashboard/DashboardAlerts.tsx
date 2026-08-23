@@ -36,6 +36,7 @@ function RunwayChargeRows({ rows }: { rows: RunwayRow[] }) {
               <ProviderBadge
                 name={r.providerName}
                 kind={r.providerKind}
+                uuid={r.providerUuid}
                 faviconLink={r.providerFaviconLink}
                 loginUrl={r.providerLoginUrl}
                 iconName={r.providerIconName}
@@ -320,6 +321,7 @@ export function DashboardAlerts({ overdue, upcoming, runway, topUps }: Dashboard
                     <ProviderBadge
                       name={b.providerName}
                       kind={b.providerKind}
+                      uuid={b.providerUuid}
                       faviconLink={b.providerFaviconLink}
                       loginUrl={b.providerLoginUrl}
                       iconName={b.providerIconName}
@@ -327,6 +329,7 @@ export function DashboardAlerts({ overdue, upcoming, runway, topUps }: Dashboard
                     />
                     <ServiceBadge
                       name={b.name}
+                      uuid={b.serviceUuid}
                       type={b.type}
                       countryCode={b.countryCode}
                       marker={b.marker}
@@ -373,6 +376,7 @@ export function DashboardAlerts({ overdue, upcoming, runway, topUps }: Dashboard
                       <ProviderBadge
                         name={u.providerName}
                         kind={u.providerKind || fromCritical?.providerKind}
+                        uuid={u.providerUuid}
                         faviconLink={u.providerFaviconLink ?? fromCritical?.providerFaviconLink}
                         loginUrl={u.providerLoginUrl ?? fromCritical?.providerLoginUrl}
                         iconName={u.providerIconName ?? fromCritical?.providerIconName}
@@ -445,6 +449,7 @@ export function DashboardAlerts({ overdue, upcoming, runway, topUps }: Dashboard
                       <ProviderBadge
                         name={b.providerName}
                         kind={b.providerKind}
+                        uuid={b.providerUuid}
                         faviconLink={b.providerFaviconLink}
                         loginUrl={b.providerLoginUrl}
                         iconName={b.providerIconName}
@@ -452,6 +457,7 @@ export function DashboardAlerts({ overdue, upcoming, runway, topUps }: Dashboard
                       />
                       <ServiceBadge
                         name={b.name}
+                        uuid={b.serviceUuid}
                         type={b.type}
                         countryCode={b.countryCode}
                         marker={b.marker}

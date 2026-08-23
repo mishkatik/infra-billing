@@ -1,7 +1,8 @@
 import type { AnalyticsSummary, Provider } from '@infra/shared';
-import { IconChevronLeft, IconChevronRight } from '@tabler/icons-react';
+import { IconChevronLeft, IconChevronRight, IconExternalLink } from '@tabler/icons-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { ProviderIcon } from '@/components/ProviderIcon';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -63,32 +64,49 @@ export function ByProviderCard({ providerRows, base, isLoading, providerOf }: By
               </TableRow>
             </TableHeader>
             <TableBody>
-              {rowsPage.map((p) => (
-                <TableRow key={p.providerUuid}>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <ProviderIcon
-                        name={p.name}
-                        src={providerFavicon(
-                          providerOf(p.providerUuid) ?? { faviconLink: null, loginUrl: null },
+              {rowsPage.map((p) => {
+                const provider = providerOf(p.providerUuid);
+                return (
+                  <TableRow key={p.providerUuid}>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Link
+                          to={`/providers?selected=${p.providerUuid}`}
+                          className="flex items-center gap-2 hover:underline"
+                        >
+                          <ProviderIcon
+                            name={p.name}
+                            src={providerFavicon(provider ?? { faviconLink: null, loginUrl: null })}
+                            iconName={provider?.iconName}
+                            iconBg={provider?.iconBg}
+                            size={18}
+                          />
+                          <span className="text-sm font-medium">{p.name}</span>
+                        </Link>
+                        {provider?.loginUrl && (
+                          <a
+                            href={provider.loginUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            aria-label={provider.loginUrl}
+                            className="inline-flex shrink-0 text-muted-foreground transition-colors hover:text-foreground"
+                          >
+                            <IconExternalLink className="size-3.5" />
+                          </a>
                         )}
-                        iconName={providerOf(p.providerUuid)?.iconName}
-                        iconBg={providerOf(p.providerUuid)?.iconBg}
-                        size={18}
-                      />
-                      <span className="text-sm font-medium">{p.name}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right">{p.servicesCount}</TableCell>
-                  <TableCell className="text-right">{formatMoney(p.monthlyCost, base)}</TableCell>
-                  <TableCell className="text-right font-semibold">
-                    {formatMoney(p.spent, base)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {formatMoney(p.balance, p.balanceCurrency)}
-                  </TableCell>
-                </TableRow>
-              ))}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right">{p.servicesCount}</TableCell>
+                    <TableCell className="text-right">{formatMoney(p.monthlyCost, base)}</TableCell>
+                    <TableCell className="text-right font-semibold">
+                      {formatMoney(p.spent, base)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {formatMoney(p.balance, p.balanceCurrency)}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         ) : (
