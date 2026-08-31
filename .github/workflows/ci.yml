@@ -1,0 +1,120 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Lint, typecheck, build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Biome check
+        run: npm run check
+
+      - name: Generate Prisma client
+        run: npm run prisma:generate
+
+      - name: Build (shared → frontend → backend)
+        run: npm run build
+
+      - name: Typecheck
+        run: npm run typecheck
+
+  docker-smoke:
+    name: Docker build & boot
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17.6
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: infra_billing
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci -d infra_billing"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          load: true
+          tags: infra-billing:ci
+          build-args: |
+            GIT_COMMIT=${{ github.sha }}
+          cache-from: |
+            type=gha,scope=ci-amd64
+            type=gha,scope=amd64
+          cache-to: type=gha,mode=max,scope=ci-amd64
+
+      # The known failure mode here: an app that builds and typechecks fine but dies on
+      # container boot (runtime deps, prisma migrate, swagger setup). DOCS=true exercises
+      # the Swagger path too.
+      - name: Boot container
+        run: |
+          docker run -d --name app --network host \
+            -e DATABASE_URL='postgresql://ci:ci@127.0.0.1:5432/infra_billing?schema=public' \
+            -e ENCRYPTION_KEY="$(openssl rand -base64 32)" \
+            -e DOCS=true \
+            infra-billing:ci
+
+      - name: Wait for health
+        run: |
+          up=""
+          for _ in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:8080/api/health > /dev/null; then
+              up=1
+              break
+            fi
+            if [ "$(docker inspect -f '{{.State.Running}}' app)" != "true" ]; then
+              echo "container exited early" >&2
+              exit 1
+            fi
+            sleep 2
+          done
+          if [ -z "$up" ]; then
+            echo "timed out waiting for /api/health" >&2
+            exit 1
+          fi
+          body="$(curl -sf http://127.0.0.1:8080/api/health)"
+          echo "health: $body"
+          echo "$body" | grep -q '"db":"up"'
+          curl -sf -o /dev/null http://127.0.0.1:8080/api/docs
+          curl -sf -o /dev/null http://127.0.0.1:8080/
+
+      - name: Container logs
+        if: always()
+        run: docker logs app || true
