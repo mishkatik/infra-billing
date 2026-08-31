@@ -13,7 +13,7 @@
     "@fontsource/mulish": "^5.2.8",
     "@hookform/resolvers": "^5.4.0",
     "@infra/shared": "*",
-    "@paper-design/shaders-react": "^0.0.77",
+    "@paper-design/shaders-react": "^0.0.80",
     "@remotion/player": "^4.0.484",
     "@simplewebauthn/browser": "^13.3.0",
     "@tabler/icons-react": "^3.44.0",
