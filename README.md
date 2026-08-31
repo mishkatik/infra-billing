@@ -158,6 +158,7 @@ docker compose exec infra-billing cli reset-admin --yes
 | `DATABASE_URL` | Строка подключения Prisma (хост = `infra-billing-db` в docker, `127.0.0.1` локально) |
 | `ENCRYPTION_KEY` | **Обязательно.** AES-256-GCM ключ для секретов в БД — токены провайдеров и секрет сессии (32 байта base64) |
 | `DOCS` | `true` — включить Swagger UI на `/api/docs` (публично при включении). Default `false` |
+| `COOKIE_SECURE` | `Secure`-флаг сессионной куки. Не задан — следует за `NODE_ENV` (в prod включён). `false` — только для http-деплоя за защищённым транспортом (Tailscale/NetBird); passkeys всё равно требуют https |
 
 ---
 

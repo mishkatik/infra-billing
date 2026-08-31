@@ -11,6 +11,14 @@ export const envSchema = z.object({
   // session secret (32 bytes, base64). Root key: must stay in env (can't live in the DB it protects).
   ENCRYPTION_KEY: z.string().min(1),
 
+  // `Secure` flag of the session cookie. Unset → follows NODE_ENV (true in production).
+  // `false` is for http-only deployments where the transport is protected elsewhere (WireGuard
+  // overlays like Tailscale/NetBird); passkeys still need a real secure context regardless.
+  COOKIE_SECURE: z
+    .enum(['true', 'false'])
+    .optional()
+    .transform((v) => (v === undefined ? undefined : v === 'true')),
+
   // NB: the admin account (username + password hash) lives in the DB `auth_config` row, created on
   // first run in the panel. NOT in env. base currency / rate source / sync interval / Telegram are
   // also in the DB `Settings` row. See AuthConfigService / SettingsService.

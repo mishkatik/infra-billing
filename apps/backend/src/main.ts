@@ -44,6 +44,13 @@ async function bootstrap(): Promise<void> {
     app.enableCors({ origin: ['http://localhost:5173'], credentials: true });
   }
 
+  if (config.isProd && !config.cookieSecure) {
+    logger.warn(
+      'COOKIE_SECURE=false: session cookie is sent without Secure — make sure the transport is protected elsewhere',
+      'Bootstrap',
+    );
+  }
+
   app.enableShutdownHooks();
   await app.listen(config.port, '0.0.0.0');
 

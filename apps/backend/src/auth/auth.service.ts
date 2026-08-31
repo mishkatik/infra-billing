@@ -72,7 +72,7 @@ export class AuthService {
     return {
       httpOnly: true,
       sameSite: 'strict',
-      secure: this.config.isProd,
+      secure: this.config.cookieSecure,
       path: '/',
       maxAge: SESSION_MAX_AGE_SEC * 1000,
     };

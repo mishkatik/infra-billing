@@ -26,6 +26,10 @@ export class AppConfigService {
     return this.env.DOCS;
   }
 
+  get cookieSecure(): boolean {
+    return this.env.COOKIE_SECURE ?? this.isProd;
+  }
+
   get buildInfo(): {
     version: string;
     buildTime: string;
