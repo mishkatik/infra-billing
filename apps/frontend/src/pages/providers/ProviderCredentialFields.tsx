@@ -708,7 +708,7 @@ export function ProviderCredentialFields({
             reveal={reveal}
           />
         </Field>
-        {kind === 'billmgr' && (
+        {(kind === 'billmgr' || kind === 'hostbill') && (
           <Field
             id="cred-totp"
             label={t('providers.field.totpSecret')}

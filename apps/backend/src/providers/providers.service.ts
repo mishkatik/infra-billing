@@ -134,10 +134,10 @@ export class ProvidersService {
     if (kind === 'yandex') {
       return { hasToken: Boolean(c.keyId && c.serviceAccountId && c.privateKey) };
     }
-    if (kind === 'selectel' || kind === 'hostbill') {
+    if (kind === 'selectel') {
       return { hasPassword: Boolean(c.password) };
     }
-    if (kind === 'billmgr') {
+    if (kind === 'billmgr' || kind === 'hostbill') {
       return { hasPassword: Boolean(c.password), hasTotpSecret: Boolean(c.totpSecret) };
     }
     if (kind === 'beget') {
@@ -217,10 +217,10 @@ export class ProvidersService {
         ),
       };
     }
-    if (kind === 'selectel' || kind === 'hostbill') {
+    if (kind === 'selectel') {
       return c.password ? { password: c.password } : {};
     }
-    if (kind === 'billmgr') {
+    if (kind === 'billmgr' || kind === 'hostbill') {
       const out: ProviderCredentialsReveal = {};
       if (c.password) out.password = c.password;
       if (c.totpSecret) out.totpSecret = c.totpSecret;
@@ -377,7 +377,7 @@ export class ProvidersService {
       return this.crypto.encrypt(JSON.stringify(creds));
     }
     if (kind === 'hostbill' || kind === 'billmgr') {
-      const supportsTotp = kind === 'billmgr';
+      const supportsTotp = kind === 'billmgr' || kind === 'hostbill';
       const supplied =
         dto.baseUrl || dto.username || dto.password || (supportsTotp && dto.totpSecret);
       if (!supplied) return null;
