@@ -10,7 +10,7 @@ export interface ServiceFilter {
   isActive?: boolean;
 }
 
-export function useServices(filter: ServiceFilter = {}) {
+export function useServices(filter: ServiceFilter = {}, opts?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ['services', filter],
     queryFn: async () => {
@@ -21,6 +21,7 @@ export function useServices(filter: ServiceFilter = {}) {
       if (filter.isActive !== undefined) params.isActive = String(filter.isActive);
       return (await api.get<Service[]>(API_PATH.SERVICES.ROOT, { params })).data;
     },
+    enabled: opts?.enabled ?? true,
   });
 }
 

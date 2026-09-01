@@ -1,7 +1,9 @@
 import type { ForecastPoint } from '@infra/shared';
 import { useTranslation } from 'react-i18next';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
+import { useMe } from '@/api/auth';
 import { useSettings } from '@/api/settings';
+import { isAdmin } from '@/auth/permissions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { formatMoney, formatMoneyTick } from '@/utils/format';
@@ -13,20 +15,24 @@ interface ForecastCardProps {
 
 export function ForecastCard({ forecast, base }: ForecastCardProps) {
   const { t } = useTranslation();
-  const { data: settings } = useSettings();
+  const me = useMe();
+  const { data: settings } = useSettings({ enabled: isAdmin(me.data) });
   // Force mode duplicates the tariff fill into actual — stacking estimated would double the bar.
   const showEstimated =
     Boolean(settings?.forecastTariffBackfill) && !settings?.forecastTariffBackfillForce;
   const chartMoney = (v: number) => formatMoney(String(v), base);
+  // Scope withholds payments (member without payments:read) — every point omits `actual` rather
+  // than reporting a misleading 0. Used only to decide whether the series/legend renders at all.
+  const hasActuals = (forecast ?? []).some((p) => p.actual !== undefined);
   const forecastData = (forecast ?? []).map((p) => {
-    const actual = Number(p.actual);
+    const actual = p.actual === undefined ? undefined : Number(p.actual);
     const estimated = Number(p.estimated);
     const projected = Number(p.projected);
     // Estimated is the full portfolio monthly cost and overrides the bar (not stacked on actual).
     const override = showEstimated && estimated > 0;
     return {
       month: p.month,
-      actual: override ? 0 : actual,
+      actual: actual === undefined ? undefined : override ? 0 : actual,
       estimated: showEstimated ? estimated : 0,
       projected,
       actualTip: actual,
@@ -35,7 +41,9 @@ export function ForecastCard({ forecast, base }: ForecastCardProps) {
   });
   // All-zero months mean a bare axis with no bars — skip the card entirely.
   if (
-    !forecastData.some((p) => p.actual > 0 || p.projected > 0 || (showEstimated && p.estimated > 0))
+    !forecastData.some(
+      (p) => (p.actual ?? 0) > 0 || p.projected > 0 || (showEstimated && p.estimated > 0),
+    )
   ) {
     return null;
   }
@@ -136,7 +144,7 @@ export function ForecastCard({ forecast, base }: ForecastCardProps) {
                   />
                 }
               />
-              <Bar dataKey="actual" stackId="spend" fill="var(--chart-1)" />
+              {hasActuals && <Bar dataKey="actual" stackId="spend" fill="var(--chart-1)" />}
               {showEstimated && (
                 <Bar dataKey="estimated" stackId="spend" fill="var(--chart-1)" fillOpacity={0.7} />
               )}

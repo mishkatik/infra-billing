@@ -21,7 +21,8 @@ interface PaymentsTableProps {
   isLoading: boolean;
   total: number;
   providerOf: (uuid: string) => Provider | undefined;
-  onDelete: (uuid: string) => void;
+  // Absent for members without payments:edit — the delete column renders empty.
+  onDelete?: (uuid: string) => void;
 }
 
 export function PaymentsTable({
@@ -78,17 +79,19 @@ export function PaymentsTable({
                     {p.description ?? t('common.none')}
                   </TableCell>
                   <TableCell>
-                    <div className="flex justify-end">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        aria-label={t('common.delete')}
-                        className="text-destructive hover:text-destructive"
-                        onClick={() => onDelete(p.uuid)}
-                      >
-                        <IconTrash className="size-4" />
-                      </Button>
-                    </div>
+                    {onDelete && (
+                      <div className="flex justify-end">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label={t('common.delete')}
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => onDelete(p.uuid)}
+                        >
+                          <IconTrash className="size-4" />
+                        </Button>
+                      </div>
+                    )}
                   </TableCell>
                 </TableRow>
               );

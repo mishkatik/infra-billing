@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/table';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { SortState } from '@/hooks/useTableSort';
+import { cn } from '@/lib/utils';
 import { providerFavicon } from '@/utils/favicon';
 import { formatDate, formatMoney } from '@/utils/format';
 import type { ProviderSortKey } from './providersSort';
@@ -27,8 +28,9 @@ interface ProvidersTableProps {
   kindLabel: (kind: string) => string;
   sort: SortState<ProviderSortKey> | null;
   onToggleSort: (key: ProviderSortKey) => void;
-  onRowClick: (p: Provider) => void;
-  onSync: (uuid: string) => void;
+  // Absent for members without providers:edit — rows render inert (no edit/delete/sync entry point).
+  onRowClick?: (p: Provider) => void;
+  onSync?: (uuid: string) => void;
 }
 
 export function ProvidersTable({
@@ -67,15 +69,22 @@ export function ProvidersTable({
             {providers?.map((p) => (
               <TableRow
                 key={p.uuid}
-                tabIndex={0}
-                className="cursor-pointer focus-visible:bg-muted/50 focus-visible:outline-none"
-                onClick={() => onRowClick(p)}
-                onKeyDown={(e) => {
-                  if (e.key !== 'Enter' && e.key !== ' ') return;
-                  // Space scrolls the page by default; Enter doesn't.
-                  if (e.key === ' ') e.preventDefault();
-                  onRowClick(p);
-                }}
+                tabIndex={onRowClick ? 0 : undefined}
+                className={cn(
+                  onRowClick &&
+                    'cursor-pointer focus-visible:bg-muted/50 focus-visible:outline-none',
+                )}
+                onClick={onRowClick ? () => onRowClick(p) : undefined}
+                onKeyDown={
+                  onRowClick
+                    ? (e) => {
+                        if (e.key !== 'Enter' && e.key !== ' ') return;
+                        // Space scrolls the page by default; Enter doesn't.
+                        if (e.key === ' ') e.preventDefault();
+                        onRowClick(p);
+                      }
+                    : undefined
+                }
               >
                 <TableCell className="py-3">
                   <div className="flex items-center gap-2">
@@ -134,7 +143,7 @@ export function ProvidersTable({
                         {formatDate(p.lastSyncAt)}
                       </span>
                     )}
-                    {p.kind !== 'manual' && (
+                    {p.kind !== 'manual' && onSync && (
                       <Button
                         type="button"
                         variant="ghost"

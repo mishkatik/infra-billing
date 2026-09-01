@@ -1,0 +1,28 @@
+model Account {
+  uuid String @id @default(uuid()) @map("uuid")
+
+  // Both null while the account is pending an invite claim.
+  username     String? @unique @map("username")
+  passwordHash String? @map("password_hash")
+
+  // Flat "<area>:<scope>" entries (see PERMISSIONS in @infra/shared). Edit implies read;
+  // normalized on write.
+  permissions String[] @default([]) @map("permissions")
+
+  // Stable WebAuthn user handle (random bytes), one per account.
+  webauthnUserId Bytes @map("webauthn_user_id")
+
+  disabled Boolean @default(false) @map("disabled")
+
+  // SHA-256 of the current one-time invite/reset link token; null once claimed or never issued.
+  setupTokenHash      String?   @unique @map("setup_token_hash")
+  setupTokenExpiresAt DateTime? @map("setup_token_expires_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt      @map("updated_at")
+
+  projects AccountProject[]
+  passkeys Passkey[]
+
+  @@map("accounts")
+}

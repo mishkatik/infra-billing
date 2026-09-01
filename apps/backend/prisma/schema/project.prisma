@@ -10,6 +10,7 @@ model Project {
   updatedAt DateTime @updatedAt      @map("updated_at")
 
   services Service[]
+  accounts AccountProject[]
 
   @@map("projects")
 }

@@ -5,6 +5,7 @@
       "**",
       "!**/node_modules",
       "!**/dist",
+      "!.claude",
       "!apps/backend/src/generated",
       "!apps/backend/prisma/migrations",
       "!**/*.tsbuildinfo",

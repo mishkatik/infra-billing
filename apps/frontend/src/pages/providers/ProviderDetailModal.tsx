@@ -28,7 +28,7 @@ interface ProviderDetailModalProps {
   isSaving: boolean;
   isSyncing: boolean;
   onSubmit: FormEventHandler<HTMLFormElement>;
-  onSync: (uuid: string) => void;
+  onSync?: (uuid: string) => void;
   onDelete: (p: Provider) => void;
   onClose: () => void;
 }
@@ -127,7 +127,7 @@ export function ProviderDetailModal({
                 />
               </section>
 
-              {shown.kind !== 'manual' && (
+              {shown.kind !== 'manual' && onSync && (
                 <section className="space-y-2 rounded-xl border p-4">
                   <p className="section-label">{t('providers.detail.syncTitle')}</p>
                   <InfoRow

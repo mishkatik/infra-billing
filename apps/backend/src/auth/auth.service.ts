@@ -4,8 +4,9 @@ import jwt from 'jsonwebtoken';
 import { CookieOptions } from 'express';
 import { AppConfigService } from '@config/app-config.service';
 import { ApiTokensRepository } from '@repositories/api-tokens/api-tokens.repository';
+import { AccountsRepository } from '@repositories/accounts/accounts.repository';
 import { AuthConfigService } from './auth-config.service';
-import { verifyPassword } from './password.util';
+import { burnKdf, verifyPassword } from './password.util';
 import { hashToken } from '../api-tokens/token.util';
 
 export const SESSION_COOKIE = 'infra_session';
@@ -13,6 +14,21 @@ const SESSION_MAX_AGE_SEC = 7 * 24 * 60 * 60; // 7 days
 
 interface SessionPayload {
   u: string;
+  acc?: string;
+}
+
+export interface SessionIdentity {
+  username: string;
+  accountUuid: string | null;
+}
+
+export type AccountWithProjects = NonNullable<
+  Awaited<ReturnType<AccountsRepository['findByUsername']>>
+>;
+
+export interface LoginResult {
+  username: string;
+  account: AccountWithProjects | null;
 }
 
 @Injectable()
@@ -21,37 +37,70 @@ export class AuthService {
     private readonly config: AppConfigService,
     private readonly authConfig: AuthConfigService,
     private readonly apiTokens: ApiTokensRepository,
+    private readonly accounts: AccountsRepository,
   ) {}
 
-  /** Constant-time credential check against the admin row in the DB. */
-  async verifyCredentials(username: string, password: string): Promise<boolean> {
-    const row = await this.authConfig.getRow();
-    if (!row?.passwordEnabled) return false;
-    // Run the KDF unconditionally so response time doesn't reveal whether the username matched
-    // (no username-enumeration timing oracle); compare the username constant-time too.
-    const passwordOk = verifyPassword(password, row.passwordHash);
-    const usernameOk = this.safeEqual(username, row.username);
-    return usernameOk && passwordOk;
-  }
-
-  /** Sign a session JWT for the given username (7d expiry). */
-  async sign(username: string): Promise<string> {
+  /** Sign a session JWT; member sessions carry the account uuid. */
+  async sign(username: string, accountUuid?: string): Promise<string> {
     const secret = await this.authConfig.getSessionSecret();
-    return jwt.sign({ u: username } satisfies SessionPayload, secret, {
-      expiresIn: SESSION_MAX_AGE_SEC,
-    });
+    const payload: SessionPayload = accountUuid
+      ? { u: username, acc: accountUuid }
+      : { u: username };
+    return jwt.sign(payload, secret, { expiresIn: SESSION_MAX_AGE_SEC });
   }
 
-  /** Validate a session token, returning the username or null. */
-  async verify(token: string | undefined): Promise<string | null> {
+  /** Validate a session token, returning the identity or null. */
+  async verify(token: string | undefined): Promise<SessionIdentity | null> {
     if (!token) return null;
     try {
       const secret = await this.authConfig.getSessionSecret();
       const decoded = jwt.verify(token, secret) as SessionPayload;
-      return typeof decoded?.u === 'string' ? decoded.u : null;
+      if (typeof decoded?.u !== 'string') return null;
+      // A present-but-non-string `acc` is malformed, not "no account" — reject rather than
+      // silently treating the session as admin.
+      if (decoded.acc !== undefined && typeof decoded.acc !== 'string') return null;
+      return {
+        username: decoded.u,
+        accountUuid: decoded.acc ?? null,
+      };
     } catch {
       return null;
     }
+  }
+
+  /**
+   * Constant-time password check against the admin row, then member accounts.
+   * The KDF runs exactly once on every path (real or dummy hash), so response time
+   * reveals neither whether the username exists nor which table matched.
+   */
+  async verifyLogin(username: string, password: string): Promise<LoginResult | null> {
+    const row = await this.authConfig.getRow();
+    if (row?.passwordEnabled && this.safeEqual(username, row.username)) {
+      let ok: boolean;
+      if (row.passwordHash) {
+        ok = verifyPassword(password, row.passwordHash);
+      } else {
+        burnKdf(password);
+        ok = false;
+      }
+      return ok ? { username: row.username, account: null } : null;
+    }
+    // passwordEnabled is owner-scoped: members always keep password login (no lockout risk).
+    const account = await this.accounts.findByUsername(username);
+    if (account && !account.disabled) {
+      let ok: boolean;
+      if (account.passwordHash) {
+        ok = verifyPassword(password, account.passwordHash);
+      } else {
+        burnKdf(password);
+        ok = false;
+      }
+      // `username` (the lookup key) equals `account.username` here, and is non-null — unlike
+      // the row's own field, which stays nullable for still-pending accounts.
+      return ok ? { username, account } : null;
+    }
+    burnKdf(password);
+    return null;
   }
 
   /** Validate an API token (Authorization: Bearer), returning its name or null. */

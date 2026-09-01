@@ -28,7 +28,7 @@ interface ByProviderCardProps {
 
 export function ByProviderCard({ providerRows, base, isLoading, providerOf }: ByProviderCardProps) {
   const { t } = useTranslation();
-  const rows = [...providerRows].sort((a, b) => Number(b.spent) - Number(a.spent));
+  const rows = [...providerRows].sort((a, b) => Number(b.spent ?? 0) - Number(a.spent ?? 0));
   const [providerPage, setProviderPage] = useState(1);
   const pageCount = Math.max(1, Math.ceil(rows.length / PROVIDER_PAGE_SIZE));
   // Clamp in case the provider list shrank below the current page.

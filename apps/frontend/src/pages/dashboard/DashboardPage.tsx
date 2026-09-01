@@ -4,8 +4,10 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useForecast, useSummary } from '@/api/analytics';
+import { useMe } from '@/api/auth';
 import { useProjects } from '@/api/projects';
 import { useProviders } from '@/api/providers';
+import { can } from '@/auth/permissions';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -14,6 +16,7 @@ import { ByProviderCard } from './ByProviderCard';
 import { DashboardAlerts } from './DashboardAlerts';
 import { ForecastCard } from './ForecastCard';
 import { KpiCards } from './KpiCards';
+import { ProjectFilter } from './ProjectFilter';
 import { SpendByTypeCard } from './SpendByTypeCard';
 import { UpcomingBillingsCard } from './UpcomingBillingsCard';
 
@@ -55,10 +58,21 @@ const PREVIEW_RUNWAY: AnalyticsSummary['balanceRunway'] = [
 
 export function DashboardPage() {
   const { t } = useTranslation();
-  const [params] = useSearchParams();
-  const { data: summary, isLoading } = useSummary();
-  const { data: forecast } = useForecast(6, 3);
-  const { data: providers } = useProviders();
+  const [params, setParams] = useSearchParams();
+  const selectedProjects = useMemo(
+    () => params.get('projects')?.split(',').filter(Boolean) ?? [],
+    [params],
+  );
+  const setSelectedProjects = (next: string[]) => {
+    const p = new URLSearchParams(params);
+    if (next.length) p.set('projects', next.join(','));
+    else p.delete('projects');
+    setParams(p, { replace: true });
+  };
+  const me = useMe();
+  const { data: summary, isLoading } = useSummary(selectedProjects);
+  const { data: forecast } = useForecast(6, 3, selectedProjects);
+  const { data: providers } = useProviders({ enabled: can(me.data, 'providers:read') });
   const { data: projectsList } = useProjects();
   const providerOf = (uuid: string) => providers?.find((p) => p.uuid === uuid);
   const projectOf = (uuid: string) => projectsList?.find((p) => p.uuid === uuid);
@@ -75,7 +89,14 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title={t('dashboard.title')} subtitle={t('dashboard.subtitle')} />
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <PageHeader title={t('dashboard.title')} subtitle={t('dashboard.subtitle')} />
+        <ProjectFilter
+          options={(projectsList ?? []).map((p) => ({ value: p.uuid, label: p.name }))}
+          selected={selectedProjects}
+          onChange={setSelectedProjects}
+        />
+      </div>
 
       <KpiCards summary={summary} base={base} />
 

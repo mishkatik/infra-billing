@@ -18,8 +18,10 @@ import { Fragment, type ReactNode, useCallback, useRef } from 'react';
 import type { ProviderCredentialsReveal, YandexDiscover } from '@infra/shared';
 import { Controller, type UseFormReturn } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
+import { useMe } from '@/api/auth';
 import { apiErrorMessage } from '@/api/client';
 import { revealProviderCredentials, type SecretField, useYandexDiscover } from '@/api/providers';
+import { isAdmin } from '@/auth/permissions';
 import { NetcupAuthorizeButton } from '@/components/NetcupAuthorizeButton';
 import { SecretInput } from '@/components/SecretInput';
 import { Badge } from '@/components/ui/badge';
@@ -51,7 +53,8 @@ function SecretFormField({
   name: SecretField;
   id: string;
   hasStored?: boolean;
-  reveal: (field: SecretField) => Promise<string>;
+  // Absent for non-admin members — reveal is admin-only server-side, so the eye button stays disabled.
+  reveal?: (field: SecretField) => Promise<string>;
   placeholder?: string;
   multiline?: boolean;
 }) {
@@ -65,7 +68,7 @@ function SecretFormField({
           value={field.value}
           onChange={field.onChange}
           hasStored={hasStored}
-          onReveal={hasStored ? () => reveal(name) : undefined}
+          onReveal={hasStored && reveal ? () => reveal(name) : undefined}
           placeholder={placeholder}
           multiline={multiline}
         />
@@ -585,10 +588,12 @@ export function ProviderCredentialFields({
   storedSecrets,
 }: ProviderCredentialFieldsProps) {
   const { t } = useTranslation();
+  const me = useMe();
+  const isAdminUser = isAdmin(me.data);
   const kind = form.watch('kind');
   const optionalPh = t('common.optional');
   const revealCache = useRef<{ uuid: string; data: ProviderCredentialsReveal } | null>(null);
-  const reveal = useCallback(
+  const revealSecret = useCallback(
     async (field: SecretField) => {
       if (!providerUuid) return '';
       if (!revealCache.current || revealCache.current.uuid !== providerUuid) {
@@ -606,11 +611,17 @@ export function ProviderCredentialFields({
     },
     [providerUuid],
   );
+  // Reveal is admin-only server-side — members with providers:edit can still reach this form,
+  // so the eye button is disabled (not wired) instead of hitting a 403.
+  const reveal = isAdminUser ? revealSecret : undefined;
 
   const baseUrl = form.watch('baseUrl');
   const yandexToken = form.watch('token');
+  // Discover is admin-only server-side too — keep the body null for non-admins so the query
+  // never auto-fires and the refresh button (disabled whenever there's no body) stays inert.
+  // The key is still editable and saves normally; only the scope preview is unavailable.
   const yandexBody: YandexDiscover | null =
-    kind !== 'yandex'
+    kind !== 'yandex' || !isAdminUser
       ? null
       : yandexToken && isCompleteYandexKey(yandexToken)
         ? { token: yandexToken }
@@ -760,6 +771,7 @@ export function ProviderCredentialFields({
     return (
       <>
         <NetcupAuthorizeButton
+          disabled={!isAdminUser}
           onToken={(tok) => form.setValue('token', tok, { shouldDirty: true })}
         />
         <Field

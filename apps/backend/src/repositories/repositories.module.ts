@@ -1,4 +1,5 @@
 import { Global, Module } from '@nestjs/common';
+import { AccountsRepository } from './accounts/accounts.repository';
 import { ApiTokensRepository } from './api-tokens/api-tokens.repository';
 import { AuthConfigRepository } from './auth-config/auth-config.repository';
 import { BalanceSnapshotsRepository } from './balance-snapshots/balance-snapshots.repository';
@@ -14,6 +15,7 @@ import { SettingsRepository } from './settings/settings.repository';
 import { SyncRunsRepository } from './sync-runs/sync-runs.repository';
 
 const REPOSITORIES = [
+  AccountsRepository,
   ApiTokensRepository,
   AuthConfigRepository,
   BalanceSnapshotsRepository,

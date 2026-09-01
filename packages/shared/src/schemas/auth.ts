@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { permissionSchema } from './account';
+import { uuidSchema } from './common';
 
 export const loginSchema = z.object({
   username: z.string().min(1).describe('Owner username'),
@@ -8,6 +10,10 @@ export type LoginInput = z.infer<typeof loginSchema>;
 
 export const meSchema = z.object({
   username: z.string().describe('Logged-in username'),
+  role: z.enum(['admin', 'member']).describe('Principal role'),
+  permissions: z.array(permissionSchema).describe('Granted permissions (empty for admin)'),
+  // null = unrestricted (admin); members always carry an explicit list.
+  projectUuids: z.array(uuidSchema).describe('Accessible projects').nullable(),
 });
 export type Me = z.infer<typeof meSchema>;
 
@@ -15,8 +21,10 @@ export type Me = z.infer<typeof meSchema>;
 // methods to render.
 export const setupStatusSchema = z.object({
   needsSetup: z.boolean().describe('First-run setup required'),
-  passwordEnabled: z.boolean().describe('Password login enabled'),
-  passkeyEnabled: z.boolean().describe('Passkey login enabled'),
+  passwordEnabled: z.boolean().describe('Owner password login enabled'),
+  passkeyEnabled: z.boolean().describe('Owner passkey login enabled'),
+  memberPasswordLogin: z.boolean().describe('Member password login available'),
+  memberPasskeys: z.boolean().describe('Member passkeys registered'),
 });
 export type SetupStatus = z.infer<typeof setupStatusSchema>;
 
@@ -30,8 +38,8 @@ export type SetupInput = z.infer<typeof setupSchema>;
 // Authenticated auth configuration (GET /auth/config). Never includes hash or secret.
 export const authConfigSchema = z.object({
   username: z.string().describe('Owner username'),
-  passwordEnabled: z.boolean().describe('Password login enabled'),
-  passkeyEnabled: z.boolean().describe('Passkey login enabled'),
+  passwordEnabled: z.boolean().describe('Owner password login enabled'),
+  passkeyEnabled: z.boolean().describe('Owner passkey login enabled'),
   rpId: z.string().describe('Relying Party ID'),
   rpName: z.string().describe('Relying Party name'),
   rpOrigin: z.string().describe('Relying Party origin'),
@@ -40,8 +48,8 @@ export type AuthConfig = z.infer<typeof authConfigSchema>;
 
 // Username is set once at setup and is immutable afterwards. It's intentionally not updatable here.
 export const updateAuthConfigSchema = z.object({
-  passwordEnabled: z.boolean().describe('Enable password login').optional(),
-  passkeyEnabled: z.boolean().describe('Enable passkey login').optional(),
+  passwordEnabled: z.boolean().describe('Enable owner password login').optional(),
+  passkeyEnabled: z.boolean().describe('Enable owner passkey login').optional(),
   // Owner-set Relying Party config. Bounded to keep the singleton row sane; format isn't enforced
   // (a bad value only breaks the owner's own passkey ceremonies, fixable in the same screen).
   rpId: z.string().max(253).describe('Relying Party ID').optional(),

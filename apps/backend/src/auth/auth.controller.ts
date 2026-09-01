@@ -7,7 +7,6 @@ import {
   Param,
   Patch,
   Post,
-  Req,
   Res,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -22,7 +21,7 @@ import {
   type Passkey,
   type SetupStatus,
 } from '@infra/shared';
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { AuthService, SESSION_COOKIE } from './auth.service';
 import { AuthConfigService } from './auth-config.service';
 import { WebAuthnService } from './webauthn.service';
@@ -32,6 +31,9 @@ import { UpdateAuthConfigDto } from './dto/update-auth-config.dto';
 import { PasskeyRegisterVerifyDto } from './dto/passkey-register-verify.dto';
 import { PasskeyLoginVerifyDto } from './dto/passkey-login-verify.dto';
 import { AuthConfigDto, MeDto, PasskeyDto, SetupStatusDto } from './dto/auth-response.dto';
+import { AnyPrincipal } from './any-principal.decorator';
+import { CurrentPrincipal } from './principal.decorator';
+import { loginResultToPrincipal, toMe, type Principal } from './principal';
 import { Public } from './public.decorator';
 import { SessionOnly } from './session-only.decorator';
 import {
@@ -70,7 +72,7 @@ export class AuthController {
   async setup(@Body() dto: SetupDto, @Res({ passthrough: true }) res: Response): Promise<Me> {
     await this.authConfig.setup(dto.username, dto.password);
     res.cookie(SESSION_COOKIE, await this.auth.sign(dto.username), this.auth.cookieOptions());
-    return { username: dto.username };
+    return { username: dto.username, role: 'admin', permissions: [], projectUuids: null };
   }
 
   @ApiOperation({ summary: 'Log in with credentials' })
@@ -79,11 +81,14 @@ export class AuthController {
   @Post(API_SUB.AUTH_LOGIN)
   @HttpCode(200)
   async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response): Promise<Me> {
-    if (!(await this.auth.verifyCredentials(dto.username, dto.password))) {
-      throw new UnauthorizedException('Invalid username or password');
-    }
-    res.cookie(SESSION_COOKIE, await this.auth.sign(dto.username), this.auth.cookieOptions());
-    return { username: dto.username };
+    const result = await this.auth.verifyLogin(dto.username, dto.password);
+    if (!result) throw new UnauthorizedException('Invalid username or password');
+    res.cookie(
+      SESSION_COOKIE,
+      await this.auth.sign(result.username, result.account?.uuid),
+      this.auth.cookieOptions(),
+    );
+    return toMe(loginResultToPrincipal(result));
   }
 
   @ApiOperation({ summary: 'Log out current session' })
@@ -112,17 +117,22 @@ export class AuthController {
     @Body() dto: PasskeyLoginVerifyDto,
     @Res({ passthrough: true }) res: Response,
   ): Promise<Me> {
-    const username = await this.webauthn.verifyLogin(dto.response as AuthenticationResponseJSON);
-    res.cookie(SESSION_COOKIE, await this.auth.sign(username), this.auth.cookieOptions());
-    return { username };
+    const result = await this.webauthn.verifyLogin(dto.response as AuthenticationResponseJSON);
+    res.cookie(
+      SESSION_COOKIE,
+      await this.auth.sign(result.username, result.account?.uuid),
+      this.auth.cookieOptions(),
+    );
+    return toMe(loginResultToPrincipal(result));
   }
 
   @ApiOperation({ summary: 'Get current user' })
   @ApiOkResponse({ type: MeDto })
   @ApiBearerAuth()
+  @AnyPrincipal()
   @Get(API_SUB.AUTH_ME)
-  me(@Req() req: Request & { user?: string }): Me {
-    return { username: req.user ?? '' };
+  me(@CurrentPrincipal() principal: Principal): Me {
+    return toMe(principal);
   }
 
   @ApiOperation({ summary: 'Get auth config' })
@@ -143,35 +153,49 @@ export class AuthController {
 
   @ApiOperation({ summary: 'Get passkey register options' })
   @ApiBearerAuth()
+  @AnyPrincipal()
   @Post(API_SUB.AUTH_PASSKEY_REGISTER_OPTIONS)
   @HttpCode(200)
-  passkeyRegisterOptions(): Promise<unknown> {
-    return this.webauthn.registerOptions();
+  passkeyRegisterOptions(@CurrentPrincipal() principal: Principal): Promise<unknown> {
+    return this.webauthn.registerOptions(principal);
   }
 
   @ApiOperation({ summary: 'Verify passkey registration' })
   @ApiOkResponse({ type: PasskeyDto })
   @ApiBearerAuth()
+  @AnyPrincipal()
   @Post(API_SUB.AUTH_PASSKEY_REGISTER_VERIFY)
   @HttpCode(200)
-  passkeyRegisterVerify(@Body() dto: PasskeyRegisterVerifyDto): Promise<Passkey> {
-    return this.webauthn.verifyRegistration(dto.response as RegistrationResponseJSON, dto.name);
+  passkeyRegisterVerify(
+    @CurrentPrincipal() principal: Principal,
+    @Body() dto: PasskeyRegisterVerifyDto,
+  ): Promise<Passkey> {
+    return this.webauthn.verifyRegistration(
+      principal,
+      dto.response as RegistrationResponseJSON,
+      dto.name,
+    );
   }
 
   @ApiOperation({ summary: 'List passkeys' })
   @ApiOkResponse({ type: [PasskeyDto] })
   @ApiBearerAuth()
+  @AnyPrincipal()
   @Get(API_SUB.AUTH_PASSKEYS)
-  listPasskeys(): Promise<Passkey[]> {
-    return this.webauthn.list();
+  listPasskeys(@CurrentPrincipal() principal: Principal): Promise<Passkey[]> {
+    return this.webauthn.list(principal);
   }
 
   @ApiOperation({ summary: 'Delete a passkey' })
   @ApiNoContentResponse()
   @ApiBearerAuth()
+  @AnyPrincipal()
   @Delete(API_SUB.AUTH_PASSKEY_BY_ID)
   @HttpCode(204)
-  deletePasskey(@Param(ID_PARAM) uuid: string): Promise<void> {
-    return this.webauthn.delete(uuid);
+  deletePasskey(
+    @CurrentPrincipal() principal: Principal,
+    @Param(ID_PARAM) uuid: string,
+  ): Promise<void> {
+    return this.webauthn.delete(principal, uuid);
   }
 }

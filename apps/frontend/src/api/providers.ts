@@ -22,10 +22,11 @@ export async function revealProviderCredentials(uuid: string): Promise<ProviderC
     .data;
 }
 
-export function useProviders() {
+export function useProviders(opts?: { enabled?: boolean }) {
   return useQuery({
     queryKey: KEY,
     queryFn: async () => (await api.get<Provider[]>(API_PATH.PROVIDERS.ROOT)).data,
+    enabled: opts?.enabled ?? true,
   });
 }
 

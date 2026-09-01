@@ -17,6 +17,6 @@ import { AuthGuard } from './auth.guard';
     // Global guard: protects every /api/* route except those marked @Public().
     { provide: APP_GUARD, useClass: AuthGuard },
   ],
-  exports: [AuthService],
+  exports: [AuthService, AuthConfigService],
 })
 export class AuthModule {}

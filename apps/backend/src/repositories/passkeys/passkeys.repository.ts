@@ -6,17 +6,24 @@ import { PrismaService } from '../../prisma/prisma.service';
 export class PasskeysRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  listAll() {
-    return this.prisma.passkey.findMany({ orderBy: { createdAt: 'asc' } });
+  listByOwner(accountUuid: string | null) {
+    return this.prisma.passkey.findMany({ where: { accountUuid }, orderBy: { createdAt: 'asc' } });
   }
 
-  async listNames(): Promise<(string | null)[]> {
-    const rows = await this.prisma.passkey.findMany({ select: { name: true } });
+  async listNamesByOwner(accountUuid: string | null): Promise<(string | null)[]> {
+    const rows = await this.prisma.passkey.findMany({
+      where: { accountUuid },
+      select: { name: true },
+    });
     return rows.map((r) => r.name);
   }
 
-  count() {
-    return this.prisma.passkey.count();
+  countByOwner(accountUuid: string | null) {
+    return this.prisma.passkey.count({ where: { accountUuid } });
+  }
+
+  countMembers() {
+    return this.prisma.passkey.count({ where: { accountUuid: { not: null } } });
   }
 
   findByUuid(uuid: string) {

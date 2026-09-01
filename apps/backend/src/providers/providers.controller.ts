@@ -10,6 +10,9 @@ import {
   Post,
 } from '@nestjs/common';
 import { API, API_SUB, CONTROLLERS_INFO, ID_PARAM } from '@infra/shared';
+import type { Principal } from '../auth/principal';
+import { CurrentPrincipal } from '../auth/principal.decorator';
+import { RequirePerm } from '../auth/require-perm.decorator';
 import { SessionOnly } from '../auth/session-only.decorator';
 import { NetcupDeviceFlowService } from '../connectors/netcup/netcup.device-flow';
 import { ProvidersService } from './providers.service';
@@ -44,6 +47,7 @@ export class ProvidersController {
   ) {}
 
   @Get()
+  @RequirePerm('providers:read')
   @ApiOperation({ summary: 'List providers' })
   @ApiOkResponse({ type: [ProviderDto] })
   list() {
@@ -52,6 +56,7 @@ export class ProvidersController {
 
   @Post()
   @HttpCode(201)
+  @RequirePerm('providers:edit')
   @ApiOperation({ summary: 'Create a provider' })
   @ApiCreatedResponse({ type: ProviderDto })
   create(@Body() dto: CreateProviderDto) {
@@ -94,13 +99,15 @@ export class ProvidersController {
   }
 
   @Get(API_SUB.BY_ID)
+  @RequirePerm('providers:read')
   @ApiOperation({ summary: 'Get provider with services' })
   @ApiOkResponse({ type: ProviderWithServicesDto })
-  get(@Param(ID_PARAM, ParseUUIDPipe) uuid: string) {
-    return this.providers.getWithServices(uuid);
+  get(@Param(ID_PARAM, ParseUUIDPipe) uuid: string, @CurrentPrincipal() principal: Principal) {
+    return this.providers.getWithServices(uuid, principal);
   }
 
   @Patch(API_SUB.BY_ID)
+  @RequirePerm('providers:edit')
   @ApiOperation({ summary: 'Update a provider' })
   @ApiOkResponse({ type: ProviderDto })
   update(@Param(ID_PARAM, ParseUUIDPipe) uuid: string, @Body() dto: UpdateProviderDto) {
@@ -109,6 +116,7 @@ export class ProvidersController {
 
   @Delete(API_SUB.BY_ID)
   @HttpCode(204)
+  @RequirePerm('providers:edit')
   @ApiOperation({ summary: 'Delete a provider' })
   @ApiNoContentResponse()
   remove(@Param(ID_PARAM, ParseUUIDPipe) uuid: string) {

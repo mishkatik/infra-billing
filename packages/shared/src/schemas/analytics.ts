@@ -1,12 +1,28 @@
 import { z } from 'zod';
 import { currencySchema, isoDateSchema, moneySchema, uuidSchema } from './common';
 
+/** `?projects=<uuid>,<uuid>` filter shared by summary and forecast. */
+export const analyticsProjectsQuerySchema = z.object({
+  projects: z
+    .string()
+    .describe('Comma-separated project UUIDs to filter by')
+    .transform((s) =>
+      s
+        .split(',')
+        .map((v) => v.trim())
+        .filter(Boolean),
+    )
+    .pipe(z.array(uuidSchema))
+    .optional(),
+});
+export type AnalyticsProjectsQuery = z.infer<typeof analyticsProjectsQuerySchema>;
+
 export const byProviderSchema = z.object({
   providerUuid: uuidSchema.describe('Provider UUID'),
   name: z.string().describe('Provider name'),
   monthlyCost: moneySchema.describe('Monthly cost in base currency'),
   // Total paid out to this provider (top-ups + manual payments) in base currency.
-  spent: moneySchema.describe('Total spent in base currency'),
+  spent: moneySchema.describe('Total spent in base currency').optional(),
   balance: moneySchema.describe('Account balance').nullable(),
   balanceCurrency: currencySchema.describe('Balance currency').nullable(),
   servicesCount: z.number().int().describe('Number of services'),
@@ -160,8 +176,8 @@ export const analyticsSummarySchema = z.object({
   baseCurrency: currencySchema.describe('Base currency code'),
   monthlyTotal: moneySchema.describe('Total monthly cost'),
   yearlyProjection: moneySchema.describe('Projected yearly cost'),
-  currentMonthPayments: moneySchema.describe('Payments this month'),
-  totalSpent: moneySchema.describe('Total spent overall'),
+  currentMonthPayments: moneySchema.describe('Payments this month').optional(),
+  totalSpent: moneySchema.describe('Total spent overall').optional(),
   byProvider: z.array(byProviderSchema).describe('Breakdown by provider'),
   byProject: z.array(byProjectSchema).describe('Breakdown by project'),
   byCountry: z.array(byCountrySchema).describe('Breakdown by country'),
@@ -181,7 +197,8 @@ export type AnalyticsSummary = z.infer<typeof analyticsSummarySchema>;
 export const forecastPointSchema = z.object({
   month: z.string().describe('Month'),
   projected: moneySchema.describe('Projected cost (future months)'),
-  actual: moneySchema.describe('Actual charges (past/current months)'),
+  // Omitted (not zeroed) when the caller's scope withholds payment data.
+  actual: moneySchema.describe('Actual charges (past/current months)').optional(),
   estimated: moneySchema.describe(
     'Tariff backfill for past/current months (providers without payment history, or force mode)',
   ),

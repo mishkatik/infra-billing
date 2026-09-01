@@ -1,9 +1,11 @@
 import i18n from 'i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
 import { initReactI18next } from 'react-i18next';
+import { accounts } from './locales/accounts';
 import { auth } from './locales/auth';
 import { common } from './locales/common';
 import { dashboard } from './locales/dashboard';
+import { invite } from './locales/invite';
 import { payments } from './locales/payments';
 import { projects } from './locales/projects';
 import { providers } from './locales/providers';
@@ -26,6 +28,8 @@ const resources = {
       settings: settings.en,
       auth: auth.en,
       tokens: tokens.en,
+      accounts: accounts.en,
+      invite: invite.en,
     },
   },
   ru: {
@@ -39,6 +43,8 @@ const resources = {
       settings: settings.ru,
       auth: auth.ru,
       tokens: tokens.ru,
+      accounts: accounts.ru,
+      invite: invite.ru,
     },
   },
 };

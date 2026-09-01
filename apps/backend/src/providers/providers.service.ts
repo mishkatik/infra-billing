@@ -6,6 +6,7 @@ import {
   Service as ServiceDto,
   YandexDiscoverResult,
 } from '@infra/shared';
+import type { Principal } from '../auth/principal';
 import { ProvidersRepository } from '@repositories/providers/providers.repository';
 import {
   AEZA_BASE_URLS,
@@ -39,11 +40,17 @@ export class ProvidersService {
     return rows.map((r) => this.withCredentialHints(mapProvider(r), r.kind, r.credentialsEnc));
   }
 
-  async getWithServices(uuid: string): Promise<ProviderDto & { services: ServiceDto[] }> {
+  async getWithServices(
+    uuid: string,
+    principal: Principal,
+  ): Promise<ProviderDto & { services: ServiceDto[] }> {
     const p = await this.providers.findWithServices(uuid);
     if (!p) throw new NotFoundException('Provider not found');
     const dto = this.withCredentialHints(mapProvider(p), p.kind, p.credentialsEnc);
-    return { ...dto, services: p.services.map(mapService) };
+    const services = p.services.filter(
+      (s) => principal.kind === 'admin' || principal.projectUuids.includes(s.projectUuid),
+    );
+    return { ...dto, services: services.map(mapService) };
   }
 
   /** Expose non-secret hints + secret-presence flags for the edit form (never plaintext). */

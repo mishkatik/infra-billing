@@ -69,8 +69,10 @@ export function LoginPage() {
             <SetupForm />
           ) : (
             <SignInForm
-              passwordEnabled={status.data?.passwordEnabled ?? true}
-              passkeyEnabled={status.data?.passkeyEnabled ?? false}
+              passwordEnabled={
+                (status.data?.passwordEnabled || status.data?.memberPasswordLogin) ?? true
+              }
+              passkeyEnabled={(status.data?.passkeyEnabled || status.data?.memberPasskeys) ?? false}
             />
           )}
         </div>

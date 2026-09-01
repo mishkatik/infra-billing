@@ -3,6 +3,7 @@ import { IconLoader2, IconPlus, IconRefresh } from '@tabler/icons-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
+import { useMe } from '@/api/auth';
 import { apiErrorMessage } from '@/api/client';
 import {
   useCreateProvider,
@@ -14,6 +15,7 @@ import {
 } from '@/api/providers';
 import { useRates } from '@/api/rates';
 import { useSettings } from '@/api/settings';
+import { can, isAdmin } from '@/auth/permissions';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { useEnums } from '@/constants';
@@ -38,14 +40,17 @@ import { PROVIDER_SORT_KEYS, providerSortAccessors } from './providersSort';
 export function ProvidersPage() {
   const { t, i18n } = useTranslation();
   const enums = useEnums();
+  const me = useMe();
+  const canEdit = can(me.data, 'providers:edit');
+  const isAdminUser = isAdmin(me.data);
   const { data: providers, isLoading } = useProviders();
-  const { data: rates } = useRates();
+  const { data: rates } = useRates({ enabled: isAdminUser });
   const create = useCreateProvider();
   const update = useUpdateProvider();
   const del = useDeleteProvider();
   const sync = useSyncProvider();
   const syncAll = useSyncAllProviders();
-  const { data: settings } = useSettings();
+  const { data: settings } = useSettings({ enabled: isAdminUser });
   // The detail modal reads the provider from the query cache by uuid, so counters/balance/sync
   // status stay live while the modal is open (e.g. after "Sync now").
   const [detailUuid, setDetailUuid] = useState<string | null>(null);
@@ -171,18 +176,22 @@ export function ProvidersPage() {
           subtitle={t('providers.subtitle')}
           actions={
             <>
-              <Button variant="outline" disabled={syncAll.isPending} onClick={doSyncAll}>
-                {syncAll.isPending ? (
-                  <IconLoader2 className="size-4 animate-spin" />
-                ) : (
-                  <IconRefresh className="size-4" />
-                )}
-                {t('providers.syncAll')}
-              </Button>
-              <Button onClick={openCreate}>
-                <IconPlus className="size-4" />
-                {t('common.add')}
-              </Button>
+              {isAdminUser && (
+                <Button variant="outline" disabled={syncAll.isPending} onClick={doSyncAll}>
+                  {syncAll.isPending ? (
+                    <IconLoader2 className="size-4 animate-spin" />
+                  ) : (
+                    <IconRefresh className="size-4" />
+                  )}
+                  {t('providers.syncAll')}
+                </Button>
+              )}
+              {canEdit && (
+                <Button onClick={openCreate}>
+                  <IconPlus className="size-4" />
+                  {t('common.add')}
+                </Button>
+              )}
             </>
           }
         />
@@ -200,8 +209,8 @@ export function ProvidersPage() {
         kindLabel={enums.providerKindLabel}
         sort={sort}
         onToggleSort={toggleSort}
-        onRowClick={openDetail}
-        onSync={doSync}
+        onRowClick={canEdit ? openDetail : undefined}
+        onSync={isAdminUser ? doSync : undefined}
       />
 
       <ProviderFormModal
@@ -221,7 +230,7 @@ export function ProvidersPage() {
         isSaving={update.isPending}
         isSyncing={sync.isPending && sync.variables === selected?.uuid}
         onSubmit={submit}
-        onSync={doSync}
+        onSync={isAdminUser ? doSync : undefined}
         onDelete={doDelete}
         onClose={() => setDetailUuid(null)}
       />
