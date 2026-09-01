@@ -9,6 +9,7 @@ import { ProvidersRepository } from '@repositories/providers/providers.repositor
 import { ServicesRepository } from '@repositories/services/services.repository';
 import { SettingsRepository } from '@repositories/settings/settings.repository';
 import { CurrencyService } from '../currency/currency.service';
+import { chargeSeverity } from '@common/billing-severity';
 import { monthlyCost } from '@common/money';
 import { overdueDays } from '@common/overdue';
 import { burnFromMonthlyCost, burnFromSnapshots, daysOfRunway } from '@common/runway';
@@ -188,10 +189,7 @@ export class AnalyticsService {
         }
       }
       const daysUntil = Math.max(0, date.startOf('day').diff(today, 'day'));
-      let severity: 'critical' | 'warning' | 'ok';
-      if (covered === false && daysUntil <= 7) severity = 'critical';
-      else if (covered === false || daysUntil <= 3) severity = 'warning';
-      else severity = 'ok';
+      const severity = chargeSeverity(covered, daysUntil, provider?.isPostpaid ?? false);
       return {
         serviceUuid: s.uuid,
         name: s.name,
@@ -216,7 +214,8 @@ export class AnalyticsService {
     });
 
     // Top-up = shortfall after simulating upcoming charges. Only for providers that already have
-    // a critical (uncovered + due within a week) line — matches the dashboard critical banner.
+    // a critical line — matches the dashboard critical banner. Unknown-coverage criticals carry
+    // no native balance, so the null guard below keeps them out of top-up suggestions.
     const criticalProviderUuids = new Set(
       upcomingBillings.filter((b) => b.severity === 'critical').map((b) => b.providerUuid),
     );

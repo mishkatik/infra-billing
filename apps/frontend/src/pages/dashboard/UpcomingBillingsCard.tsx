@@ -5,16 +5,17 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { formatDateShort, formatMoney } from '@/utils/format';
-import { AlertChargeGrid, AlertChargeRow, ProviderBadge, ServiceBadge } from './dashboardAlertUi';
+import {
+  AlertChargeGrid,
+  AlertChargeRow,
+  CoverageBadge,
+  ProviderBadge,
+  ServiceBadge,
+} from './dashboardAlertUi';
 import { dayLabel, severityBadgeClass } from './dashboardUtils';
 
 interface UpcomingBillingsCardProps {
   upcoming: AnalyticsSummary['upcomingBillings'];
-}
-
-function balanceBadgeClass(covered: boolean | null): string {
-  if (covered === false) return 'border-transparent bg-destructive/15 text-destructive';
-  return 'border-foreground/10 bg-muted text-muted-foreground';
 }
 
 export function UpcomingBillingsCard({ upcoming }: UpcomingBillingsCardProps) {
@@ -61,15 +62,7 @@ export function UpcomingBillingsCard({ upcoming }: UpcomingBillingsCardProps) {
                   />
                 </>
               }
-              balance={
-                <Badge className={cn('font-normal', balanceBadgeClass(ub.covered))}>
-                  {ub.covered === false
-                    ? t('dashboard.upcoming.insufficientBalance')
-                    : ub.covered === true
-                      ? t('dashboard.upcoming.balanceOk')
-                      : t('dashboard.upcoming.balanceUnknown')}
-                </Badge>
-              }
+              balance={<CoverageBadge covered={ub.covered} />}
               badge={
                 <Badge className={cn('capitalize', severityBadgeClass(ub.severity))}>
                   {dayLabel(t, ub.daysUntil)}

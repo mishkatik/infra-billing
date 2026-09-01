@@ -7,6 +7,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { ProviderIcon } from '@/components/ProviderIcon';
 import { Badge } from '@/components/ui/badge';
@@ -139,6 +140,26 @@ export function ServiceBadge({
   return (
     <Badge asChild variant="outline" className={cn(className, 'group/chip')} style={tint}>
       <Link to={`/services?selected=${uuid}`}>{content}</Link>
+    </Badge>
+  );
+}
+
+// Coverage → badge tint: red only when the balance definitely won't cover; covered/unknown
+// stay muted. Shared by the 14-day list and the critical plate so the two can't diverge.
+function balanceBadgeClass(covered: boolean | null): string {
+  if (covered === false) return 'border-transparent bg-destructive/15 text-destructive';
+  return 'border-foreground/10 bg-muted text-muted-foreground';
+}
+
+export function CoverageBadge({ covered }: { covered: boolean | null }) {
+  const { t } = useTranslation();
+  return (
+    <Badge className={cn('font-normal', balanceBadgeClass(covered))}>
+      {covered === false
+        ? t('dashboard.upcoming.insufficientBalance')
+        : covered === true
+          ? t('dashboard.upcoming.balanceOk')
+          : t('dashboard.upcoming.balanceUnknown')}
     </Badge>
   );
 }

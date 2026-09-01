@@ -11,6 +11,7 @@ import {
   overdueBillingMessage,
   sampleMessages,
   syncErrorMessage,
+  unknownCoverageMessage,
   upcomingBillingMessage,
 } from './messages';
 import { TelegramService } from './telegram.service';
@@ -39,12 +40,15 @@ export class NotificationsService {
     const summary = await this.analytics.summary();
     let sent = 0;
 
-    // 1) Low balance: a service whose imminent charge the provider balance won't cover
-    //    (severity "critical": uncovered + due within ~a week, same definition as the dashboard).
+    // 1) Critical upcoming charges (same definition as the dashboard plate). covered=false →
+    //    the balance won't cover it; covered=null → the panel can't see a balance (manual kind /
+    //    no balance API) — honest "go check the cabinet" alert instead of a fake balance claim.
     for (const ub of summary.upcomingBillings) {
       if (ub.severity !== 'critical') continue;
-      const html = lowBalanceMessage(ub);
-      if (await this.maybeSend(`low-balance:${ub.serviceUuid}`, html)) sent += 1;
+      const unknown = ub.covered === null;
+      const html = unknown ? unknownCoverageMessage(ub) : lowBalanceMessage(ub);
+      const key = unknown ? `unknown-coverage:${ub.serviceUuid}` : `low-balance:${ub.serviceUuid}`;
+      if (await this.maybeSend(key, html)) sent += 1;
     }
 
     // 1b) Low runway: a prepaid provider (no dated charge) whose balance is estimated to drain

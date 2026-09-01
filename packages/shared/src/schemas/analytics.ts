@@ -60,7 +60,11 @@ export const byCurrencySchema = z.object({
   servicesCount: z.number().int().describe('Number of services'),
 });
 
-/** critical = balance won't cover an imminent charge; warning = very soon / underfunded. */
+/**
+ * critical = imminent (≤7d) charge that is uncovered — or has unknown coverage on a non-postpaid
+ * provider; warning = very soon / underfunded. Consumers tell "insufficient" from "unknown"
+ * via `covered`.
+ */
 export const billingSeveritySchema = z.enum(['critical', 'warning', 'ok']);
 export type BillingSeverity = z.infer<typeof billingSeveritySchema>;
 
@@ -87,7 +91,8 @@ export const upcomingBillingSchema = z.object({
   daysUntil: z.number().int().describe('Days until billing'),
   providerBalance: moneySchema.describe('Provider balance').nullable(),
   providerBalanceCurrency: currencySchema.describe('Provider balance currency').nullable(),
-  // null = provider exposes no balance (e.g. Hetzner) → coverage unknown.
+  // null = provider exposes no balance (manual kind, Hetzner-class connectors) → coverage
+  // unknown; unknown + due ≤7d on a non-postpaid provider is still critical.
   covered: z.boolean().describe('Balance covers charge').nullable(),
   severity: billingSeveritySchema.describe('Billing severity level'),
 });

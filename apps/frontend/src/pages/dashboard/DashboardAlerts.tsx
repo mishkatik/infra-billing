@@ -9,6 +9,7 @@ import { formatMoney } from '@/utils/format';
 import {
   AlertChargeGrid,
   AlertChargeRow,
+  CoverageBadge,
   ProviderBadge,
   ServiceBadge,
   clusterIsWrapped,
@@ -302,7 +303,7 @@ export function DashboardAlerts({ overdue, upcoming, runway, topUps }: Dashboard
   const criticalTopUps = topUps.filter((u) =>
     critical.some((b) => b.providerUuid === u.providerUuid),
   );
-  const pairsKey = `${critical.map((b) => `${b.serviceUuid}:${b.name}:${b.cost}:${b.providerName}`).join('|')}:${criticalTopUps.map((u) => `${u.providerUuid}:${u.amount}:${u.providerName}`).join('|')}:${runwayCritical.map((r) => `${r.providerUuid}:${r.daysLeft}:${r.balance}`).join('|')}:${runwayWarning.map((r) => `${r.providerUuid}:${r.severity}:${r.daysLeft}`).join('|')}:${t('dashboard.critical.title')}`;
+  const pairsKey = `${critical.map((b) => `${b.serviceUuid}:${b.name}:${b.cost}:${b.providerName}:${b.covered}`).join('|')}:${criticalTopUps.map((u) => `${u.providerUuid}:${u.amount}:${u.providerName}`).join('|')}:${runwayCritical.map((r) => `${r.providerUuid}:${r.daysLeft}:${r.balance}`).join('|')}:${runwayWarning.map((r) => `${r.providerUuid}:${r.severity}:${r.daysLeft}`).join('|')}:${t('dashboard.critical.title')}`;
 
   const chargeCriticalAlert =
     critical.length > 0 ? (
@@ -310,7 +311,7 @@ export function DashboardAlerts({ overdue, upcoming, runway, topUps }: Dashboard
         <IconAlertTriangle className="size-4" />
         <AlertTitle>{t('dashboard.critical.title')}</AlertTitle>
         <AlertDescription className="mt-2 block w-full">
-          <AlertChargeGrid>
+          <AlertChargeGrid showBalance>
             {critical.map((b, index) => (
               <AlertChargeRow
                 key={b.serviceUuid}
@@ -338,6 +339,7 @@ export function DashboardAlerts({ overdue, upcoming, runway, topUps }: Dashboard
                     />
                   </>
                 }
+                balance={<CoverageBadge covered={b.covered} />}
                 badge={
                   <Badge className={cn('capitalize', severityBadgeClass(b.severity))}>
                     {dayLabel(t, b.daysUntil)}
