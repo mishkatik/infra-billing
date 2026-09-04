@@ -1,6 +1,6 @@
 {
   "name": "@infra/backend",
-  "version": "0.41.0",
+  "version": "0.42.0",
   "private": true,
   "main": "dist/main.js",
   "bin": {
