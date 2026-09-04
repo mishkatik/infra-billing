@@ -183,6 +183,19 @@
     color: #430b34;
   }
 }
+/* Header version pill while a newer release is out: a slow brand glow (BuildInfo). */
+@keyframes version-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+  50% {
+    box-shadow: 0 0 14px -2px var(--brand);
+  }
+}
+.version-pill-update {
+  animation: version-glow 2.6s ease-in-out infinite;
+}
 /* The login page is always-dark artwork: keep the canvas near-black for its whole lifetime
    (set via a class from LoginPage), covering overscroll and lazy-chunk gaps in light theme. */
 html.login-artwork {
@@ -224,10 +237,15 @@ html.login-artwork {
 }
 @media (prefers-reduced-motion: reduce) {
   .brand-marker,
-  .brand-marker-text {
+  .brand-marker-text,
+  .version-pill-update {
     animation: none;
   }
   .brand-marker-text {
     color: #430b34;
+  }
+  /* Keep the "update available" cue, just without the pulse. */
+  .version-pill-update {
+    box-shadow: 0 0 10px -3px var(--brand);
   }
 }

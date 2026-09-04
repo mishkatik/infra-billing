@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
 import { useTranslation } from 'react-i18next';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import 'dayjs/locale/ru';
@@ -18,6 +19,9 @@ import { PaymentsPage } from './pages/payments/PaymentsPage';
 import { SettingsPage } from './pages/settings/SettingsPage';
 import { AuthSettingsPage } from './pages/auth-settings/AuthSettingsPage';
 import { TokensPage } from './pages/TokensPage';
+
+// Relative dates ("3 days ago") for the build badge; the locale is switched per render below.
+dayjs.extend(relativeTime);
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { refetchOnWindowFocus: false, retry: 1 } },
