@@ -2,7 +2,13 @@ import { Injectable, Logger } from '@nestjs/common';
 import axios from 'axios';
 import { ProjectsRepository } from '@repositories/projects/projects.repository';
 import { ProvidersRepository } from '@repositories/providers/providers.repository';
-import { FaviconCandidate, FaviconSource, buildFaviconCandidates, pngWidth } from './favicon.util';
+import {
+  FaviconCandidate,
+  FaviconSource,
+  buildFaviconCandidates,
+  pngWidth,
+  stripForeignObjects,
+} from './favicon.util';
 
 export interface FaviconImage {
   body: Buffer;
@@ -127,8 +133,11 @@ export class FaviconsService {
       }
       // Node's adapter already yields a Buffer for arraybuffer responses; keep the copy-free path.
       const raw: unknown = res.data;
-      const body = Buffer.isBuffer(raw) ? raw : Buffer.from(raw as ArrayBuffer);
+      let body = Buffer.isBuffer(raw) ? raw : Buffer.from(raw as ArrayBuffer);
       if (body.length === 0) throw new Error('empty body');
+      if (contentType === 'image/svg+xml') {
+        body = Buffer.from(stripForeignObjects(body.toString('utf8')), 'utf8');
+      }
       if (service && (pngWidth(body) ?? SERVICE_MIN_WIDTH) < SERVICE_MIN_WIDTH) {
         throw new Error('placeholder globe');
       }

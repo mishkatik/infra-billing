@@ -75,6 +75,15 @@ export function buildFaviconCandidates(src: FaviconSource): FaviconCandidate[] {
   return out;
 }
 
+/**
+ * Drops <foreignObject> subtrees from an SVG. Browsers don't render them when the SVG is used as
+ * an image (design-tool exports put blurred backgrounds there), and Chrome marks any canvas such
+ * an SVG is drawn on as tainted, which would defeat the frontend's tone analysis.
+ */
+export function stripForeignObjects(svg: string): string {
+  return svg.replace(/<foreignObject\b[^>]*\/>|<foreignObject\b[\s\S]*?<\/foreignObject\s*>/gi, '');
+}
+
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
 /** Width from the IHDR chunk, or null when the bytes are not a PNG. */

@@ -1,6 +1,6 @@
 // Pixel statistics of a loaded favicon, used to pick a tile background that contrasts with the
 // icon. Needs a same-origin image (the backend proxy): a cross-origin one taints the canvas and
-// getImageData throws, which degrades to null, i.e. the neutral tile.
+// getImageData throws, which degrades to null, i.e. no contrast rescue for that icon.
 
 export interface IconTone {
   /** The icon brings its own opaque (or near-full) background and needs no tile behind it. */
@@ -15,14 +15,13 @@ export type IconToneClass = 'light' | 'dark' | 'mid';
 
 const SAMPLE = 24;
 const cache = new Map<string, IconTone | null>();
-let canvas: HTMLCanvasElement | null = null;
 
+// A canvas per analysis, never shared: a taint is permanent, so one unreadable image (a
+// cross-origin one, or an SVG with foreignObject) must not poison every icon analysed after it.
 function context(): CanvasRenderingContext2D | null {
-  if (!canvas) {
-    canvas = document.createElement('canvas');
-    canvas.width = SAMPLE;
-    canvas.height = SAMPLE;
-  }
+  const canvas = document.createElement('canvas');
+  canvas.width = SAMPLE;
+  canvas.height = SAMPLE;
   return canvas.getContext('2d', { willReadFrequently: true });
 }
 
@@ -40,7 +39,6 @@ function compute(img: HTMLImageElement): IconTone | null {
   try {
     const ctx = context();
     if (!ctx) return null;
-    ctx.clearRect(0, 0, SAMPLE, SAMPLE);
     ctx.drawImage(img, 0, 0, SAMPLE, SAMPLE);
     const { data } = ctx.getImageData(0, 0, SAMPLE, SAMPLE);
     let covered = 0;

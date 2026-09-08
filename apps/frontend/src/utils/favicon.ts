@@ -14,8 +14,12 @@ function fnv1a(input: string): string {
   return (hash >>> 0).toString(36);
 }
 
+// Bump when the proxy starts serving something different for the same source link (e.g. the
+// SVG sanitising added in 0.43.1), so browsers drop the day-long cached copy.
+const PROXY_REV = 2;
+
 function proxyUrl(path: string, source: string): string {
-  return `/${API_PREFIX}${path}?v=${fnv1a(source)}`;
+  return `/${API_PREFIX}${path}?v=${fnv1a(`${PROXY_REV}|${source}`)}`;
 }
 
 /** A provider's icon, or null when it has neither a stored favicon link nor a login URL. */
