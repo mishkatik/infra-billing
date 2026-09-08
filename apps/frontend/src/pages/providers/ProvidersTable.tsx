@@ -78,12 +78,13 @@ export function ProvidersTable({
                 }}
               >
                 <TableCell className="py-3">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
                     <ProviderIcon
                       name={p.name}
                       src={providerFavicon(p)}
                       iconName={p.iconName}
                       iconBg={p.iconBg}
+                      size={24}
                     />
                     <span className="font-semibold">{p.name}</span>
                     {p.loginUrl && (

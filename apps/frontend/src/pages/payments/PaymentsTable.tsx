@@ -55,7 +55,7 @@ export function PaymentsTable({
                   <TableCell>
                     <EntityLabel
                       name={provider?.name ?? ''}
-                      src={providerFavicon(provider ?? { faviconLink: null, loginUrl: null })}
+                      src={providerFavicon(provider)}
                       iconName={provider?.iconName}
                       iconBg={provider?.iconBg}
                     />

@@ -92,13 +92,13 @@ export function ProjectsTable({
               return (
                 <TableRow key={p.uuid}>
                   <TableCell className="py-3">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
                       <ProviderIcon
                         name={p.name}
-                        src={projectFavicon(p.faviconLink)}
+                        src={projectFavicon(p)}
                         iconName={p.iconName}
                         iconBg={p.iconBg}
-                        size={20}
+                        size={24}
                       />
                       <span className="font-semibold">{p.name}</span>
                       {isDefault && (

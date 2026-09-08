@@ -39,7 +39,9 @@ export function ProviderBadge({
   const icon = (
     <ProviderIcon
       name={name}
-      src={providerFavicon({ faviconLink: faviconLink ?? null, loginUrl: loginUrl ?? null })}
+      src={providerFavicon(
+        uuid ? { uuid, faviconLink: faviconLink ?? null, loginUrl: loginUrl ?? null } : null,
+      )}
       iconName={iconName}
       iconBg={iconBg}
       size={16}

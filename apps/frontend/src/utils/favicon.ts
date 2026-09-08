@@ -1,66 +1,36 @@
-// Favicon via Google s2 (same approach as Remnawave's favicon-resolver).
-const S2_PREFIX = 'https://www.google.com/s2/favicons?sz=64&domain_url=';
+import { API_PATH, API_PREFIX } from '@infra/shared';
 
-function faviconResolver(link: string | null | undefined): string | null {
-  if (!link) return null;
-  try {
-    const url = new URL(link.startsWith('http') ? link : `https://${link}`);
-    if (!url.host) return null;
-    return `${S2_PREFIX}${url.protocol}//${url.host}`;
-  } catch {
-    return null;
+// Favicons come through the backend proxy (same origin, cached): that is what lets ProviderIcon
+// read the icon's pixels and pick a contrasting tile. The ?v= hash of the source link is a
+// browser-side cache buster — the server drops its entry when the link changes, but the browser
+// would keep the old image for the Cache-Control lifetime otherwise.
+
+function fnv1a(input: string): string {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < input.length; i++) {
+    hash ^= input.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
   }
+  return (hash >>> 0).toString(36);
 }
 
-/**
- * Favicon for the registrable domain, dropping one subdomain label (console.yandex.cloud →
- * yandex.cloud). Google's s2 service 404s for some dashboard subdomains (e.g. console.yandex.cloud)
- * while it has the root domain's icon, so this is tried as a fallback when the primary fails to
- * load. Returns null when `src` isn't an s2 URL or the host has no subdomain to strip.
- */
-export function faviconRootFallback(src: string | null): string | null {
-  if (!src?.startsWith(S2_PREFIX)) return null;
-  try {
-    const url = new URL(src.slice(S2_PREFIX.length));
-    const labels = url.host.split('.');
-    if (labels.length < 3) return null;
-    return `${S2_PREFIX}${url.protocol}//${labels.slice(1).join('.')}`;
-  } catch {
-    return null;
-  }
+function proxyUrl(path: string, source: string): string {
+  return `/${API_PREFIX}${path}?v=${fnv1a(source)}`;
 }
 
-/** True for s2 URLs — the service answers "no favicon" with a 16px globe callers filter out. */
-export function isFaviconServiceUrl(src: string): boolean {
-  return src.startsWith(S2_PREFIX);
+/** A provider's icon, or null when it has neither a stored favicon link nor a login URL. */
+export function providerFavicon(
+  p: { uuid: string; faviconLink: string | null; loginUrl: string | null } | null | undefined,
+): string | null {
+  const source = p?.faviconLink || p?.loginUrl;
+  if (!p || !source) return null;
+  return proxyUrl(API_PATH.PROVIDERS.FAVICON(p.uuid), source);
 }
 
-/**
- * A direct image URL (has a path, e.g. .../logo.png) is used as-is; a bare domain is resolved
- * to its site favicon (Google s2).
- */
-function faviconFromLink(link: string): string | null {
-  try {
-    const url = new URL(link.startsWith('http') ? link : `https://${link}`);
-    if (url.pathname && url.pathname !== '/') return url.href;
-    return faviconResolver(link);
-  } catch {
-    return null;
-  }
-}
-
-/**
- * A provider's icon. faviconLink (when the sync resolved one from the panel itself, e.g. a
- * BILLmanager skin icon) wins over the loginUrl-derived site favicon.
- */
-export function providerFavicon(p: {
-  faviconLink: string | null;
-  loginUrl: string | null;
-}): string | null {
-  return p.faviconLink ? faviconFromLink(p.faviconLink) : faviconResolver(p.loginUrl);
-}
-
-/** A project's icon. */
-export function projectFavicon(faviconLink: string | null): string | null {
-  return faviconLink ? faviconFromLink(faviconLink) : null;
+/** A project's icon, or null when it has no favicon link. */
+export function projectFavicon(
+  p: { uuid: string; faviconLink: string | null } | null | undefined,
+): string | null {
+  if (!p?.faviconLink) return null;
+  return proxyUrl(API_PATH.PROJECTS.FAVICON(p.uuid), p.faviconLink);
 }

@@ -4,6 +4,7 @@ import { BulkMoveResult, DEFAULT_PROJECT_UUID, Project as ProjectDto } from '@in
 import { ProjectsRepository } from '@repositories/projects/projects.repository';
 import { ServicesRepository } from '@repositories/services/services.repository';
 import { mapProject } from '@common/mappers';
+import { FaviconsService } from '../favicons/favicons.service';
 import { CreateProjectDto, UpdateProjectDto } from './dto/project.dto';
 
 @Injectable()
@@ -11,6 +12,7 @@ export class ProjectsService {
   constructor(
     private readonly projects: ProjectsRepository,
     private readonly services: ServicesRepository,
+    private readonly favicons: FaviconsService,
   ) {}
 
   async list(): Promise<ProjectDto[]> {
@@ -36,6 +38,7 @@ export class ProjectsService {
     if (dto.iconName !== undefined) data.iconName = dto.iconName;
     if (dto.iconBg !== undefined) data.iconBg = dto.iconBg;
     const p = await this.projects.update(uuid, data);
+    if (dto.faviconLink !== undefined) this.favicons.invalidateProject(uuid);
     return mapProject(p);
   }
 
@@ -61,6 +64,7 @@ export class ProjectsService {
     await this.ensureExists(uuid);
     // onDelete is Restrict, so the repo moves this project's services to the default project first.
     await this.projects.deleteMovingServices(uuid, DEFAULT_PROJECT_UUID);
+    this.favicons.invalidateProject(uuid);
   }
 
   private async ensureExists(uuid: string): Promise<void> {

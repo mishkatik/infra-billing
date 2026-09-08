@@ -30,6 +30,8 @@ export const API = {
 /** Method sub-paths within a controller (NestJS-style; `:uuid` for route params). */
 export const API_SUB = {
   BY_ID: ID,
+  // Proxied favicon of a provider / project (same sub-path on both controllers).
+  FAVICON: `${ID}/favicon`,
   AUTH_LOGIN: 'login',
   AUTH_LOGOUT: 'logout',
   AUTH_ME: 'me',
@@ -87,6 +89,7 @@ export const API_PATH = {
   PROVIDERS: {
     ROOT: path(API.PROVIDERS),
     BY_ID: (uuid: string) => pathId(API.PROVIDERS, API_SUB.BY_ID, uuid),
+    FAVICON: (uuid: string) => pathId(API.PROVIDERS, API_SUB.FAVICON, uuid),
     SYNC_ALL: path(API.PROVIDERS, API_SUB.PROVIDER_SYNC_ALL),
     SYNC: (uuid: string) => pathId(API.PROVIDERS, API_SUB.PROVIDER_SYNC, uuid),
     SYNC_RUNS: (uuid: string) => pathId(API.PROVIDERS, API_SUB.PROVIDER_SYNC_RUNS, uuid),
@@ -101,6 +104,7 @@ export const API_PATH = {
   PROJECTS: {
     ROOT: path(API.PROJECTS),
     BY_ID: (uuid: string) => pathId(API.PROJECTS, API_SUB.BY_ID, uuid),
+    FAVICON: (uuid: string) => pathId(API.PROJECTS, API_SUB.FAVICON, uuid),
     MOVE_ALL: (uuid: string) => pathId(API.PROJECTS, API_SUB.PROJECT_MOVE_ALL, uuid),
     EMPTY: (uuid: string) => pathId(API.PROJECTS, API_SUB.PROJECT_EMPTY, uuid),
     STATS: (uuid: string) => pathId(API.PROJECTS, API_SUB.PROJECT_STATS, uuid),

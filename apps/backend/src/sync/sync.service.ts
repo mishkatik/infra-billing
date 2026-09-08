@@ -15,6 +15,7 @@ import { ServicesRepository } from '@repositories/services/services.repository';
 import { SettingsRepository } from '@repositories/settings/settings.repository';
 import { SyncRunsRepository } from '@repositories/sync-runs/sync-runs.repository';
 import { CryptoService } from '../crypto/crypto.service';
+import { FaviconsService } from '../favicons/favicons.service';
 import { ConnectorFactory } from '@connectors/connector.factory';
 import { PaymentData, ServiceData } from '@connectors/connector.interface';
 import { mapSyncRun } from '@common/mappers';
@@ -43,6 +44,7 @@ export class SyncService implements OnModuleInit {
     private readonly syncRuns: SyncRunsRepository,
     private readonly settings: SettingsRepository,
     private readonly crypto: CryptoService,
+    private readonly favicons: FaviconsService,
     private readonly connectors: ConnectorFactory,
     private readonly scheduler: SchedulerRegistry,
   ) {}
@@ -132,6 +134,7 @@ export class SyncService implements OnModuleInit {
           const url = await connector.fetchFaviconUrl(controller.signal);
           if (url && url !== provider.faviconLink) {
             await this.providers.updateFaviconLink(uuid, url);
+            this.favicons.invalidateProvider(uuid);
           }
         } catch (e) {
           this.logger.warn(

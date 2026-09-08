@@ -150,7 +150,7 @@ export function ServicesTable({
                   <TableCell>
                     <EntityLabel
                       name={provider?.name ?? ''}
-                      src={providerFavicon(provider ?? { faviconLink: null, loginUrl: null })}
+                      src={providerFavicon(provider)}
                       iconName={provider?.iconName}
                       iconBg={provider?.iconBg}
                     />
@@ -158,7 +158,7 @@ export function ServicesTable({
                   <TableCell>
                     <EntityLabel
                       name={project?.name ?? ''}
-                      src={projectFavicon(project?.faviconLink ?? null)}
+                      src={projectFavicon(project)}
                       iconName={project?.iconName}
                       iconBg={project?.iconBg}
                     />

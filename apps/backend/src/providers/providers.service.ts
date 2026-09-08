@@ -21,6 +21,7 @@ import { VDSINA_BASE_URLS } from '@connectors/vdsina/vdsina.types';
 import { YandexConnector } from '../connectors/yandex/yandex.connector';
 import type { YandexCredentials } from '../connectors/yandex/yandex.types';
 import { CryptoService } from '../crypto/crypto.service';
+import { FaviconsService } from '../favicons/favicons.service';
 import { mapProvider, mapService } from '@common/mappers';
 import { CreateProviderDto, UpdateProviderDto, YandexDiscoverDto } from './dto/provider.dto';
 
@@ -32,6 +33,7 @@ export class ProvidersService {
   constructor(
     private readonly providers: ProvidersRepository,
     private readonly crypto: CryptoService,
+    private readonly favicons: FaviconsService,
   ) {}
 
   async list(): Promise<ProviderDto[]> {
@@ -270,12 +272,14 @@ export class ProvidersService {
     const creds = this.buildCredentials(existing.kind, dto, existing.credentialsEnc);
     if (creds !== null) data.credentialsEnc = creds;
     const p = await this.providers.update(uuid, data);
+    if (dto.loginUrl !== undefined) this.favicons.invalidateProvider(uuid);
     return this.withCredentialHints(mapProvider(p), p.kind, p.credentialsEnc);
   }
 
   async remove(uuid: string): Promise<void> {
     await this.ensureExists(uuid);
     await this.providers.delete(uuid);
+    this.favicons.invalidateProvider(uuid);
   }
 
   // Encrypt creds for storage: timeweb/hetzner → raw token; hostbill/billmgr/selectel/4vps → JSON.

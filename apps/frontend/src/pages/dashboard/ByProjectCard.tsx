@@ -106,10 +106,10 @@ export function ByProjectCard({ projectRows, base, isLoading, projectOf }: ByPro
                 {rows.map((p) => (
                   <TableRow key={p.projectUuid}>
                     <TableCell>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5">
                         <ProviderIcon
                           name={p.name}
-                          src={projectFavicon(projectOf(p.projectUuid)?.faviconLink ?? null)}
+                          src={projectFavicon(projectOf(p.projectUuid))}
                           iconName={projectOf(p.projectUuid)?.iconName}
                           iconBg={projectOf(p.projectUuid)?.iconBg}
                           size={18}

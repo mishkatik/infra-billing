@@ -10,6 +10,7 @@ import { ConfigModule } from '@config/config.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { RepositoriesModule } from '@repositories/repositories.module';
 import { CryptoModule } from './crypto/crypto.module';
+import { FaviconsModule } from './favicons/favicons.module';
 import { AuthModule } from './auth/auth.module';
 import { HealthModule } from './health/health.module';
 import { ProvidersModule } from './providers/providers.module';
@@ -36,6 +37,7 @@ const FRONTEND_DIST = join(__dirname, '..', '..', 'frontend', 'dist');
     PrismaModule,
     RepositoriesModule,
     CryptoModule,
+    FaviconsModule,
     AuthModule,
     ScheduleModule.forRoot(),
     HealthModule,

@@ -7,7 +7,7 @@ export function EntityLabel({
   src,
   iconName,
   iconBg,
-  size = 22,
+  size = 24,
 }: {
   name: string;
   src: string | null;
@@ -16,7 +16,7 @@ export function EntityLabel({
   size?: number;
 }) {
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-1.5">
       <ProviderIcon name={name} src={src} iconName={iconName} iconBg={iconBg} size={size} />
       <span>{name}</span>
     </div>

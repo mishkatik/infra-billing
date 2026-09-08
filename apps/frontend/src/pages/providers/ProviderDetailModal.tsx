@@ -77,6 +77,7 @@ export function ProviderDetailModal({
               src={providerFavicon(shown)}
               iconName={shown.iconName}
               iconBg={shown.iconBg}
+              size={24}
             />
             <span>{shown.name}</span>
             <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">

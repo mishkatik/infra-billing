@@ -72,11 +72,11 @@ export function ByProviderCard({ providerRows, base, isLoading, providerOf }: By
                       <div className="flex items-center gap-2">
                         <Link
                           to={`/providers?selected=${p.providerUuid}`}
-                          className="flex items-center gap-2 hover:underline"
+                          className="flex items-center gap-1.5 hover:underline"
                         >
                           <ProviderIcon
                             name={p.name}
-                            src={providerFavicon(provider ?? { faviconLink: null, loginUrl: null })}
+                            src={providerFavicon(provider)}
                             iconName={provider?.iconName}
                             iconBg={provider?.iconBg}
                             size={18}

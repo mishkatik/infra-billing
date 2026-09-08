@@ -4,14 +4,19 @@ import {
   Delete,
   Get,
   HttpCode,
+  NotFoundException,
   Param,
   ParseUUIDPipe,
   Patch,
   Post,
+  Res,
+  StreamableFile,
 } from '@nestjs/common';
 import { API, API_SUB, CONTROLLERS_INFO, ID_PARAM } from '@infra/shared';
+import { Response } from 'express';
 import { SessionOnly } from '../auth/session-only.decorator';
 import { NetcupDeviceFlowService } from '../connectors/netcup/netcup.device-flow';
+import { FaviconsService } from '../favicons/favicons.service';
 import { ProvidersService } from './providers.service';
 import {
   CreateProviderDto,
@@ -29,8 +34,10 @@ import {
   ApiBearerAuth,
   ApiCreatedResponse,
   ApiNoContentResponse,
+  ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiProduces,
   ApiTags,
 } from '@nestjs/swagger';
 
@@ -41,6 +48,7 @@ export class ProvidersController {
   constructor(
     private readonly providers: ProvidersService,
     private readonly netcupDevice: NetcupDeviceFlowService,
+    private readonly favicons: FaviconsService,
   ) {}
 
   @Get()
@@ -91,6 +99,29 @@ export class ProvidersController {
   @ApiOkResponse({ type: ProviderCredentialsRevealDto })
   revealCredentials(@Param(ID_PARAM, ParseUUIDPipe) uuid: string) {
     return this.providers.revealCredentials(uuid);
+  }
+
+  @Get(API_SUB.FAVICON)
+  @ApiOperation({ summary: 'Provider favicon (proxied, cached)' })
+  @ApiProduces('image/*')
+  @ApiOkResponse({ description: 'Favicon image', schema: { type: 'string', format: 'binary' } })
+  @ApiNotFoundResponse({ description: 'No favicon could be resolved' })
+  async favicon(
+    @Param(ID_PARAM, ParseUUIDPipe) uuid: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const icon = await this.favicons.getProviderFavicon(uuid);
+    // Headers are set here, not via @Header: Nest applies decorator headers before the handler
+    // runs, so a 24h Cache-Control would leak onto the 404 and pin a miss in the browser.
+    if (!icon) {
+      res.setHeader('Cache-Control', 'private, max-age=3600');
+      throw new NotFoundException('Favicon not found');
+    }
+    res.setHeader('Cache-Control', 'private, max-age=86400');
+    // A panel's SVG becomes same-origin here; opened as a document it must not run script.
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'");
+    return new StreamableFile(icon.body, { type: icon.contentType });
   }
 
   @Get(API_SUB.BY_ID)
