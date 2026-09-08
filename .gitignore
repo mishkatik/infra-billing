@@ -26,6 +26,9 @@ docs/screenshot-*.raw.png
 # Prisma 7 generated client
 apps/backend/src/generated/
 
+# local database dumps
+backups/
+
 # tests
 apps/backend/test/
 .claude/

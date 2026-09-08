@@ -46,7 +46,7 @@
 
 ## Стек
 
-- **Backend:** NestJS 11 (Node 22) · Prisma 7 · PostgreSQL 17 · zod (`nestjs-zod`) · axios · grammY
+- **Backend:** NestJS 11 (Node 22) · Prisma 7 · PostgreSQL 18 · zod (`nestjs-zod`) · axios · grammY
 - **Frontend:** Vite · React 19 · shadcn/ui · Tailwind CSS v4 · RemoCN (Remotion) · TanStack Query · axios
 - **Монорепо:** npm-workspaces — `apps/backend`, `apps/frontend`, `packages/shared` (общие zod-схемы)
 - **Деплой:** единый Docker-образ (бэкенд раздаёт API + собранный SPA) + отдельный Postgres
@@ -111,6 +111,32 @@ cd /opt/infra-billing && docker compose pull && docker compose down && docker co
 
 ```bash
 docker image prune
+```
+
+#### PostgreSQL 17 → 18 (с 0.44.0, не обязательно, но рекомендуется)
+
+С 0.44.0 compose в репозитории использует `postgres:18` и монтирует том в `/var/lib/postgresql`
+(раньше — `/var/lib/postgresql/data`). **Переходить не обязательно**: приложение работает и с
+PostgreSQL 17 — достаточно не трогать свой `docker-compose.yml` и обновлять только образ панели
+(`docker compose pull`). Но обновиться рекомендуется, чтобы не отставать от поддерживаемых версий
+и от compose-файла в репозитории. Файлы 17-й версии новый сервер сам не подхватит — данные надо
+обновить на месте, это делает образ `pgautoupgrade`:
+
+```bash
+# 1. Дамп на всякий случай
+docker compose exec -T infra-billing-db sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' > infra_billing-pg17.dump
+
+# 2. Скачать новый compose (в нём уже postgres:18 и новый путь тома)
+curl -fsSL -o docker-compose.yml https://raw.githubusercontent.com/mishkatik/infra-billing/main/docker-compose-prod.yml
+
+# 3. Временно поставить у сервиса infra-billing-db образ pgautoupgrade и прогнать апгрейд
+sed -i 's#image: postgres:18.*#image: pgautoupgrade/pgautoupgrade:18.6-trixie#' docker-compose.yml
+docker compose down && docker compose up -d infra-billing-db && docker compose logs -f infra-billing-db
+#    (ждать «database system is ready to accept connections» после «End of reindexing»)
+
+# 4. Вернуть официальный образ и поднять всё
+sed -i 's#image: pgautoupgrade/pgautoupgrade:.*#image: postgres:18.6#' docker-compose.yml
+docker compose down && docker compose pull && docker compose up -d
 ```
 
 ---

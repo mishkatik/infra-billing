@@ -67,7 +67,7 @@ hooks:
 test:
 	npm run test
 
-# ---- database (Postgres 17 via docker compose) ----------------------------
+# ---- database (Postgres 18 via docker compose) ----------------------------
 db-up:
 	docker compose up -d infra-billing-db
 

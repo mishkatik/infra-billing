@@ -41,7 +41,7 @@ services:
         condition: service_healthy
 
   infra-billing-db:
-    image: postgres:17.6
+    image: postgres:18.6
     container_name: infra-billing-db
     hostname: infra-billing-db
     <<: [*common, *logging, *env]
@@ -53,7 +53,9 @@ services:
     ports:
       - 127.0.0.1:${POSTGRES_HOST_PORT:-5432}:5432
     volumes:
-      - infra-billing-db-data:/var/lib/postgresql/data
+      # postgres:18+ keeps the cluster in /var/lib/postgresql/<major>/docker; mounting the parent
+      # is what lets pg_upgrade --link (pgautoupgrade) move between majors in place.
+      - infra-billing-db-data:/var/lib/postgresql
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
       interval: 3s
