@@ -127,7 +127,9 @@ export class AnalyticsService {
 
     const horizon = now.add(14, 'day');
     const today = now.startOf('day');
-    // Services billing within 14 days, sorted soonest-first. Metered (daily/hourly) services are
+    // Services billing today or within 14 days, sorted soonest-first. The lower bound is "not
+    // overdue" by calendar day (see overdueDays): a charge dated today is upcoming with daysUntil 0
+    // because the day is still ahead and can still be paid. Metered (daily/hourly) services are
     // skipped: their "next billing" is just the paid-until date sliding forward every day, not a
     // charge to prepare for — otherwise every such service would be "upcoming" every single day.
     const upcomingSorted = services
@@ -135,7 +137,7 @@ export class AnalyticsService {
         (s) =>
           s.nextBillingAt &&
           !isMeteredPeriod(s.period as Period) &&
-          dayjs(s.nextBillingAt).isAfter(now) &&
+          overdueDays(s.nextBillingAt, now) == null &&
           dayjs(s.nextBillingAt).isBefore(horizon),
       )
       .map((s) => ({
@@ -241,9 +243,10 @@ export class AnalyticsService {
     }
     balanceTopUps.sort((a, b) => new Decimal(b.amount).cmp(new Decimal(a.amount)));
 
-    // Dated charges already in the past: pay-or-fix reminders, most overdue first. Metered
-    // services can't be overdue — the paid-until date passing at night merely means the next
-    // sync hasn't refreshed it yet, and a real shortfall surfaces as the provider's runway.
+    // Dated charges whose billing day is already behind us (yesterday or earlier): pay-or-fix
+    // reminders, most overdue first. Metered services can't be overdue — the paid-until date
+    // passing at night merely means the next sync hasn't refreshed it yet, and a real shortfall
+    // surfaces as the provider's runway.
     const overdueBillings: AnalyticsSummary['overdueBillings'] = [];
     for (const s of services) {
       if (isMeteredPeriod(s.period as Period)) continue;

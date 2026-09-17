@@ -88,7 +88,7 @@ export const upcomingBillingSchema = z.object({
   cost: moneySchema.describe('Cost in service currency'),
   currency: currencySchema.describe('Service currency'),
   costBase: moneySchema.describe('Cost in base currency'),
-  daysUntil: z.number().int().describe('Days until billing'),
+  daysUntil: z.number().int().describe('Days until billing (0 = today)'),
   providerBalance: moneySchema.describe('Provider balance').nullable(),
   providerBalanceCurrency: currencySchema.describe('Provider balance currency').nullable(),
   // null = provider exposes no balance (manual kind, Hetzner-class connectors) → coverage
@@ -114,7 +114,7 @@ export const balanceTopUpSchema = z.object({
 });
 export type BalanceTopUp = z.infer<typeof balanceTopUpSchema>;
 
-/** A dated charge already in the past — needs payment or a billing-date refresh. */
+/** A dated charge whose billing day is already behind us — needs payment or a billing-date refresh. */
 export const overdueBillingSchema = z.object({
   serviceUuid: uuidSchema.describe('Service UUID'),
   name: z.string().describe('Service name'),
@@ -134,7 +134,8 @@ export const overdueBillingSchema = z.object({
   cost: moneySchema.describe('Cost in service currency'),
   currency: currencySchema.describe('Service currency'),
   costBase: moneySchema.describe('Cost in base currency'),
-  daysOverdue: z.number().int().nonnegative().describe('Whole days past due (0 = earlier today)'),
+  // >= 1 by construction: the cut is the calendar day, a charge dated today is still upcoming.
+  daysOverdue: z.number().int().positive().describe('Whole calendar days past due (1 = yesterday)'),
 });
 
 /**

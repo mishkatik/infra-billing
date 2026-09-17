@@ -63,8 +63,8 @@ function runwayLabel(days: number): string {
   return `~${days} ${ruDays(days)}`;
 }
 
+// daysOverdue is >= 1 by contract (a charge dated today is upcoming, not overdue), so no "today" case.
 function agoLabelRu(daysOverdue: number): string {
-  if (daysOverdue <= 0) return 'сегодня';
   if (daysOverdue === 1) return 'вчера';
   return `${daysOverdue} ${ruDays(daysOverdue)} назад`;
 }
