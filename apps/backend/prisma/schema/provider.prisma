@@ -12,6 +12,7 @@ model Provider {
   balanceCurrency String?   @map("balance_currency")
   balanceSyncedAt DateTime? @map("balance_synced_at")
   isPostpaid      Boolean   @default(false) @map("is_postpaid")
+  isEnabled       Boolean   @default(true) @map("is_enabled")
   lastSyncAt      DateTime? @map("last_sync_at")
   lastSyncError   String?   @map("last_sync_error")
 

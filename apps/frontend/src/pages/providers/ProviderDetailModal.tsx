@@ -1,5 +1,12 @@
 import type { Provider } from '@infra/shared';
-import { IconExternalLink, IconLoader2, IconRefresh, IconTrash } from '@tabler/icons-react';
+import {
+  IconBan,
+  IconExternalLink,
+  IconLoader2,
+  IconPlayerPlay,
+  IconRefresh,
+  IconTrash,
+} from '@tabler/icons-react';
 import { type FormEventHandler, type ReactNode, useRef } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
@@ -14,6 +21,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
 import { providerFavicon } from '@/utils/favicon';
 import { formatDate, formatMoney } from '@/utils/format';
 import { BalanceHistoryChart } from './BalanceHistoryChart';
@@ -27,8 +35,10 @@ interface ProviderDetailModalProps {
   kindLabel: (kind: string) => string;
   isSaving: boolean;
   isSyncing: boolean;
+  isToggling: boolean;
   onSubmit: FormEventHandler<HTMLFormElement>;
   onSync: (uuid: string) => void;
+  onToggleEnabled: (p: Provider) => void;
   onDelete: (p: Provider) => void;
   onClose: () => void;
 }
@@ -42,6 +52,80 @@ function InfoRow({ label, value }: { label: string; value: ReactNode }) {
   );
 }
 
+interface SyncPanelProps {
+  provider: Provider;
+  isSyncing: boolean;
+  onSync: (uuid: string) => void;
+}
+
+// Synchronization panel: last-sync info and the manual trigger — or, for a switched-off
+// provider, the hint that takes the trigger's place (the on/off button lives in the footer).
+function SyncPanel({ provider, isSyncing, onSync }: SyncPanelProps) {
+  const { t } = useTranslation();
+  return (
+    <section className="space-y-2 rounded-xl border p-4">
+      <p className="section-label">{t('providers.detail.syncTitle')}</p>
+      <InfoRow label={t('providers.detail.lastSync')} value={formatDate(provider.lastSyncAt)} />
+      {provider.lastSyncError && (
+        <p className="break-words text-xs text-destructive">{provider.lastSyncError}</p>
+      )}
+      {provider.isEnabled ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="w-full"
+          disabled={isSyncing}
+          onClick={() => onSync(provider.uuid)}
+        >
+          {isSyncing ? (
+            <IconLoader2 className="size-4 animate-spin" />
+          ) : (
+            <IconRefresh className="size-4" />
+          )}
+          {t('providers.detail.syncNow')}
+        </Button>
+      ) : (
+        <p className="text-xs text-muted-foreground">{t('providers.detail.syncDisabled')}</p>
+      )}
+    </section>
+  );
+}
+
+interface ToggleEnabledButtonProps {
+  provider: Provider;
+  isToggling: boolean;
+  onToggleEnabled: (p: Provider) => void;
+}
+
+// Instant on/off — applies right away, independent of Save (same footer button as services).
+function ToggleEnabledButton({ provider, isToggling, onToggleEnabled }: ToggleEnabledButtonProps) {
+  const { t } = useTranslation();
+  const enabled = provider.isEnabled;
+  return (
+    <Button
+      variant="ghost"
+      disabled={isToggling}
+      className={cn(
+        'ml-1',
+        enabled
+          ? 'bg-destructive/15 text-destructive hover:bg-destructive/25 hover:text-destructive'
+          : 'bg-success/15 text-success hover:bg-success/25 hover:text-success',
+      )}
+      onClick={() => onToggleEnabled(provider)}
+    >
+      {isToggling ? (
+        <IconLoader2 className="size-4 animate-spin" />
+      ) : enabled ? (
+        <IconBan className="size-4" />
+      ) : (
+        <IconPlayerPlay className="size-4" />
+      )}
+      {enabled ? t('providers.detail.disable') : t('providers.detail.enable')}
+    </Button>
+  );
+}
+
 // Provider details: the edit form on the left, info/sync/balance-history panels on the right.
 export function ProviderDetailModal({
   provider,
@@ -50,8 +134,10 @@ export function ProviderDetailModal({
   kindLabel,
   isSaving,
   isSyncing,
+  isToggling,
   onSubmit,
   onSync,
+  onToggleEnabled,
   onDelete,
   onClose,
 }: ProviderDetailModalProps) {
@@ -86,6 +172,11 @@ export function ProviderDetailModal({
             {shown.isPostpaid && (
               <Badge variant="outline" className="text-[10px] uppercase tracking-wide">
                 {t('providers.detail.postpaid')}
+              </Badge>
+            )}
+            {!shown.isEnabled && (
+              <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">
+                {t('providers.badgeDisabled')}
               </Badge>
             )}
           </DialogTitle>
@@ -129,31 +220,7 @@ export function ProviderDetailModal({
               </section>
 
               {shown.kind !== 'manual' && (
-                <section className="space-y-2 rounded-xl border p-4">
-                  <p className="section-label">{t('providers.detail.syncTitle')}</p>
-                  <InfoRow
-                    label={t('providers.detail.lastSync')}
-                    value={formatDate(shown.lastSyncAt)}
-                  />
-                  {shown.lastSyncError && (
-                    <p className="break-words text-xs text-destructive">{shown.lastSyncError}</p>
-                  )}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="w-full"
-                    disabled={isSyncing}
-                    onClick={() => onSync(shown.uuid)}
-                  >
-                    {isSyncing ? (
-                      <IconLoader2 className="size-4 animate-spin" />
-                    ) : (
-                      <IconRefresh className="size-4" />
-                    )}
-                    {t('providers.detail.syncNow')}
-                  </Button>
-                </section>
+                <SyncPanel provider={shown} isSyncing={isSyncing} onSync={onSync} />
               )}
 
               {shown.balance != null && (
@@ -199,6 +266,13 @@ export function ProviderDetailModal({
               </TooltipTrigger>
               <TooltipContent>{t('common.delete')}</TooltipContent>
             </Tooltip>
+            {shown.kind !== 'manual' && (
+              <ToggleEnabledButton
+                provider={shown}
+                isToggling={isToggling}
+                onToggleEnabled={onToggleEnabled}
+              />
+            )}
           </div>
           <Button type="submit" form="provider-detail-form" disabled={isSaving}>
             {isSaving && <IconLoader2 className="size-4 animate-spin" />}

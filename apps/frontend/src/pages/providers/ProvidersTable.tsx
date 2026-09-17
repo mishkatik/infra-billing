@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/table';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { SortState } from '@/hooks/useTableSort';
+import { cn } from '@/lib/utils';
 import { providerFavicon } from '@/utils/favicon';
 import { formatDate, formatMoney } from '@/utils/format';
 import type { ProviderSortKey } from './providersSort';
@@ -68,7 +69,10 @@ export function ProvidersTable({
               <TableRow
                 key={p.uuid}
                 tabIndex={0}
-                className="cursor-pointer focus-visible:bg-muted/50 focus-visible:outline-none"
+                className={cn(
+                  'cursor-pointer focus-visible:bg-muted/50 focus-visible:outline-none',
+                  !p.isEnabled && 'opacity-50',
+                )}
                 onClick={() => onRowClick(p)}
                 onKeyDown={(e) => {
                   if (e.key !== 'Enter' && e.key !== ' ') return;
@@ -87,6 +91,11 @@ export function ProvidersTable({
                       size={24}
                     />
                     <span className="font-semibold">{p.name}</span>
+                    {!p.isEnabled && (
+                      <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">
+                        {t('providers.badgeDisabled')}
+                      </Badge>
+                    )}
                     {p.loginUrl && (
                       <Button
                         asChild
@@ -135,7 +144,7 @@ export function ProvidersTable({
                         {formatDate(p.lastSyncAt)}
                       </span>
                     )}
-                    {p.kind !== 'manual' && (
+                    {p.kind !== 'manual' && p.isEnabled && (
                       <Button
                         type="button"
                         variant="ghost"

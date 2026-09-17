@@ -267,6 +267,7 @@ export class ProvidersService {
     if (dto.iconName !== undefined) data.iconName = dto.iconName;
     if (dto.iconBg !== undefined) data.iconBg = dto.iconBg;
     if (dto.isPostpaid !== undefined) data.isPostpaid = dto.isPostpaid;
+    if (dto.isEnabled !== undefined) data.isEnabled = dto.isEnabled;
     // Merge onto existing credentials so a partial edit works, e.g. adding only a TOTP
     // secret to an existing BILLmanager provider without re-entering the password.
     const creds = this.buildCredentials(existing.kind, dto, existing.credentialsEnc);

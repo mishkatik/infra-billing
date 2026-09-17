@@ -16,10 +16,10 @@ export class ProvidersRepository {
     return this.prisma.provider.findMany({ orderBy: { createdAt: 'asc' }, include: COUNT_INCLUDE });
   }
 
-  /** Non-manual providers, i.e. the ones eligible for API sync. */
+  /** Enabled, non-manual providers, i.e. the ones autosync and sync-all pick up. */
   listSyncable() {
     return this.prisma.provider.findMany({
-      where: { kind: { not: 'manual' } },
+      where: { kind: { not: 'manual' }, isEnabled: true },
       select: { uuid: true, name: true },
     });
   }

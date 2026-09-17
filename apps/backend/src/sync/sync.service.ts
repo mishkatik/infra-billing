@@ -83,7 +83,7 @@ export class SyncService implements OnModuleInit {
     this.logger.log(`Provider autosync every ${hours}h`);
   }
 
-  /** Sync every non-manual provider; failures are isolated. */
+  /** Sync every enabled non-manual provider; failures are isolated. */
   async syncAllProviders(): Promise<void> {
     const providers = await this.providers.listSyncable();
     for (const p of providers) {
@@ -98,7 +98,7 @@ export class SyncService implements OnModuleInit {
     }
   }
 
-  /** Manually sync every non-manual provider in parallel; returns a summary for the UI. */
+  /** Manually sync every enabled non-manual provider in parallel; summary for the UI. */
   async syncAll(): Promise<{ total: number; ok: number; failed: number }> {
     const providers = await this.providers.listSyncable();
     const results = await Promise.allSettled(providers.map((p) => this.syncProvider(p.uuid)));
@@ -117,6 +117,8 @@ export class SyncService implements OnModuleInit {
     if (provider.kind === 'manual') {
       throw new BadRequestException('Manual providers cannot be synced');
     }
+    // Switched off by the owner: no run, no lastSyncError, nothing for the alerts to pick up.
+    if (!provider.isEnabled) throw new BadRequestException('Provider is disabled');
 
     const run = await this.syncRuns.createRunning(uuid);
     const controller = new AbortController();

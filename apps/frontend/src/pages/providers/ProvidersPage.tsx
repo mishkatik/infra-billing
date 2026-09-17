@@ -98,6 +98,23 @@ export function ProvidersPage() {
     }
   };
 
+  // Instant on/off from the detail modal footer. The form deliberately does not carry
+  // isEnabled, so a later Save can't revert it.
+  const [togglingUuid, setTogglingUuid] = useState<string | null>(null);
+  const toggleEnabled = async (p: Provider) => {
+    setTogglingUuid(p.uuid);
+    try {
+      await update.mutateAsync({ uuid: p.uuid, dto: { isEnabled: !p.isEnabled } });
+      notifySuccess(
+        t(p.isEnabled ? 'providers.disabledToast' : 'providers.enabledToast', { name: p.name }),
+      );
+    } catch (e) {
+      notifyError(apiErrorMessage(e));
+    } finally {
+      setTogglingUuid(null);
+    }
+  };
+
   const submit = form.handleSubmit(async (v) => {
     const err = validateProviderCredentials(v, t, { requireCreds: !selected });
     if (err) {
@@ -135,8 +152,9 @@ export function ProvidersPage() {
         closeCreateModal();
       }
       notifySuccess(selected ? t('providers.updated') : t('providers.created'));
-      // Auto-sync syncable providers so credential/token changes take effect right away.
-      if (saved.kind !== 'manual') void doSync(saved.uuid);
+      // Auto-sync syncable providers so credential/token changes take effect right away
+      // (not a switched-off one: its sync endpoint answers 400).
+      if (saved.kind !== 'manual' && saved.isEnabled) void doSync(saved.uuid);
     } catch (e) {
       notifyError(apiErrorMessage(e));
     }
@@ -220,8 +238,10 @@ export function ProvidersPage() {
         kindLabel={enums.providerKindLabel}
         isSaving={update.isPending}
         isSyncing={sync.isPending && sync.variables === selected?.uuid}
+        isToggling={togglingUuid !== null && togglingUuid === selected?.uuid}
         onSubmit={submit}
         onSync={doSync}
+        onToggleEnabled={toggleEnabled}
         onDelete={doDelete}
         onClose={() => setDetailUuid(null)}
       />

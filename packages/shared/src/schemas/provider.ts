@@ -23,6 +23,9 @@ export const providerSchema = z.object({
   balanceCurrency: currencySchema.describe('Balance currency').nullable(),
   // Invoice-billed (postpaid): balance is not prepaid funds → excluded from balance warnings.
   isPostpaid: z.boolean().describe('Invoice-billed / postpaid'),
+  // Owner switch: false stops autosync, "Sync all" and manual sync. Services, balance and
+  // analytics are untouched — the provider is only muted in the UI.
+  isEnabled: z.boolean().describe('Sync enabled'),
   balanceSyncedAt: isoDateSchema.describe('Balance update time').nullable(),
   lastSyncAt: isoDateSchema.describe('Last successful sync').nullable(),
   lastSyncError: z.string().describe('Last sync error').nullable(),
@@ -100,6 +103,7 @@ export const updateProviderSchema = z.object({
   iconName: iconNameSchema.describe('Tabler icon name').nullable().optional(),
   iconBg: iconBgSchema.describe('Icon tile background').nullable().optional(),
   isPostpaid: z.boolean().describe('Invoice-billed / postpaid').optional(),
+  isEnabled: z.boolean().describe('Sync enabled').optional(),
   ...credentialFields,
 });
 export type UpdateProvider = z.infer<typeof updateProviderSchema>;
