@@ -4,12 +4,14 @@ import dayjs, { type ManipulateType } from 'dayjs';
 import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import { apiErrorMessage } from '@/api/client';
 import { useCreatePayment } from '@/api/payments';
 import { useProjects } from '@/api/projects';
 import { useProviders } from '@/api/providers';
 import { useRates } from '@/api/rates';
 import {
+  parseServiceFilter,
   type ServiceFilter,
   useCreateService,
   useDeleteService,
@@ -21,6 +23,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { useEnums } from '@/constants';
 import { useDisclosure } from '@/hooks/useDisclosure';
+import { isStaleUuid, usePersistedState } from '@/hooks/usePersistedState';
 import { useSelectedParam } from '@/hooks/useSelectedParam';
 import { sortRows, useTableSort } from '@/hooks/useTableSort';
 import { useCountryOptions } from '@/utils/countries';
@@ -60,7 +63,23 @@ export function ServicesPage() {
   const { data: projects } = useProjects();
   const { data: rates } = useRates();
   const { data: settings } = useSettings();
-  const [filter, setFilter] = useState<ServiceFilter>({});
+  const [searchParams] = useSearchParams();
+  // A dashboard deep link (?selected=) must find its row, so that visit starts unfiltered in memory
+  // only: the saved filter stays in storage and returns on the next mount — unless a filter is
+  // changed here, in which case the on-screen filter is what gets saved.
+  const [filter, setFilter] = usePersistedState<ServiceFilter>(
+    'services-filter',
+    parseServiceFilter,
+    {},
+    !searchParams.has('selected'),
+  );
+  // A saved filter may name a provider/project deleted since. Adjust during render (React restarts
+  // before commit, as in PaymentsPage) so a blank Select over an empty table is never committed;
+  // while the lists are still loading the saved value is kept.
+  if (isStaleUuid(filter.providerUuid, providers))
+    setFilter((f) => ({ ...f, providerUuid: undefined }));
+  if (isStaleUuid(filter.projectUuid, projects))
+    setFilter((f) => ({ ...f, projectUuid: undefined }));
   const { data: services, isLoading } = useServices(filter);
   const create = useCreateService();
   const update = useUpdateService();
@@ -127,11 +146,13 @@ export function ServicesPage() {
     };
     for (const s of services ?? []) add(s.type);
     for (const type of localTypes) add(type);
+    // A saved type filter must stay selectable even when no service carries it right now.
+    if (filter.type) add(filter.type);
     if (formTypeInUse) add(formType.trim());
     return extras.length === 0
       ? enums.serviceTypeOptions
       : [...enums.serviceTypeOptions, ...extras];
-  }, [enums, services, localTypes, formType, formTypeInUse]);
+  }, [enums, services, localTypes, filter.type, formType, formTypeInUse]);
 
   const rememberType = (type: string) => {
     const next = type.trim();

@@ -1,13 +1,30 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { CreatePayment, PaginatedPayments, Payment } from '@infra/shared';
 import { api } from './client';
-import { API_PATH } from '@infra/shared';
+import { API_PATH, isoDateSchema, uuidSchema } from '@infra/shared';
 
 export interface PaymentFilter {
   providerUuid?: string;
   serviceUuid?: string;
   from?: string;
   to?: string;
+}
+
+/**
+ * Validate a filter read back from localStorage with the same schemas the API enforces; malformed
+ * fields are dropped. serviceUuid is never restored — the filter bar doesn't set it.
+ */
+export function parsePaymentFilter(raw: unknown): PaymentFilter | null {
+  if (typeof raw !== 'object' || raw === null) return null;
+  const o = raw as Record<string, unknown>;
+  const f: PaymentFilter = {};
+  const provider = uuidSchema.safeParse(o.providerUuid);
+  if (provider.success) f.providerUuid = provider.data;
+  const from = isoDateSchema.safeParse(o.from);
+  if (from.success) f.from = from.data;
+  const to = isoDateSchema.safeParse(o.to);
+  if (to.success) f.to = to.data;
+  return f;
 }
 
 interface UsePaymentsOpts {

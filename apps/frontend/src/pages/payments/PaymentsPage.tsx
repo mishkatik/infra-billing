@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { apiErrorMessage } from '@/api/client';
 import {
+  parsePaymentFilter,
   type PaymentFilter,
   useCreatePayment,
   useDeletePayment,
@@ -16,6 +17,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { useEnums } from '@/constants';
 import { useDisclosure } from '@/hooks/useDisclosure';
+import { isStaleUuid, usePersistedState } from '@/hooks/usePersistedState';
 import { trimMoney } from '@/utils/format';
 import { notifyError, notifySuccess } from '@/utils/notify';
 import { PaymentFormModal } from './PaymentFormModal';
@@ -29,7 +31,11 @@ export function PaymentsPage() {
   const { t } = useTranslation();
   const enums = useEnums();
   const { data: providers } = useProviders();
-  const [filter, setFilterState] = useState<PaymentFilter>({});
+  const [filter, setFilterState] = usePersistedState<PaymentFilter>(
+    'payments-filter',
+    parsePaymentFilter,
+    {},
+  );
   const [rawPage, setRawPage] = useState(1);
   // A new filter always lands on page 1 — reset in the same event that changes the filter, so we
   // never fetch the old page against the new filter (the old effect chain did exactly that).
@@ -37,6 +43,10 @@ export function PaymentsPage() {
     setFilterState(update);
     setRawPage(1);
   };
+  // A saved filter may name a provider deleted since; adjust during render (like the page clamp
+  // below) so a blank Select over an empty journal is never committed. Loading lists keep the value.
+  if (isStaleUuid(filter.providerUuid, providers))
+    setFilter((f) => ({ ...f, providerUuid: undefined }));
   const { data, isLoading } = usePayments(filter, { page: rawPage, pageSize: PAGE_SIZE });
   const payments = data?.items ?? [];
   const total = data?.total ?? 0;

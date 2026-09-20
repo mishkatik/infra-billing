@@ -1,13 +1,31 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { CreateService, Service, UpdateService } from '@infra/shared';
 import { api } from './client';
-import { API_PATH } from '@infra/shared';
+import { API_PATH, serviceTypeSchema, uuidSchema } from '@infra/shared';
 
 export interface ServiceFilter {
   providerUuid?: string;
   projectUuid?: string;
   type?: string;
   isActive?: boolean;
+}
+
+/**
+ * Validate a filter read back from localStorage with the same schemas the API enforces, so a
+ * restored value can never 400; malformed or unknown fields are dropped one by one.
+ */
+export function parseServiceFilter(raw: unknown): ServiceFilter | null {
+  if (typeof raw !== 'object' || raw === null) return null;
+  const o = raw as Record<string, unknown>;
+  const f: ServiceFilter = {};
+  const provider = uuidSchema.safeParse(o.providerUuid);
+  if (provider.success) f.providerUuid = provider.data;
+  const project = uuidSchema.safeParse(o.projectUuid);
+  if (project.success) f.projectUuid = project.data;
+  const type = serviceTypeSchema.safeParse(o.type);
+  if (type.success) f.type = type.data;
+  if (typeof o.isActive === 'boolean') f.isActive = o.isActive;
+  return f;
 }
 
 export function useServices(filter: ServiceFilter = {}) {

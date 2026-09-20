@@ -1,4 +1,3 @@
-import dayjs from 'dayjs';
 import type { Dispatch, SetStateAction } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { PaymentFilter } from '@/api/payments';
@@ -47,12 +46,14 @@ export function PaymentsFilters({ filter, setFilter, providerOptions }: Payments
           </SelectContent>
         </Select>
       </div>
+      {/* Values are UTC-midnight ISO strings (toIso): slice the date part instead of parsing, which
+          would shift the day in negative-offset timezones. */}
       <div className="w-[160px] space-y-1.5">
         <Label htmlFor="payments-filter-from">{t('payments.filterFrom')}</Label>
         <DateField
           id="payments-filter-from"
           placeholder={t('payments.datePlaceholder')}
-          value={filter.from ? dayjs(filter.from).format('YYYY-MM-DD') : ''}
+          value={filter.from?.slice(0, 10) ?? ''}
           onChange={(v) => setFilter((f) => ({ ...f, from: v ? toIso(v) : undefined }))}
         />
       </div>
@@ -61,7 +62,7 @@ export function PaymentsFilters({ filter, setFilter, providerOptions }: Payments
         <DateField
           id="payments-filter-to"
           placeholder={t('payments.datePlaceholder')}
-          value={filter.to ? dayjs(filter.to).format('YYYY-MM-DD') : ''}
+          value={filter.to?.slice(0, 10) ?? ''}
           onChange={(v) => setFilter((f) => ({ ...f, to: v ? toIso(v) : undefined }))}
         />
       </div>
