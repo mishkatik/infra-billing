@@ -99,7 +99,7 @@ export function ServicesPage() {
   const defaultProjectUuid =
     projects?.find((p) => p.uuid === DEFAULT_PROJECT_UUID)?.uuid ?? projectOptions[0]?.value ?? '';
 
-  const { sort, toggleSort } = useTableSort('services-sort', SERVICE_SORT_KEYS);
+  const { sort, toggleSort, resetSort } = useTableSort('services-sort', SERVICE_SORT_KEYS);
   const sorted = sortRows(
     services,
     sort,
@@ -338,6 +338,11 @@ export function ServicesPage() {
         providerOptions={providerOptions}
         projectOptions={projectOptions}
         typeOptions={typeOptions}
+        sortActive={sort !== null}
+        onReset={() => {
+          setFilter({});
+          resetSort();
+        }}
       />
 
       <ServicesTable

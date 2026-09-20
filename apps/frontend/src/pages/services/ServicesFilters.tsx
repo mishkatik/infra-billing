@@ -1,6 +1,7 @@
 import type { Dispatch, SetStateAction } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ServiceFilter } from '@/api/services';
+import { ResetViewButton } from '@/components/ResetViewButton';
 import {
   Select,
   SelectContent,
@@ -18,6 +19,9 @@ interface ServicesFiltersProps {
   providerOptions: { value: string; label: string }[];
   projectOptions: { value: string; label: string }[];
   typeOptions: { value: string; label: string }[];
+  /** Column sort is part of the saved view too: it shows and resets together with the filters. */
+  sortActive: boolean;
+  onReset: () => void;
 }
 
 export function ServicesFilters({
@@ -26,8 +30,13 @@ export function ServicesFilters({
   providerOptions,
   projectOptions,
   typeOptions,
+  sortActive,
+  onReset,
 }: ServicesFiltersProps) {
   const { t } = useTranslation();
+  // The reset button doubles as the "view is not default" cue — a restored filter or sort is
+  // otherwise easy to miss on a list that just looks short or oddly ordered.
+  const active = sortActive || Object.values(filter).some((v) => v !== undefined);
   return (
     <div className="flex flex-wrap gap-3">
       <Select
@@ -93,6 +102,7 @@ export function ServicesFilters({
           <SelectItem value="false">{t('services.activityInactive')}</SelectItem>
         </SelectContent>
       </Select>
+      {active && <ResetViewButton onClick={onReset} />}
     </div>
   );
 }

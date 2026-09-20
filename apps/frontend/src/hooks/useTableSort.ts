@@ -28,7 +28,8 @@ function readStored<K extends string>(storageKey: string, keys: readonly K[]): S
 /**
  * Tri-state per-table column sort: asc → desc → off (original API order).
  * Persisted in localStorage under `storageKey`; stale/corrupt values (e.g. a
- * column removed later) fall back to "off".
+ * column removed later) fall back to "off". `resetSort` is the "off" state for
+ * a page-level reset button.
  */
 export function useTableSort<K extends string>(storageKey: string, keys: readonly K[]) {
   const [sort, setSort] = useState<SortState<K> | null>(() => readStored(storageKey, keys));
@@ -50,7 +51,12 @@ export function useTableSort<K extends string>(storageKey: string, keys: readonl
     [storageKey],
   );
 
-  return { sort, toggleSort };
+  const resetSort = useCallback(() => {
+    localStorage.removeItem(storageKey);
+    setSort(null);
+  }, [storageKey]);
+
+  return { sort, toggleSort, resetSort };
 }
 
 /**
