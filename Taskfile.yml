@@ -1,0 +1,197 @@
+version: '3'
+
+vars:
+  IMAGE: infra-billing
+  # Host → dockerized Postgres (published on 127.0.0.1), so host-side prisma commands work without
+  # .env's docker-internal host (infra-billing-db). Left as shell expansion on purpose: the POSTGRES_*
+  # come from the task's `dotenv`, which isn't visible to templates. DB must be up (db-up).
+  LOCAL_DATABASE_URL: postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@127.0.0.1:${POSTGRES_HOST_PORT:-5432}/$POSTGRES_DB?schema=public
+
+tasks:
+  default:
+    silent: true
+    cmds:
+      - '{{.TASK_EXE}} --list --sort none'
+
+  install:
+    desc: npm ci (install all workspaces)
+    cmds:
+      - npm ci
+
+  dev:
+    desc: run backend + frontend in watch mode
+    cmds:
+      - npm run dev
+
+  build:
+    desc: build shared -> frontend -> backend
+    cmds:
+      - npm run build
+
+  typecheck:
+    desc: tsc --noEmit across workspaces
+    cmds:
+      - npm run typecheck
+
+  lint:
+    desc: Biome lint (no writes)
+    cmds:
+      - npm run lint
+
+  format:
+    desc: Biome format --write (apply formatting)
+    cmds:
+      - npm run format
+
+  check:
+    desc: Biome check (lint + format, no writes)
+    cmds:
+      - npm run check
+
+  check-fix:
+    desc: Biome check --write (apply safe fixes + formatting)
+    cmds:
+      - npm run check:fix
+
+  hooks:
+    desc: install the git pre-commit hook (.githooks)
+    silent: true
+    preconditions:
+      - sh: git rev-parse --git-dir
+        msg: Not a git repo — run 'git init' first.
+    cmds:
+      - chmod +x .githooks/pre-commit
+      - git config core.hooksPath .githooks
+      - >-
+        echo "Hooks installed: pre-commit runs 'biome check' on staged files
+        (core.hooksPath=.githooks)."
+
+  test:
+    desc: build + run backend unit tests (node --test)
+    cmds:
+      - npm run test
+
+  # ---- database (Postgres 18 via docker compose) ----------------------------
+  db-up:
+    desc: start only the postgres service (compose)
+    cmds:
+      - docker compose up -d infra-billing-db
+
+  db-down:
+    desc: stop the postgres service
+    cmds:
+      - docker compose stop infra-billing-db
+
+  db-logs:
+    desc: tail postgres logs
+    cmds:
+      - docker compose logs -f infra-billing-db
+
+  migrate:
+    desc: prisma migrate dev (apps/backend)
+    dotenv: ['.env']
+    cmds:
+      - DATABASE_URL="{{.LOCAL_DATABASE_URL}}" npm run prisma:migrate -w @infra/backend
+
+  generate:
+    desc: prisma generate (apps/backend)
+    cmds:
+      - npm run prisma:generate -w @infra/backend
+
+  studio:
+    desc: open prisma studio
+    dotenv: ['.env']
+    cmds:
+      - DATABASE_URL="{{.LOCAL_DATABASE_URL}}" npm run prisma:studio -w @infra/backend
+
+  # Recovery for a forgotten password with all passkeys lost: the app shows first-run setup again.
+  # Runs the in-container CLI, the app container must be up.
+  auth-reset:
+    desc: wipe the admin account + passkeys (re-trigger first-run setup)
+    prompt: Wipe the admin account and all passkeys?
+    cmds:
+      - docker compose exec -T infra-billing cli reset-admin --yes
+
+  # ---- docker ---------------------------------------------------------------
+  docker-build:
+    desc: build the production image locally
+    vars:
+      VERSION: &version
+        sh: node -p "require('./package.json').version"
+    cmds:
+      - >-
+        docker build
+        --build-arg APP_VERSION={{.VERSION}}
+        --build-arg BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+        --build-arg GIT_COMMIT=$(git rev-parse HEAD 2>/dev/null || echo unknown)
+        -t {{.IMAGE}}:{{.VERSION}} -t {{.IMAGE}}:latest .
+
+  docker-save:
+    desc: build and save the image to {{.IMAGE}}.tar.gz
+    deps: [docker-build]
+    silent: true
+    vars:
+      VERSION: *version
+    cmds:
+      - echo "Saving {{.IMAGE}}:{{.VERSION}} -> {{.IMAGE}}.tar.gz..."
+      - docker save {{.IMAGE}}:{{.VERSION}} | gzip > {{.IMAGE}}.tar.gz
+      - echo "Wrote {{.IMAGE}}.tar.gz ($(du -h {{.IMAGE}}.tar.gz | cut -f1))"
+
+  docker-up:
+    desc: docker compose up -d (postgres + infra-billing)
+    cmds:
+      - docker compose up -d
+
+  docker-down:
+    desc: docker compose down
+    cmds:
+      - docker compose down
+
+  # ---- versioning -----------------------------------------------------------
+  bump-patch:
+    desc: bump patch version (root + all workspaces in sync) and reinstall
+    cmds:
+      - task: bump
+        vars: { PART: patch }
+
+  bump-minor:
+    desc: bump minor version (root + all workspaces in sync) and reinstall
+    cmds:
+      - task: bump
+        vars: { PART: minor }
+
+  bump-major:
+    desc: bump major version (root + all workspaces in sync) and reinstall
+    cmds:
+      - task: bump
+        vars: { PART: major }
+
+  # Bump the root version, then sync all workspaces (backend/frontend/shared) to the same version,
+  # then refresh the lockfile. Workspaces are private/internal. Only the root version drives the
+  # image tag / build-info; they're kept in sync just for clarity.
+  bump:
+    internal: true
+    silent: true
+    cmds:
+      - npm version {{.PART}} --no-git-tag-version >/dev/null
+      - |
+        V=$(node -p "require('./package.json').version")
+        npm version "$V" --no-git-tag-version --workspaces --allow-same-version >/dev/null
+        echo "Bumped all packages to $V"
+      - npm install
+
+  tag-release:
+    desc: create and push a signed git tag
+    silent: true
+    vars:
+      VERSION: *version
+    cmds:
+      - echo "Creating signed tag for version {{.VERSION}}..."
+      - git tag -s "{{.VERSION}}" -m "Release {{.VERSION}}"
+      - git push origin --follow-tags
+      - echo "Signed tag {{.VERSION}} created and pushed"
+
+  docs-screenshot:
+    desc: Retina dashboard shots → docs/screenshot-{dark,light}.webp (needs CAPTURE_USER + CAPTURE_PASSWORD)
+    cmds:
+      - npm run docs:screenshot

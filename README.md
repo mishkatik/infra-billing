@@ -303,26 +303,29 @@ curl -H "Authorization: Bearer ib_…" https://infra-billing/api/providers
 
 ## Локальная разработка
 
+Команды — через [Task](https://taskfile.dev/installation) (`brew install go-task`), `task` без
+аргументов покажет список.
+
 ```bash
-make install            # npm ci
-make db-up              # поднять только Postgres (127.0.0.1:5432)
+task install            # npm ci
+task db-up              # поднять только Postgres (127.0.0.1:5432)
 
 # .env для локального запуска вне docker — DATABASE_URL на 127.0.0.1:
 #   DATABASE_URL="postgresql://infra:infra@127.0.0.1:5432/infra_billing?schema=public"
 
-make migrate            # prisma migrate dev
-make dev                # backend :8080 + frontend :5173 (Vite проксирует /api)
+task migrate            # prisma migrate dev
+task dev                # backend :8080 + frontend :5173 (Vite проксирует /api)
 ```
 
-Открыть <http://localhost:5173>. `make migrate`/`make studio` сами ходят в БД на `127.0.0.1`
-(см. `LOCAL_DATABASE_URL` в Makefile). Локальный билд образа: `make docker-build` + `make docker-up`
-(использует `docker-compose.yml` со сборкой из исходников).
+Открыть <http://localhost:5173>. `task migrate`/`task studio` сами ходят в БД на `127.0.0.1`
+(см. `LOCAL_DATABASE_URL` в `Taskfile.yml`). Локальный билд образа: `task docker-build` +
+`task docker-up` (использует `docker-compose.yml` со сборкой из исходников).
 
-Превью дашборда в шапке README обновляются так (нужны запущенные `make dev` и креды владельца):
+Превью дашборда в шапке README обновляются так (нужны запущенные `task dev` и креды владельца):
 
 ```bash
 # один раз, если нет системного Chrome: npx playwright install chromium
-CAPTURE_USER=admin CAPTURE_PASSWORD='…' make docs-screenshot
+CAPTURE_USER=admin CAPTURE_PASSWORD='…' task docs-screenshot
 ```
 
 Скрипт пишет `docs/screenshot-{dark,light}.webp` (Retina → рамка → WebP).

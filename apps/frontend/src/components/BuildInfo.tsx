@@ -102,7 +102,7 @@ export function BuildInfo() {
   if (isPending) return <Skeleton className="h-8 w-[84px] rounded-full" />;
   if (!data) return null;
 
-  // "" is the env default, "unknown" is what the Makefile passes outside a git checkout.
+  // "" is the env default, "unknown" is what `task docker-build` passes outside a git checkout.
   const commit = data.gitCommit && data.gitCommit !== 'unknown' ? data.gitCommit : '';
   const built = data.buildTime ? dayjs(data.buildTime) : null;
   const builtAt = built?.isValid() ? built : null;

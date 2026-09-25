@@ -23,7 +23,7 @@ export const envSchema = z.object({
   // first run in the panel. NOT in env. base currency / rate source / sync interval / Telegram are
   // also in the DB `Settings` row. See AuthConfigService / SettingsService.
 
-  // Build metadata, baked in by the Docker build args (see Dockerfile/Makefile).
+  // Build metadata, baked in by the Docker build args (see Dockerfile/Taskfile.yml).
   APP_VERSION: z.string().default('dev'),
   BUILD_TIME: z.string().default(''),
   GIT_COMMIT: z.string().default(''),

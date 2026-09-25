@@ -1,8 +1,8 @@
 #!/bin/sh
 # Pre-commit: Biome lints + checks formatting of the STAGED files only.
-# Install with `make hooks` (sets core.hooksPath=.githooks). Auto-fix with `make check-fix`.
+# Install with `task hooks` (sets core.hooksPath=.githooks). Auto-fix with `task check-fix`.
 if ! npx biome check --staged --no-errors-on-unmatched; then
   echo "" >&2
-  echo "✖ Biome нашёл проблемы в staged-файлах. Исправьте: make check-fix (затем git add -u)." >&2
+  echo "✖ Biome нашёл проблемы в staged-файлах. Исправьте: task check-fix (затем git add -u)." >&2
   exit 1
 fi

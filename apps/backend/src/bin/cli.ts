@@ -4,7 +4,7 @@ import { consola } from 'consola';
 import { PrismaClient } from '@generated/prisma/client';
 
 // Standalone maintenance CLI (no NestJS). It exists for owners running the production
-// docker-compose stack, who have no Makefile or source checkout. Run it inside the app container:
+// docker-compose stack, who have no Taskfile or source checkout. Run it inside the app container:
 //
 //   docker compose exec -it infra-billing cli             # interactive menu
 //   docker compose exec infra-billing cli reset-admin -y  # non-interactive
