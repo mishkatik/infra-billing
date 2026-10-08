@@ -180,15 +180,75 @@ tasks:
         echo "Bumped all packages to $V"
       - npm install
 
-  tag-release:
-    desc: create and push a signed git tag
+  # Body of the release pull request: the commits going out, since GitHub's release notes only list
+  # pull requests, and a warning about new migrations, which run on start and can't be rolled back.
+  # Run it again to refresh the body after a fix lands on the release branch.
+  release-notes:
+    desc: print the release pull request body (commits since main + migration warning)
+    silent: true
+    cmds:
+      - |
+        echo '## Changes'
+        echo
+        git log --no-merges --reverse --format='- %s' origin/main..HEAD
+        MIGRATIONS=$(git diff --name-only --diff-filter=A origin/main HEAD -- apps/backend/prisma/migrations \
+          | sed -n 's#^apps/backend/prisma/migrations/\([^/]*\)/.*#\1#p' | sort -u)
+        if [ -n "$MIGRATIONS" ]; then
+          echo
+          echo '⚠️ Database migrations run on start and cannot be rolled back. Back up the database before updating:'
+          echo "$MIGRATIONS" | sed 's/^/- /'
+        fi
+
+  # Opens the pull request into main from the branch being released (dev, or a hotfix branch) once
+  # its version bump is pushed. The title becomes the merge commit that gets the tag.
+  release-pr:
+    desc: open the release pull request into main for the current version
     silent: true
     vars:
       VERSION: *version
+      BRANCH:
+        sh: git branch --show-current
+    preconditions:
+      - sh: '[ -n "{{.BRANCH}}" ]'
+        msg: Detached HEAD, switch to dev or a hotfix branch.
+      - sh: '[ "{{.BRANCH}}" != main ]'
+        msg: Run on dev (or a hotfix branch) once the version bump is pushed, not on main.
+      - sh: 'git fetch -q origin && [ "$(git rev-parse HEAD)" = "$(git rev-parse "origin/{{.BRANCH}}")" ]'
+        msg: '{{.BRANCH}} differs from origin/{{.BRANCH}}, push it first.'
+      - sh: git merge-base --is-ancestor origin/main HEAD
+        msg: 'origin/main is not merged into {{.BRANCH}}, merge it first.'
+      - sh: '[ -z "$(git ls-remote --tags origin "refs/tags/{{.VERSION}}")" ]'
+        msg: '{{.VERSION}} is already released, bump the version first (task bump-patch or bump-minor).'
+      - sh: >-
+          [ "$( { git ls-remote --tags --refs origin | sed 's#.*refs/tags/##'; echo "{{.VERSION}}"; }
+          | sort -t. -k1,1n -k2,2n -k3,3n | tail -n 1)" = "{{.VERSION}}" ]
+        msg: '{{.VERSION}} is below the latest release tag, bump the version past it.'
+    cmds:
+      - '{{.TASK_EXE}} release-notes | gh pr create --base main --head "{{.BRANCH}}" --title "chore(release): {{.VERSION}}" --body-file -'
+      - echo "Release head {{.BRANCH}} at $(git rev-parse HEAD)"
+
+  # Tags the release PR's merge commit, so it refuses anything but a clean main that matches origin.
+  # Pushes the tag alone: main only moves through pull requests.
+  tag-release:
+    desc: create and push a signed tag for the merged release on main
+    silent: true
+    vars:
+      VERSION: *version
+    preconditions:
+      - sh: '[ "$(git branch --show-current)" = main ]'
+        msg: Tag on main once the release PR is merged (git switch main && git pull --ff-only).
+      - sh: '[ -z "$(git status --porcelain)" ]'
+        msg: The working tree is not clean.
+      - sh: 'git fetch -q origin main && [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ]'
+        msg: Local main differs from origin/main, run git pull --ff-only first.
+      - sh: >-
+          ! git rev-parse -q --verify "refs/tags/{{.VERSION}}" >/dev/null &&
+          [ -z "$(git ls-remote --tags origin "refs/tags/{{.VERSION}}")" ]
+        msg: 'Tag {{.VERSION}} already exists. Release tags never move, ship the next version instead.'
     cmds:
       - echo "Creating signed tag for version {{.VERSION}}..."
       - git tag -s "{{.VERSION}}" -m "Release {{.VERSION}}"
-      - git push origin --follow-tags
+      - git push origin "refs/tags/{{.VERSION}}"
       - echo "Signed tag {{.VERSION}} created and pushed"
 
   docs-screenshot:
