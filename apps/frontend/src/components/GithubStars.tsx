@@ -1,7 +1,6 @@
-import { IconBrandGithub, IconStarFilled } from '@tabler/icons-react';
+import { IconBrandGithub, IconStar } from '@tabler/icons-react';
 import { useTranslation } from 'react-i18next';
 import { GITHUB_REPO_URL, useGithubStars } from '@/api/github';
-import { Odometer } from '@/components/remocn/odometer';
 import { Button } from '@/components/ui/button';
 
 export function GithubStars() {
@@ -13,18 +12,15 @@ export function GithubStars() {
   return (
     <Button
       asChild
-      variant="outline"
+      variant="ghost"
       size="sm"
-      className="rounded-full hover:-translate-y-px hover:border-brand hover:shadow-[0_2px_12px_-6px_var(--brand)]"
+      className="h-7 gap-1.5 px-2 font-normal"
       aria-label={t('app.starOnGithub')}
     >
       <a href={GITHUB_REPO_URL} target="_blank" rel="noopener noreferrer">
-        <IconBrandGithub className="size-4" />
-        <span className="flex items-center gap-1.5">
-          <IconStarFilled className="size-[13px] text-amber-400" />
-          {/* Counter in the remocn github-stars style: an odometer with rolling digits. */}
-          <Odometer value={stars} className="text-sm leading-none font-semibold" />
-        </span>
+        <IconBrandGithub stroke={1.5} className="size-4" />
+        <IconStar stroke={1.5} className="size-3.5" />
+        <span className="leading-none">{stars}</span>
       </a>
     </Button>
   );

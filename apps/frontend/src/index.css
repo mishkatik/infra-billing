@@ -4,97 +4,108 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Theme ported from remocn.dev: neutral primary/surfaces, light = pure white with
- * #e5e5e5 borders, dark = #111115 with a subtle violet tint and TRANSLUCENT white
- * borders (6–8%) — that translucency is what makes the dark surfaces feel organic.
- * Brand magenta stays as the accent (--brand): logo, login hero, charts.
- * 'Twemoji Country Flags' must come FIRST in --font-sans — the flag polyfill on
- * Windows; regular glyphs fall through to Mulish.
+ * Quiet theme: soft stone neutrals, white surfaces separated by tone and whitespace instead of
+ * borders, one calm humanist sans (Golos Text) with tabular figures for every number. Colour is
+ * rationed: a muted slate for the active nav item and charts, and muted status tones — brick for
+ * failures, ochre for attention, sage for ok — always paired with a word or a shape, never colour
+ * alone. `.dark` is the same system on a warm near-black ground.
+ * 'Twemoji Country Flags' must come FIRST in --font-sans — the flag polyfill on Windows;
+ * regular glyphs fall through to Golos Text.
  */
 :root {
   --radius: 0.625rem;
-  --background: #ffffff;
-  --foreground: #0a0a0a;
+  --background: #f4f4f1;
+  --foreground: #1d1d1b;
   --card: #ffffff;
-  --card-foreground: #0a0a0a;
+  --card-foreground: #1d1d1b;
   --popover: #ffffff;
-  --popover-foreground: #0a0a0a;
-  --primary: #171717;
-  --primary-foreground: #fafafa;
-  --secondary: #f5f5f5;
-  --secondary-foreground: #171717;
-  --muted: #f5f5f5;
-  --muted-foreground: #737373;
-  --accent: #f5f5f5;
-  --accent-foreground: #171717;
-  --destructive: #e40014;
+  --popover-foreground: #1d1d1b;
+  --primary: #1d1d1b;
+  --primary-foreground: #ffffff;
+  --secondary: #efefeb;
+  --secondary-foreground: #1d1d1b;
+  --muted: #f4f4f1;
+  --muted-foreground: #6e6e69;
+  --accent: #efefeb;
+  --accent-foreground: #1d1d1b;
+  --ink-2: #6e6e69;
+  --ink-3: #a3a39d;
+  --slate: #5a6b7d;
+  --ok: #6f8f72;
+  --warn: #a8803a;
+  --destructive: #b5482f;
   --destructive-foreground: #ffffff;
-  --success: #099268;
-  --success-foreground: #ffffff;
-  --warning: #e8590c;
-  --warning-foreground: #ffffff;
-  --brand: #c83fa1;
-  --border: #e5e5e5;
-  --input: #e5e5e5;
-  --ring: #a1a1a1;
-  --chart-1: #e358b7;
-  --chart-2: #0ca678;
-  --chart-3: #4dabf7;
-  --chart-4: #ffa94d;
-  --chart-5: #9775fa;
-  --sidebar: #fafafa;
-  --sidebar-foreground: #0a0a0a;
-  --sidebar-primary: #171717;
-  --sidebar-primary-foreground: #fafafa;
-  --sidebar-accent: #f5f5f5;
-  --sidebar-accent-foreground: #171717;
-  --sidebar-border: #e5e5e5;
-  --sidebar-ring: #a1a1a1;
+  --fail-bg: #fbf3f1;
+  --border: #ebebe7;
+  --hairline: #f0f0ec;
+  --input: #e4e4df;
+  --field: #f4f4f1;
+  --ring: #5a6b7d;
+  --overlay: rgba(29, 29, 27, 0.25);
+  --sidebar: #ffffff;
+  --sidebar-foreground: #1d1d1b;
+  --sidebar-primary: #1d1d1b;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #efefeb;
+  --sidebar-accent-foreground: #5a6b7d;
+  --sidebar-border: transparent;
+  --sidebar-ring: #5a6b7d;
 }
 
 .dark {
-  --background: #111115;
-  --foreground: #eeeeee;
-  --card: #161519;
-  --card-foreground: #eeeeee;
-  --popover: #161519;
-  --popover-foreground: #eeeeee;
-  --primary: #eeeeee;
-  --primary-foreground: #111115;
-  --secondary: #1a1a1e;
-  --secondary-foreground: #cdcdd1;
-  --muted: #18181c;
-  --muted-foreground: #8f8e94;
-  --accent: #1a1a1e;
-  --accent-foreground: #eeeeee;
-  --destructive: #ff6568;
-  --destructive-foreground: #ffffff;
-  --success: #12b886;
-  --success-foreground: #06281d;
-  --warning: #ff922b;
-  --warning-foreground: #331303;
-  --brand: #fb7be2;
-  --border: #ffffff0f;
-  --input: #ffffff14;
-  --ring: #ffffff33;
-  --chart-1: #fb7be2;
-  --chart-2: #12b886;
-  --chart-3: #4dabf7;
-  --chart-4: #ffa94d;
-  --chart-5: #9775fa;
-  --sidebar: #111115;
-  --sidebar-foreground: #eeeeee;
-  --sidebar-primary: #eeeeee;
-  --sidebar-primary-foreground: #111115;
-  --sidebar-accent: #1a1a1e;
-  --sidebar-accent-foreground: #eeeeee;
-  --sidebar-border: #ffffff0f;
-  --sidebar-ring: #ffffff33;
+  --background: #151514;
+  --foreground: #ecebe6;
+  --card: #1e1e1c;
+  --card-foreground: #ecebe6;
+  --popover: #232321;
+  --popover-foreground: #ecebe6;
+  --primary: #ecebe6;
+  --primary-foreground: #151514;
+  --secondary: #2a2a27;
+  --secondary-foreground: #ecebe6;
+  --muted: #1a1a19;
+  --muted-foreground: #9e9d96;
+  --accent: #2a2a27;
+  --accent-foreground: #ecebe6;
+  --ink-2: #9e9d96;
+  --ink-3: #6c6b65;
+  --slate: #a3b3c4;
+  --ok: #92b095;
+  --warn: #cfa968;
+  --destructive: #e0806a;
+  --destructive-foreground: #151514;
+  --fail-bg: #2b1f1b;
+  --border: #2d2d2a;
+  --hairline: #262624;
+  --input: #34342f;
+  --field: #262624;
+  --ring: #a3b3c4;
+  --overlay: rgba(0, 0, 0, 0.55);
+  --sidebar: #1e1e1c;
+  --sidebar-foreground: #ecebe6;
+  --sidebar-primary: #ecebe6;
+  --sidebar-primary-foreground: #151514;
+  --sidebar-accent: #2a2a27;
+  --sidebar-accent-foreground: #a3b3c4;
+  --sidebar-border: transparent;
+  --sidebar-ring: #a3b3c4;
+}
+
+/* Barely-there elevation: cards sit on the canvas by tone, popovers need a touch more to lift
+ * off a white card. Anything stronger is out of character. */
+@theme {
+  --shadow-*: initial;
+  --inset-shadow-*: initial;
+  --drop-shadow-*: initial;
+  --shadow-xs: 0 1px 2px rgb(0 0 0 / 0.03);
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.04);
+  --shadow-md: 0 6px 24px -6px rgb(0 0 0 / 0.12), 0 1px 3px rgb(0 0 0 / 0.04);
+  --shadow-lg: 0 16px 48px -12px rgb(0 0 0 / 0.18), 0 2px 6px rgb(0 0 0 / 0.05);
 }
 
 @theme inline {
-  --font-sans: 'Twemoji Country Flags', 'Mulish', -apple-system, 'Segoe UI', sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-sans: 'Twemoji Country Flags', 'Golos Text', -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -109,21 +120,20 @@
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-slate: var(--slate);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
-  --color-success: var(--success);
-  --color-success-foreground: var(--success-foreground);
-  --color-warning: var(--warning);
-  --color-warning-foreground: var(--warning-foreground);
-  --color-brand: var(--brand);
+  --color-fail-bg: var(--fail-bg);
   --color-border: var(--border);
+  --color-hairline: var(--hairline);
   --color-input: var(--input);
+  --color-field: var(--field);
   --color-ring: var(--ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
+  --color-overlay: var(--overlay);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -132,10 +142,11 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: 6px;
+  --radius-md: 8px;
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --radius-xl: 14px;
+  --radius-2xl: 16px;
 }
 
 @layer base {
@@ -144,62 +155,40 @@
   }
   html {
     color-scheme: light;
-    /* Theme the canvas itself: otherwise overscroll and pre-body paint show white in dark mode. */
+    /* Theme the canvas itself: otherwise overscroll and pre-body paint show the wrong ground. */
     @apply bg-background;
   }
   html.dark {
     color-scheme: dark;
   }
+  /* Tabular figures everywhere: amounts, dates and counts line up in columns without a
+   * separate monospace face. IBM Plex Mono (font-mono) is kept for real code only — logs,
+   * connector kinds, tokens, JSON. */
   body {
     @apply bg-background text-foreground font-sans antialiased;
+    font-variant-numeric: tabular-nums;
   }
-  /* Uppercase muted section labels — the panel's signature structural device. */
+  ::selection {
+    @apply bg-slate/25 text-foreground;
+  }
+  /* Small sentence-case label in soft gray: table heads, field and stat captions. */
   .section-label {
-    @apply text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground;
+    @apply text-[13px] leading-none font-normal text-ink-2;
   }
 }
 
-/* Wordmark with marker (BrandWordmark) — CSS take on the remocn marker-highlight:
-   the marker sweeps in from the left with a slight overshoot, and the text under it
-   recolors to a dark plum. */
-@keyframes brand-marker-sweep {
-  0% {
-    transform: scaleX(0);
-  }
-  75% {
-    transform: scaleX(1.04);
-  }
-  100% {
-    transform: scaleX(1);
-  }
-}
-@keyframes brand-marker-ink {
-  0%,
-  45% {
-    color: inherit;
-  }
-  70%,
-  100% {
-    color: #430b34;
-  }
-}
-/* Header version pill while a newer release is out: a slow brand glow (BuildInfo). */
-@keyframes version-glow {
+/* "In progress" status dots breathe slowly; static under reduced motion. */
+@keyframes ink-pulse {
   0%,
   100% {
-    box-shadow: 0 0 0 0 transparent;
+    opacity: 1;
   }
   50% {
-    box-shadow: 0 0 14px -2px var(--brand);
+    opacity: 0.35;
   }
 }
-.version-pill-update {
-  animation: version-glow 2.6s ease-in-out infinite;
-}
-/* The login page is always-dark artwork: keep the canvas near-black for its whole lifetime
-   (set via a class from LoginPage), covering overscroll and lazy-chunk gaps in light theme. */
-html.login-artwork {
-  background-color: #0a0a0c;
+.ink-pulse {
+  animation: ink-pulse 1.6s ease-in-out infinite;
 }
 
 /* Radix Collapsible has no built-in height animation — without these the sections snap. */
@@ -228,24 +217,8 @@ html.login-artwork {
   animation: collapsible-up 0.2s ease-out;
 }
 
-/* 400ms with no delay — in sync with the recharts bars/donuts and the stars odometer. */
-.brand-marker {
-  animation: brand-marker-sweep 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-.brand-marker-text {
-  animation: brand-marker-ink 0.4s linear both;
-}
 @media (prefers-reduced-motion: reduce) {
-  .brand-marker,
-  .brand-marker-text,
-  .version-pill-update {
+  .ink-pulse {
     animation: none;
-  }
-  .brand-marker-text {
-    color: #430b34;
-  }
-  /* Keep the "update available" cue, just without the pulse. */
-  .version-pill-update {
-    box-shadow: 0 0 10px -3px var(--brand);
   }
 }

@@ -5,8 +5,8 @@ import { PrismaService } from '../../prisma/prisma.service';
 export class SyncRunsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  createRunning(providerUuid: string) {
-    return this.prisma.syncRun.create({ data: { providerUuid, status: 'running' } });
+  createRunning(accountUuid: string) {
+    return this.prisma.syncRun.create({ data: { accountUuid, status: 'running' } });
   }
 
   markOk(id: bigint, servicesFound: number) {
@@ -23,20 +23,32 @@ export class SyncRunsRepository {
     });
   }
 
-  listForProvider(providerUuid: string, limit: number) {
+  listForAccount(accountUuid: string, limit: number) {
     return this.prisma.syncRun.findMany({
-      where: { providerUuid },
+      where: { accountUuid },
       orderBy: { startedAt: 'desc' },
       take: limit,
     });
   }
 
-  /** Failed runs finished since `since`, newest first, with the provider name/login link. */
+  /**
+   * Failed runs finished since `since`, newest first, with the account label and the provider
+   * name / login link (plus its account count, so a message knows whether to name the account).
+   */
   listErrorsSince(since: Date) {
     return this.prisma.syncRun.findMany({
       where: { status: 'error', finishedAt: { gte: since } },
       orderBy: { finishedAt: 'desc' },
-      include: { provider: { select: { name: true, loginUrl: true } } },
+      include: {
+        account: {
+          select: {
+            label: true,
+            provider: {
+              select: { name: true, loginUrl: true, _count: { select: { accounts: true } } },
+            },
+          },
+        },
+      },
     });
   }
 }

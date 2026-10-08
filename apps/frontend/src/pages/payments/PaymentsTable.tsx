@@ -1,7 +1,9 @@
-import type { Payment, Provider, Service } from '@infra/shared';
+import type { Payment, Service } from '@infra/shared';
 import { IconTrash } from '@tabler/icons-react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
+import { CardHeadRow } from '@/components/ink/CardHeadRow';
+import { CountryFlag } from '@/components/CountryFlag';
 import { EntityLabel } from '@/components/EntityLabel';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -24,7 +26,8 @@ import {
   serviceTypeModel,
 } from '@/pages/services/ServiceTypeIcon';
 import { providerFavicon } from '@/utils/favicon';
-import { countryFlag, formatDateShort, formatMoney, truncate } from '@/utils/format';
+import { type AccountRef, accountDisplayName } from '@/utils/providerState';
+import { formatDateShort, formatMoney, truncate } from '@/utils/format';
 
 const SERVICE_NAME_MAX_LENGTH = 40;
 
@@ -32,7 +35,7 @@ interface PaymentsTableProps {
   payments: Payment[];
   isLoading: boolean;
   total: number;
-  providerOf: (uuid: string) => Provider | undefined;
+  accountOf: (accountUuid: string) => AccountRef | undefined;
   serviceOf: (uuid: string) => Service | undefined;
   onDelete: (uuid: string) => void;
 }
@@ -59,18 +62,18 @@ function ServiceLabel({ service }: { service: Service }) {
         !service.isActive && 'opacity-50',
       )}
     >
-      {LOCATED_TYPES.has(service.type) ? (
-        <span className="inline-flex size-[18px] shrink-0 items-center justify-center text-[15px] leading-none">
-          {countryFlag(service.countryCode)}
-        </span>
-      ) : (
-        <ServiceTypeIcon
-          type={service.type}
-          model={serviceTypeModel(service.meta)}
-          marker={serviceTypeMarker(service.meta)}
-          markerBg={serviceTypeMarkerBg(service.meta)}
-        />
-      )}
+      <span className="inline-flex shrink-0">
+        {LOCATED_TYPES.has(service.type) ? (
+          <CountryFlag code={service.countryCode} />
+        ) : (
+          <ServiceTypeIcon
+            type={service.type}
+            model={serviceTypeModel(service.meta)}
+            marker={serviceTypeMarker(service.meta)}
+            markerBg={serviceTypeMarkerBg(service.meta)}
+          />
+        )}
+      </span>
       {name}
     </Link>
   );
@@ -80,36 +83,40 @@ export function PaymentsTable({
   payments,
   isLoading,
   total,
-  providerOf,
+  accountOf,
   serviceOf,
   onDelete,
 }: PaymentsTableProps) {
   const { t } = useTranslation();
+  const mainLabel = t('common.accountMain');
   return (
-    <Card className="overflow-hidden py-0">
+    <Card className="gap-0 overflow-hidden py-0">
+      <CardHeadRow title={t('payments.title')} count={total} />
       <div className="overflow-x-auto">
-        <Table className="min-w-[880px] [&_td]:py-3">
+        <Table className="min-w-[960px]">
           <TableHeader>
-            <TableRow className="[&_th]:text-muted-foreground">
-              <TableHead>{t('payments.colDate')}</TableHead>
+            <TableRow>
+              <TableHead className="pl-6">{t('payments.colDate')}</TableHead>
               <TableHead>{t('payments.colProvider')}</TableHead>
               <TableHead>{t('payments.colService')}</TableHead>
               <TableHead>{t('payments.colType')}</TableHead>
-              <TableHead>{t('payments.colAmount')}</TableHead>
+              <TableHead className="text-right">{t('payments.colAmount')}</TableHead>
+              <TableHead>{t('payments.colSource')}</TableHead>
               <TableHead>{t('payments.colDescription')}</TableHead>
-              <TableHead />
+              <TableHead className="w-10 pr-6" />
             </TableRow>
           </TableHeader>
           <TableBody>
             {payments.map((p) => {
-              const provider = providerOf(p.providerUuid);
+              const ref = accountOf(p.accountUuid);
+              const provider = ref?.provider;
               const service = p.serviceUuid ? serviceOf(p.serviceUuid) : undefined;
               return (
                 <TableRow key={p.uuid}>
-                  <TableCell>{formatDateShort(p.paymentDate)}</TableCell>
+                  <TableCell className="pl-6">{formatDateShort(p.paymentDate)}</TableCell>
                   <TableCell>
                     <EntityLabel
-                      name={provider?.name ?? ''}
+                      name={ref ? accountDisplayName(ref.provider, ref.account, mainLabel) : ''}
                       src={providerFavicon(provider)}
                       iconName={provider?.iconName}
                       iconBg={provider?.iconBg}
@@ -118,38 +125,43 @@ export function PaymentsTable({
                   <TableCell>
                     {/* An attributed payment stays blank until the services list loads. */}
                     {p.serviceUuid === null ? (
-                      <span className="text-muted-foreground">{t('common.none')}</span>
+                      <span className="text-ink-3">{t('common.none')}</span>
                     ) : (
                       service && <ServiceLabel service={service} />
                     )}
                   </TableCell>
                   <TableCell>
-                    {p.type === 'charge' ? (
-                      <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">
-                        {t('payments.typeCharge')}
-                      </Badge>
+                    <Badge variant="secondary">
+                      {p.type === 'charge' ? t('payments.typeCharge') : t('payments.typeTopup')}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">{formatMoney(p.amount, p.currency)}</TableCell>
+                  <TableCell className="text-[13px] text-ink-2">
+                    {p.externalId != null ? (
+                      <span title={p.externalId}>{t('payments.sourceAuto')}</span>
                     ) : (
-                      <Badge className="border-transparent bg-success/15 text-[10px] text-success uppercase tracking-wide">
-                        {t('payments.typeTopup')}
-                      </Badge>
+                      t('payments.sourceManual')
                     )}
                   </TableCell>
-                  <TableCell className="font-semibold">
-                    {formatMoney(p.amount, p.currency)}
+                  <TableCell className="text-ink-2">
+                    {p.description ? (
+                      <span className="block max-w-[280px] truncate" title={p.description}>
+                        {p.description}
+                      </span>
+                    ) : (
+                      <span className="text-ink-3">{t('common.none')}</span>
+                    )}
                   </TableCell>
-                  <TableCell className="whitespace-normal text-muted-foreground">
-                    {p.description ?? t('common.none')}
-                  </TableCell>
-                  <TableCell>
+                  <TableCell className="pr-6">
                     <div className="flex justify-end">
                       <Button
                         variant="ghost"
-                        size="icon"
+                        size="icon-xs"
+                        className="text-ink-3 hover:bg-fail-bg hover:text-destructive"
                         aria-label={t('common.delete')}
-                        className="text-destructive hover:text-destructive"
                         onClick={() => onDelete(p.uuid)}
                       >
-                        <IconTrash className="size-4" />
+                        <IconTrash />
                       </Button>
                     </div>
                   </TableCell>
@@ -157,8 +169,8 @@ export function PaymentsTable({
               );
             })}
             {!isLoading && total === 0 && (
-              <TableRow>
-                <TableCell colSpan={7} className="py-6 text-center text-muted-foreground">
+              <TableRow className="hover:bg-transparent">
+                <TableCell colSpan={8} className="py-6 text-center text-ink-2">
                   {t('payments.empty')}
                 </TableCell>
               </TableRow>

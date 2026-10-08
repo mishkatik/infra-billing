@@ -1,5 +1,11 @@
 import { z } from 'zod';
-import { currencySchema, isoDateSchema, moneySchema, uuidSchema } from './common';
+import {
+  currencySchema,
+  isoDateSchema,
+  moneyAmountSchema,
+  moneySchema,
+  uuidSchema,
+} from './common';
 
 export const byProviderSchema = z.object({
   providerUuid: uuidSchema.describe('Provider UUID'),
@@ -7,8 +13,8 @@ export const byProviderSchema = z.object({
   monthlyCost: moneySchema.describe('Monthly cost in base currency'),
   // Total paid out to this provider (top-ups + manual payments) in base currency.
   spent: moneySchema.describe('Total spent in base currency'),
-  balance: moneySchema.describe('Account balance').nullable(),
-  balanceCurrency: currencySchema.describe('Balance currency').nullable(),
+  // The provider's account balances summed per currency (empty when none is known).
+  balances: z.array(moneyAmountSchema).describe('Balance per currency'),
   servicesCount: z.number().int().describe('Number of services'),
 });
 
@@ -73,6 +79,15 @@ export const upcomingBillingSchema = z.object({
   name: z.string().describe('Service name'),
   providerUuid: uuidSchema.describe('Provider UUID'),
   providerName: z.string().describe('Provider name'),
+  accountUuid: uuidSchema.describe('Provider account UUID'),
+  // Set only when the provider has several accounts, so a row can say which one; null otherwise
+  // (and for a provider's original, unlabelled account).
+  accountLabel: z
+    .string()
+    .describe(
+      'Account label, set only when the provider has several accounts; empty for its original unlabelled account',
+    )
+    .nullable(),
   providerKind: z.string().describe('Provider connector kind'),
   // Provider cabinet link (loginUrl), used to deeplink the provider in Telegram alerts.
   providerLoginUrl: z.string().describe('Provider cabinet link').nullable(),
@@ -89,21 +104,30 @@ export const upcomingBillingSchema = z.object({
   currency: currencySchema.describe('Service currency'),
   costBase: moneySchema.describe('Cost in base currency'),
   daysUntil: z.number().int().describe('Days until billing (0 = today)'),
-  providerBalance: moneySchema.describe('Provider balance').nullable(),
-  providerBalanceCurrency: currencySchema.describe('Provider balance currency').nullable(),
-  // null = provider exposes no balance (manual kind, Hetzner-class connectors) → coverage
-  // unknown; unknown + due ≤7d on a non-postpaid provider is still critical.
+  accountBalance: moneySchema.describe('Account balance').nullable(),
+  accountBalanceCurrency: currencySchema.describe('Account balance currency').nullable(),
+  // null = the account exposes no balance (manual kind, Hetzner-class connectors) → coverage
+  // unknown; unknown + due ≤7d on a non-postpaid account is still critical.
   covered: z.boolean().describe('Balance covers charge').nullable(),
   severity: billingSeveritySchema.describe('Billing severity level'),
 });
 
 /**
- * How much to top up a prepaid provider so the upcoming 14-day charges fit the balance.
- * Amount is in the provider's balance currency (after simulating charges in date order).
+ * How much to top up a prepaid account so the upcoming 14-day charges fit its balance.
+ * Amount is in the account's balance currency (after simulating charges in date order).
  */
 export const balanceTopUpSchema = z.object({
   providerUuid: uuidSchema.describe('Provider UUID'),
   providerName: z.string().describe('Provider name'),
+  accountUuid: uuidSchema.describe('Provider account UUID'),
+  // Set only when the provider has several accounts, so a row can say which one; null otherwise
+  // (and for a provider's original, unlabelled account).
+  accountLabel: z
+    .string()
+    .describe(
+      'Account label, set only when the provider has several accounts; empty for its original unlabelled account',
+    )
+    .nullable(),
   providerKind: z.string().describe('Provider connector kind'),
   providerLoginUrl: z.string().describe('Provider cabinet link').nullable(),
   providerFaviconLink: z.string().describe('Provider favicon URL').nullable(),
@@ -120,6 +144,15 @@ export const overdueBillingSchema = z.object({
   name: z.string().describe('Service name'),
   providerUuid: uuidSchema.describe('Provider UUID'),
   providerName: z.string().describe('Provider name'),
+  accountUuid: uuidSchema.describe('Provider account UUID'),
+  // Set only when the provider has several accounts, so a row can say which one; null otherwise
+  // (and for a provider's original, unlabelled account).
+  accountLabel: z
+    .string()
+    .describe(
+      'Account label, set only when the provider has several accounts; empty for its original unlabelled account',
+    )
+    .nullable(),
   providerKind: z.string().describe('Provider connector kind'),
   providerLoginUrl: z.string().describe('Provider cabinet link').nullable(),
   providerFaviconLink: z.string().describe('Provider favicon URL').nullable(),
@@ -139,13 +172,22 @@ export const overdueBillingSchema = z.object({
 });
 
 /**
- * Estimated balance depletion for a prepaid provider that has no upcoming dated charge.
+ * Estimated balance depletion for a prepaid account that has no upcoming dated charge.
  * Burn rate is inferred from balance-snapshot decline (or, with too little history, the sum of
- * the provider's services' monthly cost). All money is in the provider's own balance currency.
+ * the account's services' monthly cost). All money is in the account's own balance currency.
  */
 export const balanceRunwaySchema = z.object({
   providerUuid: uuidSchema.describe('Provider UUID'),
   providerName: z.string().describe('Provider name'),
+  accountUuid: uuidSchema.describe('Provider account UUID'),
+  // Set only when the provider has several accounts, so a row can say which one; null otherwise
+  // (and for a provider's original, unlabelled account).
+  accountLabel: z
+    .string()
+    .describe(
+      'Account label, set only when the provider has several accounts; empty for its original unlabelled account',
+    )
+    .nullable(),
   providerKind: z.string().describe('Provider connector kind'),
   providerLoginUrl: z.string().describe('Provider cabinet link').nullable(),
   providerFaviconLink: z.string().describe('Provider favicon URL').nullable(),
@@ -200,3 +242,31 @@ export const balancePointSchema = z.object({
   capturedAt: isoDateSchema.describe('Snapshot timestamp'),
 });
 export type BalancePoint = z.infer<typeof balancePointSchema>;
+
+/** One UTC day of an account's spend; `amount` is null outside the period the data covers. */
+export const accountSpendDaySchema = z.object({
+  date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .describe('UTC day (YYYY-MM-DD)'),
+  amount: moneySchema.describe('Spent that day').nullable(),
+  estimated: z.boolean().describe('Includes an estimate for a top-up interval'),
+});
+export type AccountSpendDay = z.infer<typeof accountSpendDaySchema>;
+
+/**
+ * What an account spent over the last 30 complete UTC days (today excluded), in one currency.
+ * Source: the provider's own charges when it reports them, else balance declines between snapshots
+ * (a top-up interval is estimated from the account's average rate and marks the result approximate).
+ */
+export const accountSpendSchema = z.object({
+  currency: currencySchema.describe('Currency of every amount').nullable(),
+  source: z.enum(['charges', 'snapshots']).describe('Where the figures come from').nullable(),
+  approximate: z.boolean().describe('Some days are estimated'),
+  coveredDays: z.number().int().describe('Days of the window the data covers (0–30)'),
+  days: z.array(accountSpendDaySchema).describe('Oldest first, 30 entries'),
+  last7d: moneySchema.describe('Spent over the last 7 days').nullable(),
+  last30d: moneySchema.describe('Spent over the covered part of the last 30 days').nullable(),
+  perDay: moneySchema.describe('Average per covered day').nullable(),
+});
+export type AccountSpend = z.infer<typeof accountSpendSchema>;

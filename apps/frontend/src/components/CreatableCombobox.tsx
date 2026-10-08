@@ -82,10 +82,10 @@ export function CreatableCombobox({
           type="button"
           role="combobox"
           aria-expanded={open}
-          className="flex h-9 w-full items-center justify-between gap-2 rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30 dark:hover:bg-input/50"
+          className="flex h-9 w-full items-center justify-between gap-2 rounded-md border border-transparent bg-field px-3 py-2 text-sm transition-[color,box-shadow,border-color] outline-none focus-visible:border-ring/40 focus-visible:ring-3 focus-visible:ring-ring/15"
         >
           <span className={cn('truncate', !value && 'text-muted-foreground')}>{display}</span>
-          <IconChevronDown className="size-4 shrink-0 text-muted-foreground opacity-50" />
+          <IconChevronDown className="size-4 shrink-0 text-ink-3" />
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-(--radix-popover-trigger-width) p-0" align="start">
@@ -100,7 +100,7 @@ export function CreatableCombobox({
               {canCreate ? (
                 <button
                   type="button"
-                  className="flex w-full items-center gap-2 px-2 py-1.5 text-left text-sm"
+                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-foreground hover:bg-accent"
                   onClick={create}
                 >
                   <IconPlus className="size-4 shrink-0" />
@@ -119,7 +119,7 @@ export function CreatableCombobox({
                   onSelect={() => pick(o.value)}
                 >
                   {o.label}
-                  {o.value === value && <IconCheck className="ml-auto size-4" />}
+                  {o.value === value && <IconCheck className="ml-auto size-4 text-ink-2" />}
                 </CommandItem>
               ))}
               {canCreate && (

@@ -1,0 +1,43 @@
+name: Build&Push Dev Docker Image
+
+# Every push to `dev` publishes the same multi-arch image as a release, tagged `dev`
+# (GHCR and Docker Hub). The build info shows the version with a "-dev" suffix.
+
+on:
+  push:
+    branches:
+      - dev
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+# A newer push supersedes the running build: two runs racing could leave `dev` on the older commit.
+concurrency:
+  group: dev-image
+  cancel-in-progress: true
+
+jobs:
+  image:
+    name: Image
+    uses: ./.github/workflows/docker-image.yml
+    with:
+      tags: dev
+      version-suffix: -dev
+    secrets: inherit
+
+  notify-on-error:
+    name: Notify on error
+    needs: [image]
+    if: failure()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send error notification
+        uses: proDreams/actions-telegram-notifier@v3.0.0
+        with:
+          token: ${{ secrets.TELEGRAM_TOKEN }}
+          chat_id: ${{ secrets.TELEGRAM_CHAT_ID }}
+          status: failure
+          notify_fields: 'repository,branch,commit,workflow'
+          title: 'Dev build failed.'

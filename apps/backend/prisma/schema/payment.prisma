@@ -1,26 +1,28 @@
 model Payment {
   uuid String @id @default(uuid()) @map("uuid")
 
+  // Denormalized from the account, like on services (composite FK below).
   providerUuid String   @map("provider_uuid")
+  accountUuid  String   @map("account_uuid")
   serviceUuid  String?  @map("service_uuid")
-  amount       Decimal  @db.Decimal(14, 2) @map("amount")
+  amount       Decimal  @map("amount") @db.Decimal(14, 2)
   currency     String   @map("currency")
   description  String?  @map("description")
   paymentDate  DateTime @map("payment_date")
   // `topup` = пополнение/платёж провайдеру (учитывается в totalSpent); `charge` = списание за
   // услугу (детализация, к totalSpent не добавляется во избежание задвоения). Manual = topup.
-  type        String  @default("topup") @map("type")
+  type         String   @default("topup") @map("type")
   // Provider's record id (namespaced, e.g. "payment:242"/"expense:889") for sync dedup;
   // null for manually-entered payments.
-  externalId  String? @map("external_id")
+  externalId   String?  @map("external_id")
 
   createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt      @map("updated_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  provider Provider @relation(fields: [providerUuid], references: [uuid], onDelete: Cascade)
-  service  Service? @relation(fields: [serviceUuid], references: [uuid], onDelete: SetNull)
+  account ProviderAccount @relation(fields: [accountUuid, providerUuid], references: [uuid, providerUuid], onDelete: Cascade, onUpdate: Cascade, map: "payments_account_provider_fkey")
+  service Service?        @relation(fields: [serviceUuid], references: [uuid], onDelete: SetNull)
 
-  @@unique([providerUuid, externalId], map: "payments_provider_external_id_key")
+  @@unique([accountUuid, externalId], map: "payments_account_external_id_key")
   @@index([providerUuid], map: "payments_provider_uuid_idx")
   @@index([serviceUuid], map: "payments_service_uuid_idx")
   @@map("payments")

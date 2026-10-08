@@ -1,4 +1,4 @@
-import type { Service } from '@infra/shared';
+import type { Provider, Service } from '@infra/shared';
 import {
   IconBan,
   IconBraces,
@@ -10,7 +10,8 @@ import {
 import { type FormEventHandler, useEffect, useRef, useState } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import { Badge } from '@/components/ui/badge';
+import { CountryFlag } from '@/components/CountryFlag';
+import { InkGlyph } from '@/components/ink/InkGlyph';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -20,12 +21,12 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { cn } from '@/lib/utils';
-import { countryFlag, formatDate } from '@/utils/format';
+import { formatDate } from '@/utils/format';
 import type { SForm } from './serviceForm';
 import { ServiceFormFields } from './ServiceFormFields';
 import { ServiceMetaModal } from './ServiceMetaModal';
 import { ServicePaymentsModal } from './ServicePaymentsModal';
+import { ServiceSourceBadge } from './ServiceSourceBadge';
 import {
   LOCATED_TYPES,
   ServiceTypeIcon,
@@ -37,7 +38,7 @@ import {
 interface ServiceDetailModalProps {
   service: Service | null;
   form: UseFormReturn<SForm>;
-  providerOptions: { value: string; label: string }[];
+  providers: Provider[] | undefined;
   projectOptions: { value: string; label: string }[];
   typeOptions: { value: string; label: string }[];
   periodOptions: { value: string; label: string }[];
@@ -56,7 +57,7 @@ interface ServiceDetailModalProps {
 export function ServiceDetailModal({
   service,
   form,
-  providerOptions,
+  providers,
   projectOptions,
   typeOptions,
   periodOptions,
@@ -102,17 +103,16 @@ export function ServiceDetailModal({
       ? formVendor.trim() || serviceTypeModel(shown.meta)
       : serviceTypeModel(shown.meta);
 
-  const sourceBadge = (
-    <Badge
-      variant={shown.isManaged ? 'default' : 'secondary'}
-      className={cn(
-        'text-[10px] uppercase tracking-wide',
-        shown.isManaged && 'border-transparent bg-brand/15 text-brand',
-      )}
-    >
-      {shown.isManaged ? t('services.sourceManaged') : t('services.sourceManual')}
-    </Badge>
-  );
+  const sourceBadge = <ServiceSourceBadge managed={shown.isManaged} />;
+  const infoRows: { key: string; label: string; value: string }[] = [
+    {
+      key: 'payments',
+      label: t('services.detail.payments'),
+      value: String(shown.paymentsCount ?? 0),
+    },
+    { key: 'created', label: t('services.detail.created'), value: formatDate(shown.createdAt) },
+    { key: 'updated', label: t('services.detail.updated'), value: formatDate(shown.updatedAt) },
+  ];
 
   return (
     <>
@@ -125,7 +125,7 @@ export function ServiceDetailModal({
           <DialogHeader>
             <DialogTitle className="flex min-w-0 items-center gap-2">
               {LOCATED_TYPES.has(titleType) ? (
-                <span>{countryFlag(formCountry || shown.countryCode)}</span>
+                <CountryFlag code={formCountry || shown.countryCode} />
               ) : (
                 <ServiceTypeIcon
                   type={titleType}
@@ -137,9 +137,10 @@ export function ServiceDetailModal({
               <span className="truncate">{shown.name}</span>
               {sourceBadge}
               {!shown.isActive && (
-                <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">
-                  {t('services.badgeInactive')}
-                </Badge>
+                <span className="inline-flex shrink-0 items-center gap-1.5 text-[13px] font-normal text-ink-2">
+                  <InkGlyph state="off" />
+                  {t('services.statusInactive')}
+                </span>
               )}
             </DialogTitle>
           </DialogHeader>
@@ -150,7 +151,7 @@ export function ServiceDetailModal({
                 <ServiceFormFields
                   form={form}
                   editing={shown}
-                  providerOptions={providerOptions}
+                  providers={providers}
                   projectOptions={projectOptions}
                   typeOptions={typeOptions}
                   periodOptions={periodOptions}
@@ -160,32 +161,26 @@ export function ServiceDetailModal({
                 />
               </form>
 
-              <section className="space-y-2 rounded-xl border p-4">
+              <section className="space-y-2.5 self-start rounded-lg bg-background p-4">
                 <p className="section-label">{t('services.detail.infoTitle')}</p>
                 {shown.externalId && (
                   <div className="flex items-center justify-between gap-3 text-sm">
-                    <span className="text-muted-foreground">{t('services.detail.externalId')}</span>
+                    <span className="shrink-0 text-ink-2">{t('services.detail.externalId')}</span>
                     <span className="truncate font-mono text-xs" title={shown.externalId}>
                       {shown.externalId}
                     </span>
                   </div>
                 )}
                 <div className="flex items-center justify-between gap-3 text-sm">
-                  <span className="text-muted-foreground">{t('services.detail.source')}</span>
+                  <span className="text-ink-2">{t('services.detail.source')}</span>
                   {sourceBadge}
                 </div>
-                <div className="flex items-center justify-between gap-3 text-sm">
-                  <span className="text-muted-foreground">{t('services.detail.payments')}</span>
-                  <span>{shown.paymentsCount ?? 0}</span>
-                </div>
-                <div className="flex items-center justify-between gap-3 text-sm">
-                  <span className="text-muted-foreground">{t('services.detail.created')}</span>
-                  <span>{formatDate(shown.createdAt)}</span>
-                </div>
-                <div className="flex items-center justify-between gap-3 text-sm">
-                  <span className="text-muted-foreground">{t('services.detail.updated')}</span>
-                  <span>{formatDate(shown.updatedAt)}</span>
-                </div>
+                {infoRows.map((row) => (
+                  <div key={row.key} className="flex items-center justify-between gap-3 text-sm">
+                    <span className="text-ink-2">{row.label}</span>
+                    <span>{row.value}</span>
+                  </div>
+                ))}
               </section>
             </div>
           </div>
@@ -231,7 +226,7 @@ export function ServiceDetailModal({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="text-destructive hover:text-destructive"
+                    className="hover:bg-fail-bg hover:text-destructive"
                     aria-label={t('common.delete')}
                     onClick={() => onDelete(shown)}
                   >
@@ -244,12 +239,7 @@ export function ServiceDetailModal({
               <Button
                 variant="ghost"
                 disabled={isToggling}
-                className={cn(
-                  'ml-1',
-                  shown.isActive
-                    ? 'bg-destructive/15 text-destructive hover:bg-destructive/25 hover:text-destructive'
-                    : 'bg-success/15 text-success hover:bg-success/25 hover:text-success',
-                )}
+                className="ml-1"
                 onClick={() => onToggleActive(shown)}
               >
                 {isToggling ? (

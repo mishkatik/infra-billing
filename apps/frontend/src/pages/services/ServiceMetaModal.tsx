@@ -48,7 +48,6 @@ export function ServiceMetaModal({
                     variant="ghost"
                     size="icon-sm"
                     aria-label={copied ? t('common.copied') : t('common.copy')}
-                    className={copied ? 'text-success hover:text-success' : undefined}
                     onClick={copy}
                   >
                     {copied ? <IconCheck className="size-4" /> : <IconCopy className="size-4" />}
@@ -60,7 +59,7 @@ export function ServiceMetaModal({
             <JsonView data={shown.meta} />
           </div>
         ) : (
-          <p className="py-4 text-center text-muted-foreground">{t('services.metaEmpty')}</p>
+          <p className="py-4 text-center text-ink-2">{t('services.metaEmpty')}</p>
         )}
       </DialogContent>
     </Dialog>

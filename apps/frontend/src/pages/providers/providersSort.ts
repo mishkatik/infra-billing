@@ -12,15 +12,28 @@ interface ProviderSortContext {
   base: string;
 }
 
-/** Balances are compared in the base currency; providers without one go last. */
+/**
+ * A provider's balances (one per currency) summed in the base currency. Null without a balance or
+ * when a rate is missing, so such providers go last instead of sorting by a mixed-currency sum.
+ */
+function baseBalance(p: Provider, ctx: ProviderSortContext): number | null {
+  if (p.balances.length === 0) return null;
+  let sum = 0;
+  for (const b of p.balances) {
+    const v = toBaseAmount(b.amount, b.currency, ctx.base, ctx.rub);
+    if (v == null) return null;
+    sum += v;
+  }
+  return sum;
+}
+
 export function providerSortAccessors(
   ctx: ProviderSortContext,
 ): Record<ProviderSortKey, (p: Provider) => SortValue> {
   return {
     name: (p) => p.name,
-    balance: (p) =>
-      p.balance == null ? null : toBaseAmount(p.balance, p.balanceCurrency, ctx.base, ctx.rub),
-    services: (p) => p.servicesCount ?? 0,
-    payments: (p) => p.paymentsCount ?? 0,
+    balance: (p) => baseBalance(p, ctx),
+    services: (p) => p.servicesCount,
+    payments: (p) => p.paymentsCount,
   };
 }

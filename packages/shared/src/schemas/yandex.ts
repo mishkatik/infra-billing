@@ -3,16 +3,16 @@ import { uuidSchema } from './common';
 
 // Yandex Cloud scope discovery. Resolves the folders that will be scanned for servers and the
 // billing account used for balance / consumption, from the entered authorized key (create flow) or
-// from the stored credentials of an existing provider (edit flow). One of `token` / `providerUuid`
+// from the stored credentials of an existing account (edit flow). One of `token` / `accountUuid`
 // must be present.
 
 export const yandexDiscoverSchema = z
   .object({
     token: z.string().min(1).describe('Authorized key JSON (create flow)').optional(),
-    providerUuid: uuidSchema.describe('Existing provider UUID (edit flow)').optional(),
+    accountUuid: uuidSchema.describe('Existing provider account UUID (edit flow)').optional(),
   })
-  .refine((v) => Boolean(v.token || v.providerUuid), {
-    message: 'Provide the authorized key or an existing provider',
+  .refine((v) => Boolean(v.token || v.accountUuid), {
+    message: 'Provide the authorized key or an existing account',
   });
 export type YandexDiscover = z.infer<typeof yandexDiscoverSchema>;
 

@@ -61,11 +61,7 @@
       }
     },
     {
-      "includes": [
-        "apps/frontend/src/components/ui/**",
-        "apps/frontend/src/components/remocn/**",
-        "apps/frontend/src/lib/remocn-ui/**"
-      ],
+      "includes": ["apps/frontend/src/components/ui/**"],
       "linter": {
         "rules": {
           "suspicious": {

@@ -16,6 +16,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { DEFAULT_ICON_BG, canonicalTablerIconName } from '@/components/tablerIconCatalog';
 import { Button } from '@/components/ui/button';
 import { useDisclosure } from '@/hooks/useDisclosure';
+import { useSelectedParam } from '@/hooks/useSelectedParam';
 import { notifyError, notifySuccess } from '@/utils/notify';
 import { ProjectFormModal, type ProjectFormValues } from './ProjectFormModal';
 import { ProjectsTable } from './ProjectsTable';
@@ -59,6 +60,9 @@ export function ProjectsPage() {
     });
     open();
   };
+
+  // The command palette links projects as /projects?selected=<uuid>: open that one for editing.
+  useSelectedParam(projects, openEdit);
 
   const submit = form.handleSubmit(async (v) => {
     const iconName = canonicalTablerIconName(v.iconName);
@@ -121,9 +125,8 @@ export function ProjectsPage() {
     <div className="space-y-6">
       <PageHeader
         title={t('projects.title')}
-        subtitle={t('projects.subtitle')}
         actions={
-          <Button onClick={openCreate}>
+          <Button size="sm" onClick={openCreate}>
             <IconPlus className="size-4" />
             {t('common.add')}
           </Button>

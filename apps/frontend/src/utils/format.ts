@@ -55,10 +55,11 @@ export function truncate(text: string, maxLength: number): string {
   return text.length > maxLength ? `${text.slice(0, maxLength)}…` : text;
 }
 
-/** Country code (ISO 3166-1 alpha-2) → flag emoji. */
-export function countryFlag(code: string | null | undefined): string {
-  if (code?.length !== 2 || code === 'XX') return '🏳️';
-  const base = 0x1f1e6;
-  const chars = [...code.toUpperCase()].map((c) => base + (c.charCodeAt(0) - 65));
-  return String.fromCodePoint(...chars);
+/** Money without the fraction, for compact meters and captions ("412 / 600 EUR"). */
+export function formatMoneyRound(value: string | number, currency?: string | null): string {
+  const num = Number(value);
+  const formatted = Number.isFinite(num)
+    ? num.toLocaleString('ru-RU', { maximumFractionDigits: 0 })
+    : String(value);
+  return currency ? `${formatted} ${currency}` : formatted;
 }

@@ -1,5 +1,7 @@
 export interface PForm {
   providerUuid: string;
+  // Required; set silently when the provider has a single account.
+  accountUuid: string;
   serviceUuid: string;
   amount: string;
   currency: string;

@@ -9,6 +9,7 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/ui/command';
+import { CountryFlag } from '@/components/CountryFlag';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 
@@ -48,15 +49,19 @@ export function CountryCombobox({
           type="button"
           role="combobox"
           aria-expanded={open}
-          className="flex h-9 w-full items-center justify-between gap-2 rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30 dark:hover:bg-input/50"
+          className="flex h-9 w-full items-center justify-between gap-2 rounded-md border border-transparent bg-field px-3 py-2 text-sm transition-[color,box-shadow,border-color] outline-none focus-visible:border-ring/40 focus-visible:ring-3 focus-visible:ring-ring/15"
         >
           <span className="flex min-w-0 items-center gap-2">
-            <IconMapPin className="size-4 shrink-0 text-muted-foreground opacity-60" />
+            {selected ? (
+              <CountryFlag code={selected.value} />
+            ) : (
+              <IconMapPin className="size-4 shrink-0 text-ink-3" />
+            )}
             <span className={cn('truncate', !selected && 'text-muted-foreground')}>
               {selected?.label ?? placeholder}
             </span>
           </span>
-          <IconChevronDown className="size-4 shrink-0 text-muted-foreground opacity-50" />
+          <IconChevronDown className="size-4 shrink-0 text-ink-3" />
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-(--radix-popover-trigger-width) p-0" align="start">
@@ -66,7 +71,7 @@ export function CountryCombobox({
             <CommandEmpty>{t('common.nothingFound')}</CommandEmpty>
             <CommandGroup>
               {/* value="-" never matches a real search, so the clear item hides while typing. */}
-              <CommandItem value="-" className="text-muted-foreground" onSelect={() => pick('')}>
+              <CommandItem value="-" className="text-ink-2" onSelect={() => pick('')}>
                 {placeholder}
               </CommandItem>
               {options.map((o) => (
@@ -76,8 +81,9 @@ export function CountryCombobox({
                   keywords={[o.value]}
                   onSelect={() => pick(o.value)}
                 >
-                  {o.label}
-                  {o.value === value && <IconCheck className="ml-auto size-4" />}
+                  <CountryFlag code={o.value} />
+                  <span className="truncate">{o.label}</span>
+                  {o.value === value && <IconCheck className="ml-auto size-4 text-ink-2" />}
                 </CommandItem>
               ))}
             </CommandGroup>

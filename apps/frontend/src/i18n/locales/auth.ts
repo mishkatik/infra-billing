@@ -2,10 +2,8 @@
 export const auth = {
   en: {
     title: 'Sign-in',
-    subtitle: 'Manage login methods and passkeys',
     methods: {
       title: 'Sign-in methods',
-      subtitle: 'Configure authentication methods',
       warning: 'Changing these settings may affect your ability to sign in',
       password: 'Password',
       passwordDescription: 'Username + password',
@@ -32,8 +30,8 @@ export const auth = {
       namePrompt: 'Passkey name',
       namePlaceholder: 'e.g. MacBook Touch ID',
       unnamed: 'Unnamed passkey',
-      created: 'Added {{date}}',
-      lastUsed: 'last used {{date}}',
+      addedOn: 'Added',
+      lastUsedOn: 'last used',
       neverUsed: 'never used',
       backedUp: 'synced',
       added: 'Passkey added',
@@ -47,10 +45,8 @@ export const auth = {
   },
   ru: {
     title: 'Вход в систему',
-    subtitle: 'Управление способами входа и паскеями',
     methods: {
       title: 'Методы входа',
-      subtitle: 'Настройка способов аутентификации',
       warning: 'Изменение этих настроек может повлиять на возможность входа',
       password: 'Пароль',
       passwordDescription: 'Логин и пароль',
@@ -77,8 +73,8 @@ export const auth = {
       namePrompt: 'Название ключа',
       namePlaceholder: 'напр. MacBook Touch ID',
       unnamed: 'Без названия',
-      created: 'Добавлен {{date}}',
-      lastUsed: 'посл. вход {{date}}',
+      addedOn: 'Добавлен',
+      lastUsedOn: 'посл. вход',
       neverUsed: 'ещё не использовался',
       backedUp: 'синхронизирован',
       added: 'Паскей добавлен',

@@ -1,4 +1,4 @@
-import type { Service } from '@infra/shared';
+import type { Provider, Service } from '@infra/shared';
 import { IconCalendarDollar, IconStack2 } from '@tabler/icons-react';
 import { Controller, type UseFormReturn } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { normalizeMoney, trimMoney } from '@/utils/format';
+import { AccountSelect, accountsOf, impliedAccount } from './AccountSelect';
 import { OverriddenMark } from './OverriddenMark';
 import { ServiceMarkerField } from './ServiceMarkerField';
 import { LOCATED_TYPES } from './ServiceTypeIcon';
@@ -39,7 +40,7 @@ function showOverrideMark(
 interface ServiceFormFieldsProps {
   form: UseFormReturn<SForm>;
   editing: Service | null;
-  providerOptions: { value: string; label: string }[];
+  providers: Provider[] | undefined;
   projectOptions: { value: string; label: string }[];
   typeOptions: { value: string; label: string }[];
   periodOptions: { value: string; label: string }[];
@@ -52,7 +53,7 @@ interface ServiceFormFieldsProps {
 export function ServiceFormFields({
   form,
   editing,
-  providerOptions,
+  providers,
   projectOptions,
   typeOptions,
   periodOptions,
@@ -70,11 +71,14 @@ export function ServiceFormFields({
     formState: { errors, defaultValues },
   } = form;
   const name = watch('name');
+  const accounts = accountsOf(providers, watch('providerUuid'));
   const type = watch('type');
   const cost = watch('cost');
   const syncedName = metaString(editing?.meta, 'syncedName') || undefined;
   const syncedType = metaString(editing?.meta, 'syncedType') || undefined;
   const syncedCost = metaString(editing?.meta, 'syncedCost') || undefined;
+  const syncedPeriod = metaString(editing?.meta, 'syncedPeriod') || undefined;
+  const syncedCurrency = metaString(editing?.meta, 'syncedCurrency') || undefined;
   const marker = watch('marker');
   const markerBg = watch('markerBg');
   const vendor = watch('vendor');
@@ -134,6 +138,18 @@ export function ServiceFormFields({
   };
   const loadedCost = trimMoney(String(defaultValues?.cost ?? ''));
   const baselineCost = syncedCost != null ? trimMoney(syncedCost) : loadedCost;
+  // A synced price is a cost in its own period and currency: restore them together, or a daily
+  // figure would be saved as a monthly price.
+  const restoreCost = () => {
+    setValue('cost', baselineCost, restoreOpts);
+    if (syncedCost == null) return;
+    if (syncedPeriod && periodOptions.some((o) => o.value === syncedPeriod)) {
+      setValue('period', syncedPeriod, restoreOpts);
+    }
+    if (syncedCurrency && currencyOptions.some((o) => o.value === syncedCurrency)) {
+      setValue('currency', syncedCurrency, restoreOpts);
+    }
+  };
   const showCostMark = Boolean(
     editing &&
       showOverrideMark(
@@ -156,17 +172,20 @@ export function ServiceFormFields({
             render={({ field }) => (
               <Select
                 value={field.value}
-                onValueChange={field.onChange}
-                // Synced services are matched by provider, so can't be reattached elsewhere.
+                onValueChange={(v) => {
+                  field.onChange(v);
+                  setValue('accountUuid', impliedAccount(accountsOf(providers, v)));
+                }}
+                // Synced services are matched by account, so can't be reattached elsewhere.
                 disabled={Boolean(editing?.isManaged)}
               >
                 <SelectTrigger id="service-provider" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {providerOptions.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>
-                      {o.label}
+                  {(providers ?? []).map((p) => (
+                    <SelectItem key={p.uuid} value={p.uuid}>
+                      {p.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -180,6 +199,25 @@ export function ServiceFormFields({
             <p className="text-xs text-destructive">{errors.providerUuid.message}</p>
           )}
         </div>
+
+        {accounts.length > 1 && (
+          <Controller
+            control={control}
+            name="accountUuid"
+            rules={{ validate: (v) => (v ? true : t('validation.selectAccount')) }}
+            render={({ field }) => (
+              <AccountSelect
+                id="service-account"
+                label={t('services.fieldAccount')}
+                accounts={accounts}
+                value={field.value}
+                onChange={field.onChange}
+                disabled={Boolean(editing?.isManaged)}
+                error={errors.accountUuid?.message}
+              />
+            )}
+          />
+        )}
 
         <div className="space-y-2">
           <Label htmlFor="service-project">{t('services.fieldProject')}</Label>
@@ -206,7 +244,7 @@ export function ServiceFormFields({
         <div className="space-y-2">
           <div className="flex h-4 items-center gap-1">
             <Label htmlFor="service-name">
-              {t('services.fieldName')} <span className="text-destructive">*</span>
+              {t('services.fieldName')} <span aria-hidden>*</span>
             </Label>
             {showNameMark && (
               <OverriddenMark
@@ -301,12 +339,12 @@ export function ServiceFormFields({
           <div className="min-w-0 space-y-2">
             <div className="flex h-4 items-center gap-1">
               <Label htmlFor="service-cost">
-                {t('services.fieldCost')} <span className="text-destructive">*</span>
+                {t('services.fieldCost')} <span aria-hidden>*</span>
               </Label>
               {showCostMark && (
                 <OverriddenMark
                   label={t('services.detail.costOverridden')}
-                  onRestore={() => setValue('cost', baselineCost, restoreOpts)}
+                  onRestore={restoreCost}
                 />
               )}
             </div>

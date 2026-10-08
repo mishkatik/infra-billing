@@ -4,17 +4,18 @@ import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useBuildInfo } from '@/api/buildInfo';
 import {
-  GITHUB_RELEASES_URL,
+  GITHUB_DEV_BRANCH_URL,
   githubCommitUrl,
   githubReleaseUrl,
   useLatestRelease,
 } from '@/api/github';
 import { Button } from '@/components/ui/button';
+import { InkGlyph, type InkState } from '@/components/ink/InkGlyph';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { isNewerVersion } from '@/lib/version';
+import { isNewerVersion, isReleaseVersion } from '@/lib/version';
 
 const DATE_FORMAT = 'DD.MM.YYYY HH:mm';
 
@@ -58,11 +59,7 @@ function CopyButton({
           className={className}
           onClick={() => copy(text)}
         >
-          {copied ? (
-            <IconCheck className="size-3.5 text-success" />
-          ) : (
-            <IconCopy className="size-3.5" />
-          )}
+          {copied ? <IconCheck className="size-3.5" /> : <IconCopy className="size-3.5" />}
         </Button>
       </TooltipTrigger>
       <TooltipContent>{copied ? t('build.copied') : label}</TooltipContent>
@@ -73,7 +70,7 @@ function CopyButton({
 function Fact({ label, children }: { label: string; children: ReactNode }) {
   return (
     <>
-      <dt className="text-muted-foreground">{label}</dt>
+      <dt className="text-ink-2">{label}</dt>
       <dd className="min-w-0">{children}</dd>
     </>
   );
@@ -81,33 +78,33 @@ function Fact({ label, children }: { label: string; children: ReactNode }) {
 
 type Status = 'dev' | 'update' | 'current' | 'unknown' | 'pending';
 
-const STATUS_DOT: Record<Status, string> = {
-  dev: 'bg-brand',
-  update: 'bg-brand',
-  current: 'bg-success',
-  unknown: '',
-  pending: '',
+const STATUS_GLYPH: Record<Status, InkState | null> = {
+  dev: 'pending',
+  update: 'warn',
+  current: 'ok',
+  unknown: null,
+  pending: null,
 };
 
 export function BuildInfo() {
   const { t } = useTranslation();
   const { data, isPending } = useBuildInfo();
   const version = data?.version ?? '';
-  // "dev" is the build-arg default (not a tagged release): nothing to compare against.
-  const isDev = version === 'dev';
+  // Not a tagged release: nothing to compare against, and the dev branch is where it comes from.
+  const isDev = version !== '' && !isReleaseVersion(version);
   const release = useLatestRelease(version !== '' && !isDev);
   const latest = release.data;
   const hasUpdate = !isDev && latest != null && isNewerVersion(latest, version);
 
-  if (isPending) return <Skeleton className="h-8 w-[84px] rounded-full" />;
+  if (isPending) return <Skeleton className="h-4 w-12 rounded-sm" />;
   if (!data) return null;
 
   // "" is the env default, "unknown" is what `task docker-build` passes outside a git checkout.
   const commit = data.gitCommit && data.gitCommit !== 'unknown' ? data.gitCommit : '';
   const built = data.buildTime ? dayjs(data.buildTime) : null;
   const builtAt = built?.isValid() ? built : null;
-  const label = isDev ? 'DEV' : `v${version}`;
-  const releaseUrl = isDev ? GITHUB_RELEASES_URL : githubReleaseUrl(version);
+  const label = isDev ? 'dev' : `v${version}`;
+  const releaseUrl = isDev ? GITHUB_DEV_BRANCH_URL : githubReleaseUrl(version);
 
   let status: Status = 'pending';
   if (isDev) status = 'dev';
@@ -122,9 +119,11 @@ export function BuildInfo() {
     pending: '',
   };
 
+  const statusGlyph = STATUS_GLYPH[status];
   const none = t('common.none');
   const plainText = [
     `${t('app.brand')} ${label}`,
+    ...(isDev && version !== 'dev' ? [`${t('build.version')}: ${version}`] : []),
     `${t('build.date')}: ${builtAt ? `${builtAt.format(DATE_FORMAT)} (${data.buildTime})` : none}`,
     `${t('build.commit')}: ${commit || none}`,
     `${t('build.node')}: ${data.nodeVersion || none}`,
@@ -133,48 +132,41 @@ export function BuildInfo() {
   return (
     <HoverCard openDelay={200} closeDelay={150}>
       <HoverCardTrigger asChild>
-        <Button
-          asChild
-          variant="outline"
-          size="sm"
-          aria-label={isDev ? t('build.allReleases') : t('build.openRelease', { version })}
+        {/* A quiet version next to the brand; an available update adds the attention dot. A dev
+            build reads "dev" in the brand's ink so it is never mistaken for a release. */}
+        <a
+          href={releaseUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={isDev ? t('build.openDevBranch') : t('build.openRelease', { version })}
           className={cn(
-            'rounded-full text-muted-foreground hover:-translate-y-px hover:border-brand hover:shadow-[0_2px_12px_-6px_var(--brand)] dark:hover:border-brand',
-            // Keep the raised brand look while the card is open (the pointer is on the card).
-            'data-[state=open]:-translate-y-px data-[state=open]:border-brand data-[state=open]:shadow-[0_2px_12px_-6px_var(--brand)] dark:data-[state=open]:border-brand',
-            hasUpdate && 'version-pill-update border-brand text-foreground dark:border-brand',
-            // The outline variant carries dark:border-input/dark:bg-input; override both explicitly.
-            isDev &&
-              'border-transparent bg-brand/15 font-bold tracking-[0.1em] text-brand hover:bg-brand/25 hover:text-brand dark:border-transparent dark:bg-brand/15 dark:hover:bg-brand/25',
+            'inline-flex items-center gap-1 rounded-sm px-1 text-xs text-ink-3 outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 data-[state=open]:text-foreground',
+            (hasUpdate || isDev) && 'text-foreground',
+            isDev && 'font-medium',
           )}
         >
-          <a href={releaseUrl} target="_blank" rel="noopener noreferrer">
-            <IconActivity className="size-4" />
-            <span className="tabular-nums">{label}</span>
-            {hasUpdate ? <span aria-hidden className="size-1.5 rounded-full bg-brand" /> : null}
-          </a>
-        </Button>
+          {label}
+          {hasUpdate ? <InkGlyph state="warn" size={9} /> : null}
+        </a>
       </HoverCardTrigger>
 
       {/* Radix HoverCard is a pointer preview: it sets tabindex=-1 on everything inside, so the
           copy buttons and links here are mouse-only. The pill itself is the keyboard path. */}
-      <HoverCardContent align="end" sideOffset={8} collisionPadding={8} className="w-80 p-0">
-        <div className="flex items-start gap-3 border-b p-4">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-accent">
-            <IconActivity className="size-5" stroke={1.75} />
+      <HoverCardContent
+        align="end"
+        sideOffset={8}
+        collisionPadding={8}
+        className="w-80 rounded-xl p-0"
+      >
+        <div className="flex items-start gap-3 border-b border-hairline p-4">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-background text-ink-2">
+            <IconActivity className="size-5" stroke={1.5} />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-xl leading-tight font-extrabold tracking-tight tabular-nums">
-              {label}
-            </p>
+            <p className="text-lg leading-tight font-medium">{label}</p>
             {statusText[status] ? (
-              <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
-                {STATUS_DOT[status] ? (
-                  <span
-                    aria-hidden
-                    className={cn('size-1.5 shrink-0 rounded-full', STATUS_DOT[status])}
-                  />
-                ) : null}
+              <p className="mt-1 flex items-center gap-1.5 text-[13px] text-ink-2">
+                {statusGlyph ? <InkGlyph state={statusGlyph} size={10} /> : null}
                 {statusText[status]}
               </p>
             ) : null}
@@ -187,7 +179,7 @@ export function BuildInfo() {
             href={githubReleaseUrl(latest)}
             target="_blank"
             rel="noopener noreferrer"
-            className="mx-4 mt-4 flex items-center justify-between gap-2 rounded-lg border border-brand/40 bg-brand/5 px-3 py-2 text-sm font-semibold text-brand transition-colors hover:bg-brand/10"
+            className="mx-4 mt-4 flex items-center justify-between gap-2 rounded-lg bg-background px-3 py-2 text-sm font-medium transition-colors hover:bg-accent"
           >
             <span>{t('build.whatsNew', { version: latest })}</span>
             <IconArrowUpRight className="size-4 shrink-0" />
@@ -195,11 +187,12 @@ export function BuildInfo() {
         ) : null}
 
         <dl className="grid grid-cols-[auto_1fr] items-baseline gap-x-5 gap-y-2.5 p-4 text-sm">
+          {isDev && version !== 'dev' ? <Fact label={t('build.version')}>{version}</Fact> : null}
           <Fact label={t('build.date')}>
             {builtAt ? (
               <>
-                <span className="tabular-nums">{builtAt.format(DATE_FORMAT)}</span>
-                <span className="block text-xs text-muted-foreground">{builtAt.fromNow()}</span>
+                <span>{builtAt.format(DATE_FORMAT)}</span>
+                <span className="block text-xs text-ink-2">{builtAt.fromNow()}</span>
               </>
             ) : (
               none
@@ -212,7 +205,7 @@ export function BuildInfo() {
                   href={githubCommitUrl(commit)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs transition-colors hover:text-brand"
+                  className="rounded-sm bg-background px-1.5 py-0.5 font-mono text-xs transition-colors hover:bg-accent"
                 >
                   {commit.slice(0, 7)}
                 </a>
@@ -225,11 +218,11 @@ export function BuildInfo() {
           <Fact label={t('build.node')}>{data.nodeVersion || none}</Fact>
         </dl>
 
-        <div className="border-t bg-muted/40 p-2">
-          <Button asChild variant="ghost" size="sm" className="w-full justify-between font-medium">
+        <div className="border-t border-hairline p-2">
+          <Button asChild variant="ghost" size="sm" className="w-full justify-between">
             <a href={releaseUrl} target="_blank" rel="noopener noreferrer">
-              {isDev ? t('build.allReleases') : t('build.releaseNotes', { version })}
-              <IconArrowUpRight className="size-4 text-muted-foreground" />
+              {isDev ? t('build.devBranch') : t('build.releaseNotes', { version })}
+              <IconArrowUpRight className="size-4 text-ink-3" />
             </a>
           </Button>
         </div>

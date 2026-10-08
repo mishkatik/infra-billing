@@ -1,14 +1,22 @@
+import type { Provider, ProviderAccount } from '@infra/shared';
 import type { TFunction } from 'i18next';
 
-// Union of every connector's credential fields flattened into one flat form shape. The modal
-// shows only the subset relevant to the selected kind, the backend picks what it needs.
-export interface FormValues {
+/** The hoster identity: what the provider row itself stores. */
+export interface IdentityFormValues {
   name: string;
   kind: string;
-  token: string;
   loginUrl: string;
   iconName: string;
   iconBg: string;
+}
+
+// One account's settings plus every connector's credential fields flattened into one shape. The
+// form shows only the subset relevant to the provider kind, the backend picks what it needs.
+export interface AccountFormValues {
+  label: string;
+  isPostpaid: boolean;
+  useCatalogNames: boolean;
+  token: string;
   baseUrl: string;
   username: string;
   password: string;
@@ -18,9 +26,13 @@ export interface FormValues {
   panelId: string;
   apiPassword: string;
   secretKey: string;
-  isPostpaid: boolean;
-  useCatalogNames: boolean;
 }
+
+/** Which stored secrets an account already has (drives the masked inputs and reveal buttons). */
+export type StoredSecretFlags = Pick<
+  ProviderAccount,
+  'hasToken' | 'hasPassword' | 'hasTotpSecret' | 'hasApiPassword' | 'hasSecretKey'
+>;
 
 // Well-known cabinet URLs per connector kind, pre-filled into loginUrl on create so the owner
 // doesn't retype them (they also drive the provider favicon). hostbill/billmgr are self-hosted
@@ -47,13 +59,19 @@ export const DEFAULT_LOGIN_URLS: Record<string, string> = {
   openrouter: 'https://openrouter.ai',
 };
 
-export const EMPTY_FORM: FormValues = {
+export const EMPTY_IDENTITY: IdentityFormValues = {
   name: '',
   kind: 'manual',
-  token: '',
   loginUrl: '',
   iconName: '',
   iconBg: '',
+};
+
+export const EMPTY_ACCOUNT: AccountFormValues = {
+  label: '',
+  isPostpaid: false,
+  useCatalogNames: true,
+  token: '',
   baseUrl: '',
   username: '',
   password: '',
@@ -63,9 +81,41 @@ export const EMPTY_FORM: FormValues = {
   panelId: '',
   apiPassword: '',
   secretKey: '',
-  isPostpaid: false,
-  useCatalogNames: true,
 };
+
+export function identityFormFrom(p: Provider): IdentityFormValues {
+  return {
+    name: p.name,
+    kind: p.kind,
+    loginUrl: p.loginUrl ?? '',
+    iconName: p.iconName ?? '',
+    iconBg: p.iconBg ?? '',
+  };
+}
+
+/** Non-secret fields are prefilled; secrets stay blank until revealed on demand. */
+export function accountFormFrom(a: ProviderAccount): AccountFormValues {
+  return {
+    ...EMPTY_ACCOUNT,
+    label: a.label ?? '',
+    isPostpaid: a.isPostpaid,
+    useCatalogNames: a.useCatalogNames !== false,
+    baseUrl: a.baseUrl ?? '',
+    username: a.username ?? '',
+    accountId: a.accountId ?? '',
+    projectName: a.projectName ?? '',
+    panelId: a.panelId ?? '',
+  };
+}
+
+/**
+ * A new account of an existing provider starts with the API base URL of its newest account that has
+ * one: logins at the same hoster share the panel host, only the credentials differ.
+ */
+export function newAccountForm(p: Provider): AccountFormValues {
+  const baseUrl = p.accounts.filter((a) => a.baseUrl).at(-1)?.baseUrl ?? '';
+  return { ...EMPTY_ACCOUNT, baseUrl };
+}
 
 // Aeza runs two independent branches on an identical API — international .net and Russian .ru.
 // An API key belongs to exactly one of them, so the branch is part of the credentials.
@@ -92,55 +142,55 @@ function normalizeHostkeyToken(raw: string): string {
     .replace(/[.•・∙]/g, '-');
 }
 
-// Per-kind required-credential check. Caller runs this only on create (edits allow blank fields,
-// which mean "keep the stored credential"). Returns the error message to show, or null when ok.
-export function validateProviderCredentials(
-  v: FormValues,
+// Per-kind required-credential check. Required fields are enforced only for a new account (edits
+// allow blank fields, which mean "keep the stored credential"). Returns the message or null.
+export function validateAccountCredentials(
+  kind: string,
+  v: AccountFormValues,
   t: TFunction,
   opts?: { requireCreds?: boolean },
 ): string | null {
   const requireCreds = opts?.requireCreds ?? true;
   if (
     requireCreds &&
-    (v.kind === 'hostbill' || v.kind === 'billmgr') &&
+    (kind === 'hostbill' || kind === 'billmgr') &&
     !(v.baseUrl && v.username && v.password)
   )
     return t('providers.err.hostbillCreds');
-  if (requireCreds && v.kind === 'selectel' && !(v.accountId && v.username && v.password))
+  if (requireCreds && kind === 'selectel' && !(v.accountId && v.username && v.password))
     return t('providers.err.selectelCreds');
-  if (requireCreds && v.kind === '4vps' && !v.token) return t('providers.err.vps4Token');
-  if (requireCreds && v.kind === 'netcup' && !v.token) return t('providers.err.netcupToken');
-  if (requireCreds && v.kind === 'beget' && !(v.username && v.password))
+  if (requireCreds && kind === '4vps' && !v.token) return t('providers.err.vps4Token');
+  if (requireCreds && kind === 'netcup' && !v.token) return t('providers.err.netcupToken');
+  if (requireCreds && kind === 'beget' && !(v.username && v.password))
     return t('providers.err.begetCreds');
-  if (requireCreds && v.kind === 'doubleservers' && !(v.username && v.password))
+  if (requireCreds && kind === 'doubleservers' && !(v.username && v.password))
     return t('providers.err.doubleserversCreds');
-  if (requireCreds && v.kind === 'vultr' && !v.token) return t('providers.err.vultrToken');
-  if (requireCreds && v.kind === 'porkbun' && !(v.token && v.secretKey))
+  if (requireCreds && kind === 'vultr' && !v.token) return t('providers.err.vultrToken');
+  if (requireCreds && kind === 'porkbun' && !(v.token && v.secretKey))
     return t('providers.err.porkbunCreds');
-  if (requireCreds && v.kind === 'spaceship' && !(v.token && v.secretKey))
+  if (requireCreds && kind === 'spaceship' && !(v.token && v.secretKey))
     return t('providers.err.spaceshipCreds');
-  if (requireCreds && v.kind === 'linode' && !v.token) return t('providers.err.linodeToken');
-  if (requireCreds && v.kind === 'aeza' && !v.token) return t('providers.err.aezaToken');
-  if (v.kind === 'hostkey') {
+  if (requireCreds && kind === 'linode' && !v.token) return t('providers.err.linodeToken');
+  if (requireCreds && kind === 'aeza' && !v.token) return t('providers.err.aezaToken');
+  if (kind === 'hostkey') {
     if (requireCreds && !v.token) return t('providers.err.hostkeyToken');
     if (v.token && !HOSTKEY_API_KEY_RE.test(normalizeHostkeyToken(v.token)))
       return t('providers.err.hostkeyTokenFormat');
   }
-  if (requireCreds && v.kind === 'vdsina' && !v.token) return t('providers.err.vdsinaToken');
-  if (requireCreds && v.kind === 'cloudflare' && !(v.accountId && v.token))
+  if (requireCreds && kind === 'vdsina' && !v.token) return t('providers.err.vdsinaToken');
+  if (requireCreds && kind === 'cloudflare' && !(v.accountId && v.token))
     return t('providers.err.cloudflareCreds');
-  if (requireCreds && v.kind === 'stormwall' && !v.token) return t('providers.err.stormwallToken');
-  if (requireCreds && v.kind === 'yandex' && !v.token) return t('providers.err.yandexKey');
-  if (requireCreds && v.kind === 'openrouter' && !v.token)
-    return t('providers.err.openrouterToken');
+  if (requireCreds && kind === 'stormwall' && !v.token) return t('providers.err.stormwallToken');
+  if (requireCreds && kind === 'yandex' && !v.token) return t('providers.err.yandexKey');
+  if (requireCreds && kind === 'openrouter' && !v.token) return t('providers.err.openrouterToken');
   return null;
 }
 
 // Spread every credential field with blanks omitted, so an empty field on edit keeps the stored
 // value (the backend only overwrites credentials it actually receives).
-export function buildCredentials(v: FormValues) {
+export function buildCredentials(kind: string, v: AccountFormValues) {
   const token =
-    v.kind === 'hostkey' && v.token ? normalizeHostkeyToken(v.token) : v.token || undefined;
+    kind === 'hostkey' && v.token ? normalizeHostkeyToken(v.token) : v.token || undefined;
   const base = {
     token: token || undefined,
     baseUrl: v.baseUrl || undefined,
@@ -153,11 +203,29 @@ export function buildCredentials(v: FormValues) {
     apiPassword: v.apiPassword || undefined,
     secretKey: v.secretKey || undefined,
   };
-  if (v.kind === 'openrouter') {
+  if (kind === 'openrouter') {
     return {
       ...base,
       useCatalogNames: v.useCatalogNames,
     };
   }
   return base;
+}
+
+/**
+ * Label rule for the account form: required unless the account may stay the unlabelled original,
+ * and unique (case-insensitive) among the provider's other accounts. The backend checks it too.
+ */
+export function validateAccountLabel(
+  label: string,
+  t: TFunction,
+  opts: { required: boolean; otherLabels: (string | null)[] },
+): string | true {
+  const value = label.trim();
+  if (!value) return opts.required ? t('providers.account.labelRequired') : true;
+  if (value.length > 64) return t('providers.account.labelTooLong');
+  const lower = value.toLowerCase();
+  if (opts.otherLabels.some((l) => l?.trim().toLowerCase() === lower))
+    return t('providers.account.labelTaken');
+  return true;
 }

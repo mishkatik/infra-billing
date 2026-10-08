@@ -2,7 +2,6 @@
 export const tokens = {
   en: {
     title: 'API tokens',
-    subtitle: 'Personal tokens for the API (Authorization: Bearer)',
     colName: 'Name',
     colToken: 'Token',
     colCreated: 'Created',
@@ -25,7 +24,6 @@ export const tokens = {
   },
   ru: {
     title: 'API токены',
-    subtitle: 'Личные токены для API (Authorization: Bearer)',
     colName: 'Имя',
     colToken: 'Токен',
     colCreated: 'Создан',

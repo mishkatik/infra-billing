@@ -7,6 +7,14 @@ function parts(version: string): number[] | null {
 }
 
 /**
+ * A published release is bare semver ("0.47.0"). Anything else — the "dev" build-arg default, the
+ * "-dev" images built from the dev branch, local "-test" builds — is a development build.
+ */
+export function isReleaseVersion(version: string): boolean {
+  return NUMERIC.test(version.trim().replace(/^v/i, ''));
+}
+
+/**
  * Dot-part numeric compare: <0 if a<b, 0 if equal, >0 if a>b.
  * Null when either side isn't numeric (e.g. "dev") — callers must not read that as "newer".
  */

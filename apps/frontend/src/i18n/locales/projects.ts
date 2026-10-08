@@ -2,8 +2,7 @@
 export const projects = {
   en: {
     title: 'Projects',
-    subtitle: 'Group your services by project',
-    colName: 'Name',
+    colName: 'Project',
     colServices: 'Services',
     defaultBadge: 'default',
     empty: 'No projects',
@@ -28,8 +27,7 @@ export const projects = {
   },
   ru: {
     title: 'Проекты',
-    subtitle: 'Группируйте сервисы по проектам',
-    colName: 'Название',
+    colName: 'Проект',
     colServices: 'Сервисов',
     defaultBadge: 'по умолчанию',
     empty: 'Нет проектов',

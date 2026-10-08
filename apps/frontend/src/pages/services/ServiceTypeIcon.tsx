@@ -1,16 +1,16 @@
 import type { Icon } from '@tabler/icons-react';
 import {
   IconBox,
-  IconCloud,
+  IconBucket,
   IconDatabase,
   IconLicense,
   IconNetwork,
   IconServer2,
   IconServerBolt,
+  IconSparkles,
   IconWorld,
 } from '@tabler/icons-react';
 import { useState, type ReactNode } from 'react';
-import { cn } from '@/lib/utils';
 import { ServiceMarkerPreview } from './ServiceMarkerField';
 import { resolveLlmVendorIcon } from './llmVendorIcon';
 
@@ -21,16 +21,17 @@ const TYPE_ICONS: Record<string, Icon> = {
   dedicated: IconServerBolt,
   domain: IconWorld,
   cdn: IconNetwork,
-  storage: IconCloud,
+  storage: IconBucket,
   db: IconDatabase,
   license: IconLicense,
   other: IconBox,
 };
 
+// Every lead icon renders in grayscale: vendor logos and emoji keep their shape, not their colour.
 function IconSlot({ size, children }: { size: number; children: ReactNode }) {
   return (
     <span
-      className="inline-flex shrink-0 items-center justify-center self-center"
+      className="inline-flex shrink-0 items-center justify-center self-center grayscale"
       style={{ width: size, height: size }}
     >
       {children}
@@ -66,9 +67,8 @@ function LlmVendorIcon({ model, size }: { model?: string | null; size: number })
         {ready ? (
           <span
             aria-hidden
-            className={cn('block size-full', icon.adaptive && 'bg-foreground')}
+            className="block size-full bg-foreground"
             style={{
-              ...(icon.adaptive ? {} : { backgroundColor: icon.color }),
               WebkitMaskImage: `url(${icon.src})`,
               maskImage: `url(${icon.src})`,
               WebkitMaskSize: 'contain',
@@ -111,14 +111,18 @@ export function ServiceTypeIcon({
 }) {
   if (type === 'llm') return <LlmVendorIcon model={model} size={size} />;
   if (marker) return <ServiceMarkerPreview marker={marker} markerBg={markerBg} size={size} />;
-  const Cmp = TYPE_ICONS[type] ?? IconBox;
+  return <ServiceTypeGlyph type={type} size={size} />;
+}
+
+/**
+ * The type's own line icon, without a vendor logo or marker: for rows that stand for a whole type
+ * (a breakdown by type), where a model's vendor means nothing.
+ */
+export function ServiceTypeGlyph({ type, size = 18 }: { type: string; size?: number }) {
+  const Cmp = type === 'llm' ? IconSparkles : (TYPE_ICONS[type] ?? IconBox);
   return (
     <IconSlot size={size}>
-      <Cmp
-        size={Math.max(12, Math.round(size * 0.9))}
-        stroke={1.5}
-        className="block text-muted-foreground"
-      />
+      <Cmp size={Math.max(12, Math.round(size * 0.9))} stroke={1.5} className="block text-ink-3" />
     </IconSlot>
   );
 }

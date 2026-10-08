@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { countryFlag } from './format';
 
 // ISO 3166-1 alpha-2 codes. Names are resolved via Intl.DisplayNames in the active language.
 const CODES =
@@ -8,24 +7,24 @@ const CODES =
     ' ',
   );
 
-/** Country `<Select>` options { value: ISO2, label: "🇷🇺 Russia" }, localized + sorted by name. */
+/** Localized country name for an ISO2 code (falls back to the code itself). */
+export function countryName(code: string, lang: string): string {
+  try {
+    return new Intl.DisplayNames([lang], { type: 'region' }).of(code) ?? code;
+  } catch {
+    return code;
+  }
+}
+
+/** Country options { value: ISO2, label: "Russia" }, localized + sorted by name. */
 export function useCountryOptions() {
   const { i18n } = useTranslation();
   const lang = i18n.resolvedLanguage ?? 'en';
-  return useMemo(() => {
-    const regionNames =
-      typeof Intl !== 'undefined' && 'DisplayNames' in Intl
-        ? new Intl.DisplayNames([lang], { type: 'region' })
-        : null;
-    const countryName = (code: string): string => {
-      try {
-        return regionNames?.of(code) ?? code;
-      } catch {
-        return code;
-      }
-    };
-    return CODES.map((code) => ({ code, name: countryName(code) }))
-      .sort((a, b) => a.name.localeCompare(b.name, lang))
-      .map(({ code, name }) => ({ value: code, label: `${countryFlag(code)} ${name}` }));
-  }, [lang]);
+  return useMemo(
+    () =>
+      CODES.map((code) => ({ value: code, label: countryName(code, lang) })).sort((a, b) =>
+        a.label.localeCompare(b.label, lang),
+      ),
+    [lang],
+  );
 }

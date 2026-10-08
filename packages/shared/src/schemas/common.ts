@@ -47,3 +47,10 @@ export const iconNameSchema = z
 
 /** Solid hex background for a custom Tabler icon tile. */
 export const iconBgSchema = z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'hex color #RRGGBB');
+
+/** An amount in a given currency (e.g. one entry of a per-currency balance sum). */
+export const moneyAmountSchema = z.object({
+  amount: moneySchema.describe('Amount'),
+  currency: currencySchema.describe('Currency code'),
+});
+export type MoneyAmount = z.infer<typeof moneyAmountSchema>;

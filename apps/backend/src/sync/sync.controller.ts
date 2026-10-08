@@ -13,7 +13,7 @@ export class SyncController {
   // Declared before ':uuid/sync' so the static path isn't captured as a uuid.
   @Post(API_SUB.PROVIDER_SYNC_ALL)
   @HttpCode(200)
-  @ApiOperation({ summary: 'Sync all providers' })
+  @ApiOperation({ summary: 'Sync all provider accounts' })
   @ApiOkResponse({ type: SyncSummaryDto })
   triggerAll() {
     return this.sync.syncAll();
@@ -21,14 +21,29 @@ export class SyncController {
 
   @Post(API_SUB.PROVIDER_SYNC)
   @HttpCode(200)
-  @ApiOperation({ summary: 'Trigger provider sync' })
-  @ApiOkResponse({ type: SyncRunDto })
+  @ApiOperation({ summary: 'Sync every enabled account of a provider' })
+  @ApiOkResponse({ type: SyncSummaryDto })
   trigger(@Param(ID_PARAM, ParseUUIDPipe) uuid: string) {
     return this.sync.syncProvider(uuid);
   }
+}
 
-  @Get(API_SUB.PROVIDER_SYNC_RUNS)
-  @ApiOperation({ summary: 'List provider sync runs' })
+@ApiBearerAuth()
+@ApiTags(CONTROLLERS_INFO.SYNC.TAG)
+@Controller(API.PROVIDER_ACCOUNTS)
+export class AccountSyncController {
+  constructor(private readonly sync: SyncService) {}
+
+  @Post(API_SUB.ACCOUNT_SYNC)
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Trigger account sync' })
+  @ApiOkResponse({ type: SyncRunDto })
+  trigger(@Param(ID_PARAM, ParseUUIDPipe) uuid: string) {
+    return this.sync.syncAccount(uuid);
+  }
+
+  @Get(API_SUB.ACCOUNT_SYNC_RUNS)
+  @ApiOperation({ summary: 'List account sync runs' })
   @ApiOkResponse({ type: [SyncRunDto] })
   syncRuns(@Param(ID_PARAM, ParseUUIDPipe) uuid: string) {
     return this.sync.listSyncRuns(uuid);

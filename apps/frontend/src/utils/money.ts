@@ -56,3 +56,35 @@ export function monthlyAmount(cost: string, period: Period): number {
       return 0;
   }
 }
+
+/** Decimal string → integer cents, rounded half away from zero; null for non-numbers. */
+function toCents(value: string): bigint | null {
+  const m = value.trim().match(/^(-?)(\d+)(?:\.(\d+))?$/);
+  if (!m) return null;
+  const [, sign, int, frac = ''] = m;
+  let cents = BigInt(int) * 100n + BigInt(`${frac}00`.slice(0, 2));
+  if (Number(frac[2] ?? '0') >= 5) cents += 1n;
+  return sign ? -cents : cents;
+}
+
+function fromCents(cents: bigint): string {
+  const neg = cents < 0n;
+  const abs = neg ? -cents : cents;
+  return `${neg ? '-' : ''}${abs / 100n}.${(abs % 100n).toString().padStart(2, '0')}`;
+}
+
+/** Round a decimal string to 2 places exactly ("12.345" → "12.35"); non-numbers pass through. */
+export function roundMoney(value: string): string {
+  const c = toCents(value);
+  return c == null ? value : fromCents(c);
+}
+
+/**
+ * Exact sum of decimal strings, each rounded to cents first — so a caption total always equals
+ * the sum of the parts as displayed (floats would drift by a cent).
+ */
+export function sumMoney(values: string[]): string {
+  let total = 0n;
+  for (const v of values) total += toCents(v) ?? 0n;
+  return fromCents(total);
+}

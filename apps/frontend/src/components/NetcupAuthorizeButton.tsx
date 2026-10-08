@@ -3,7 +3,7 @@ import { IconBrandOauth, IconExternalLink, IconLoader2 } from '@tabler/icons-rea
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNetcupDevicePoll, useNetcupDeviceStart } from '@/api/providers';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { InkGlyph } from '@/components/ink/InkGlyph';
 import { Button } from '@/components/ui/button';
 import { notifyError, notifySuccess } from '@/utils/notify';
 
@@ -88,45 +88,48 @@ export function NetcupAuthorizeButton({ onToken }: { onToken: (token: string) =>
   };
 
   if (phase === 'authorized') {
-    return <p className="text-sm text-success">{t('providers.netcup.authorized')}</p>;
+    return (
+      <p className="flex items-center gap-2 text-sm text-foreground">
+        <InkGlyph state="ok" />
+        {t('providers.netcup.authorized')}
+      </p>
+    );
   }
 
   if (phase === 'waiting' && info) {
     // Only ever render an http(s) link (never a javascript:/empty href from a tampered response).
     const safeUrl = httpUrl(info.verificationUriComplete);
     return (
-      <Alert className="border-primary/25 bg-primary/5">
-        <AlertTitle>{t('providers.netcup.instructions')}</AlertTitle>
-        <AlertDescription>
-          <div className="space-y-2">
-            {safeUrl ? (
-              <a
-                href={safeUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-brand underline-offset-4 hover:underline"
-              >
-                <IconExternalLink className="size-4" />
-                {t('providers.netcup.openLink')}
-              </a>
-            ) : (
-              <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
-                {info.verificationUriComplete || info.verificationUri}
-              </code>
-            )}
-            <div className="flex items-center gap-2">
-              <span className="text-sm">{t('providers.netcup.code')}</span>
-              <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
-                {info.userCode}
-              </code>
-            </div>
-            <div className="flex items-center gap-2">
-              <IconLoader2 className="size-3.5 animate-spin text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">{t('providers.netcup.waiting')}</span>
-            </div>
+      <div className="space-y-2 rounded-lg bg-background p-4 text-sm">
+        <p className="font-medium">{t('providers.netcup.instructions')}</p>
+        <div className="space-y-2">
+          {safeUrl ? (
+            <a
+              href={safeUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-foreground underline underline-offset-2 hover:no-underline"
+            >
+              <IconExternalLink className="size-4" stroke={1.5} />
+              {t('providers.netcup.openLink')}
+            </a>
+          ) : (
+            <code className="break-all rounded-sm bg-card px-1.5 py-0.5 font-mono text-xs">
+              {info.verificationUriComplete || info.verificationUri}
+            </code>
+          )}
+          <div className="flex items-center gap-2">
+            <span className="text-ink-2">{t('providers.netcup.code')}</span>
+            <code className="rounded-sm bg-card px-1.5 py-0.5 font-mono text-xs font-medium">
+              {info.userCode}
+            </code>
           </div>
-        </AlertDescription>
-      </Alert>
+          <div className="flex items-center gap-2">
+            <IconLoader2 className="size-3.5 animate-spin text-ink-3" />
+            <span className="text-ink-2">{t('providers.netcup.waiting')}</span>
+          </div>
+        </div>
+      </div>
     );
   }
 
@@ -134,8 +137,8 @@ export function NetcupAuthorizeButton({ onToken }: { onToken: (token: string) =>
     <div className="space-y-1">
       <Button
         type="button"
-        variant="ghost"
-        className="w-full bg-brand/10 text-brand hover:bg-brand/20 hover:text-brand"
+        variant="secondary"
+        className="w-full"
         disabled={phase === 'waiting'}
         onClick={authorize}
       >

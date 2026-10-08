@@ -5,11 +5,10 @@ import App from './App';
 import './i18n';
 
 import './index.css';
-import '@fontsource/mulish/400.css';
-import '@fontsource/mulish/500.css';
-import '@fontsource/mulish/600.css';
-import '@fontsource/mulish/700.css';
-import '@fontsource/mulish/800.css';
+import '@fontsource/golos-text/400.css';
+import '@fontsource/golos-text/500.css';
+import '@fontsource/ibm-plex-mono/400.css';
+import '@fontsource/ibm-plex-mono/500.css';
 import './theme-transition.css';
 import './mobile.css';
 

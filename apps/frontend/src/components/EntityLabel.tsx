@@ -16,9 +16,9 @@ export function EntityLabel({
   size?: number;
 }) {
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="flex min-w-0 items-center gap-2">
       <ProviderIcon name={name} src={src} iconName={iconName} iconBg={iconBg} size={size} />
-      <span>{name}</span>
+      <span className="truncate">{name}</span>
     </div>
   );
 }

@@ -7,7 +7,7 @@ export function OverriddenMark({ label, onRestore }: { label: string; onRestore:
       <TooltipTrigger asChild>
         <button
           type="button"
-          className="inline-flex size-4 shrink-0 cursor-pointer items-center justify-center rounded-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+          className="inline-flex size-4 shrink-0 cursor-pointer items-center justify-center rounded-sm text-ink-3 hover:bg-accent hover:text-foreground"
           aria-label={label}
           onClick={(e) => {
             e.stopPropagation();
@@ -15,7 +15,7 @@ export function OverriddenMark({ label, onRestore }: { label: string; onRestore:
           }}
           onKeyDown={(e) => e.stopPropagation()}
         >
-          <IconPencil className="size-3.5" stroke={2} />
+          <IconPencil className="size-3.5" stroke={1.5} />
         </button>
       </TooltipTrigger>
       <TooltipContent>{label}</TooltipContent>

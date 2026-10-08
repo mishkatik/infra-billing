@@ -1,0 +1,33 @@
+// One account at a hoster: its own credentials, balance and sync state. A provider (the hoster
+// identity) holds one or more of these; services, payments, balance snapshots and sync runs belong
+// to an account.
+model ProviderAccount {
+  uuid String @id @default(uuid()) @map("uuid")
+
+  providerUuid    String    @map("provider_uuid")
+  // null = the provider's original account (shown as "main" in the UI).
+  label           String?   @map("label")
+  credentialsEnc  Bytes?    @map("credentials_enc")
+  isEnabled       Boolean   @default(true) @map("is_enabled")
+  isPostpaid      Boolean   @default(false) @map("is_postpaid")
+  balance         Decimal?  @map("balance") @db.Decimal(14, 2)
+  balanceCurrency String?   @map("balance_currency")
+  balanceSyncedAt DateTime? @map("balance_synced_at")
+  lastSyncAt      DateTime? @map("last_sync_at")
+  lastSyncError   String?   @map("last_sync_error")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  provider  Provider          @relation(fields: [providerUuid], references: [uuid], onDelete: Cascade, onUpdate: Cascade)
+  services  Service[]
+  payments  Payment[]
+  snapshots BalanceSnapshot[]
+  syncRuns  SyncRun[]
+
+  // Target of the (account_uuid, provider_uuid) foreign keys on services and payments: moving an
+  // account to another provider (merge) cascades the denormalized provider_uuid along with it.
+  @@unique([uuid, providerUuid], map: "provider_accounts_uuid_provider_uuid_key")
+  @@index([providerUuid], map: "provider_accounts_provider_uuid_idx")
+  @@map("provider_accounts")
+}

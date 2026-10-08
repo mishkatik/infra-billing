@@ -17,25 +17,28 @@ export function SortableTableHead({ label, active, onToggle, className }: Sortab
   return (
     <TableHead
       aria-sort={active === 'asc' ? 'ascending' : active === 'desc' ? 'descending' : undefined}
-      className={cn('text-muted-foreground', className)}
+      className={className}
     >
       {/* -ml-2/px-2 keeps the label at the th's 12px content edge (like plain headers)
-          while the button edge stays 4px in, so the 3px focus ring isn't clipped by the
-          overflow-x-auto wrapper. has-[>svg]:px-2 overrides the size="sm" svg padding;
-          text-[15px] matches the table font (Button size="sm" is text-sm otherwise). */}
+          while the button edge stays 4px in, so the focus ring isn't clipped by the
+          overflow-x-auto wrapper. The type matches the plain header row; the active column
+          steps up to the main text colour. */}
       <Button
         variant="ghost"
         size="sm"
         onClick={onToggle}
-        className="-ml-2 gap-1 px-2 text-[15px] text-muted-foreground has-[>svg]:px-2"
+        className={cn(
+          '-ml-2 h-7 gap-1 px-2 text-[13px] font-normal has-[>svg]:px-2',
+          active ? 'text-foreground' : 'text-ink-2 hover:text-foreground',
+        )}
       >
         {label}
         {active === 'asc' ? (
-          <IconArrowUp className="size-3.5" />
+          <IconArrowUp className="size-3 text-ink-3" />
         ) : active === 'desc' ? (
-          <IconArrowDown className="size-3.5" />
+          <IconArrowDown className="size-3 text-ink-3" />
         ) : (
-          <IconArrowsSort className="size-3.5 opacity-40" />
+          <IconArrowsSort className="size-3 text-ink-3 opacity-60" />
         )}
       </Button>
     </TableHead>

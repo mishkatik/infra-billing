@@ -1,28 +1,19 @@
+// The hoster identity (name, kind, cabinet link, icon). See ProviderAccount for the rest.
 model Provider {
   uuid String @id @default(uuid()) @map("uuid")
 
-  name            String    @map("name")
-  kind            String    @map("kind")
-  faviconLink     String?   @map("favicon_link")
-  loginUrl        String?   @map("login_url")
-  iconName        String?   @map("icon_name")
-  iconBg          String?   @map("icon_bg")
-  credentialsEnc  Bytes?    @map("credentials_enc")
-  balance         Decimal?  @db.Decimal(14, 2) @map("balance")
-  balanceCurrency String?   @map("balance_currency")
-  balanceSyncedAt DateTime? @map("balance_synced_at")
-  isPostpaid      Boolean   @default(false) @map("is_postpaid")
-  isEnabled       Boolean   @default(true) @map("is_enabled")
-  lastSyncAt      DateTime? @map("last_sync_at")
-  lastSyncError   String?   @map("last_sync_error")
+  name        String  @map("name")
+  kind        String  @map("kind")
+  faviconLink String? @map("favicon_link")
+  loginUrl    String? @map("login_url")
+  iconName    String? @map("icon_name")
+  iconBg      String? @map("icon_bg")
 
   createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt      @map("updated_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  services  Service[]
-  payments  Payment[]
-  snapshots BalanceSnapshot[]
-  syncRuns  SyncRun[]
+  // Credentials, balance and sync state live on the accounts.
+  accounts ProviderAccount[]
 
   @@map("providers")
 }

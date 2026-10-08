@@ -51,12 +51,12 @@ export class NotificationsService {
       if (await this.maybeSend(key, html)) sent += 1;
     }
 
-    // 1b) Low runway: a prepaid provider (no dated charge) whose balance is estimated to drain
+    // 1b) Low runway: a prepaid account (no dated charge) whose balance is estimated to drain
     //     within ~3 days (severity "critical": same threshold as the dashboard runway card).
     for (const r of summary.balanceRunway) {
       if (r.severity !== 'critical') continue;
       const html = lowRunwayMessage(r);
-      if (await this.maybeSend(`runway:${r.providerUuid}`, html)) sent += 1;
+      if (await this.maybeSend(`runway:${r.accountUuid}`, html)) sent += 1;
     }
 
     // 1c) Overdue: the billing date already passed. Dedup key has no date part, so like the
@@ -75,19 +75,21 @@ export class NotificationsService {
       if (await this.maybeSend(`upcoming:${ub.serviceUuid}:${day}`, html)) sent += 1;
     }
 
-    // 3) Sync errors in the last 24h (one per provider).
+    // 3) Sync errors in the last 24h (one per account).
     const since = dayjs().subtract(THROTTLE_HOURS, 'hour').toDate();
     const errorRuns = await this.syncRuns.listErrorsSince(since);
-    const seenProviders = new Set<string>();
+    const seenAccounts = new Set<string>();
     for (const run of errorRuns) {
-      if (seenProviders.has(run.providerUuid)) continue;
-      seenProviders.add(run.providerUuid);
+      if (seenAccounts.has(run.accountUuid)) continue;
+      seenAccounts.add(run.accountUuid);
+      const { provider, label } = run.account;
       const html = syncErrorMessage(
-        run.provider.name,
+        provider.name,
         run.error ?? 'unknown error',
-        run.provider.loginUrl,
+        provider.loginUrl,
+        provider._count.accounts > 1 ? (label ?? '') : null,
       );
-      if (await this.maybeSend(`sync-error:${run.providerUuid}`, html)) sent += 1;
+      if (await this.maybeSend(`sync-error:${run.accountUuid}`, html)) sent += 1;
     }
 
     if (sent > 0) this.logger.log(`Notifications sent: ${sent}`);

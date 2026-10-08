@@ -1,6 +1,7 @@
 import { createZodDto } from 'nestjs-zod';
 import {
   createProviderSchema,
+  mergeProviderSchema,
   netcupDevicePollResultSchema,
   netcupDevicePollSchema,
   netcupDeviceStartSchema,
@@ -15,6 +16,7 @@ import { z } from 'zod';
 
 export class CreateProviderDto extends createZodDto(createProviderSchema) {}
 export class UpdateProviderDto extends createZodDto(updateProviderSchema) {}
+export class MergeProviderDto extends createZodDto(mergeProviderSchema) {}
 export class NetcupDevicePollDto extends createZodDto(netcupDevicePollSchema) {}
 export class YandexDiscoverDto extends createZodDto(yandexDiscoverSchema) {}
 export class YandexDiscoverResultDto extends createZodDto(yandexDiscoverResultSchema) {}

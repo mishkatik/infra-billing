@@ -19,7 +19,7 @@ import type { ProviderCredentialsReveal, YandexDiscover } from '@infra/shared';
 import { Controller, type UseFormReturn } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { apiErrorMessage } from '@/api/client';
-import { revealProviderCredentials, type SecretField, useYandexDiscover } from '@/api/providers';
+import { revealAccountCredentials, type SecretField, useYandexDiscover } from '@/api/providers';
 import { NetcupAuthorizeButton } from '@/components/NetcupAuthorizeButton';
 import { SecretInput } from '@/components/SecretInput';
 import { Badge } from '@/components/ui/badge';
@@ -27,14 +27,19 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { cn } from '@/lib/utils';
 import { notifyError } from '@/utils/notify';
-import type { StoredSecretFlags } from './ProviderFormFields';
-import { AEZA_DEFAULT_BASE_URL, aezaBranchOrigin, type FormValues } from './providerForm';
+import {
+  AEZA_DEFAULT_BASE_URL,
+  type AccountFormValues,
+  aezaBranchOrigin,
+  type StoredSecretFlags,
+} from './providerForm';
 
 interface ProviderCredentialFieldsProps {
-  form: UseFormReturn<FormValues>;
-  providerUuid?: string;
+  form: UseFormReturn<AccountFormValues>;
+  kind: string;
+  // Set when editing an existing account: enables reveal and Yandex discovery from stored keys.
+  accountUuid?: string;
   storedSecrets?: StoredSecretFlags;
 }
 
@@ -47,7 +52,7 @@ function SecretFormField({
   placeholder,
   multiline,
 }: {
-  form: UseFormReturn<FormValues>;
+  form: UseFormReturn<AccountFormValues>;
   name: SecretField;
   id: string;
   hasStored?: boolean;
@@ -100,7 +105,7 @@ function Field({
               href={link}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-0.5 text-brand underline-offset-4 hover:underline"
+              className="inline-flex items-center gap-0.5 text-slate underline-offset-2 hover:underline"
             >
               {link.replace(/^https:\/\/(www\.)?/, '').replace(/\/$/, '')}
               <IconExternalLink className="size-3" />
@@ -113,361 +118,60 @@ function Field({
   );
 }
 
-// Render a Yandex setup step, turning the "center.yandex.cloud" mention into a link. Steps without
-// it are returned unchanged.
-function linkifyCenter(text: string): ReactNode {
-  const marker = 'center.yandex.cloud';
-  const idx = text.indexOf(marker);
+const LINK_CLASS = 'text-slate underline-offset-2 hover:underline';
+
+interface ConsoleHost {
+  marker: string;
+  href: string;
+}
+
+// Turn the first mention of a provider's console host in a setup step into a link.
+function linkifyHost(text: string, host?: ConsoleHost): ReactNode {
+  if (!host) return text;
+  const idx = text.indexOf(host.marker);
   if (idx === -1) return text;
   return (
     <>
       {text.slice(0, idx)}
-      <a
-        href="https://center.yandex.cloud"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-brand underline underline-offset-4 hover:no-underline"
-      >
-        {marker}
+      <a href={host.href} target="_blank" rel="noopener noreferrer" className={LINK_CLASS}>
+        {host.marker}
       </a>
-      {text.slice(idx + marker.length)}
+      {text.slice(idx + host.marker.length)}
     </>
   );
 }
 
-// Yandex Console UI labels quoted in the setup steps, styled to look like the real controls: blue
-// primary buttons for actions, a leading icon for the few recognizable menu entries. Keyed by the
-// exact English label (the console is English regardless of the app locale).
-const YA_PRIMARY = new Set([
-  'Create service account',
-  'Create',
-  'Create new key',
-  'Assign roles',
-  'Save',
-]);
-// Solid dark-grey buttons (filled with what is just an outline elsewhere).
-const YA_FILLED = new Set(['Add role', 'Create authorized key']);
-// Grey-blue role chips (no border), like a selected tag on the site.
-const YA_CHIP = new Set(['viewer', 'billing.accounts.viewer']);
-// Left-column category headers in the "All services" menu, each with its own gradient on the site.
-const YA_SECTION: Record<string, string> = {
-  'Monitoring & Resources': 'bg-gradient-to-r from-slate-600 to-slate-800 text-white',
-  Billing: 'bg-gradient-to-br from-[#2f4d7a] to-[#22395d] text-white',
-};
-const YA_ICON: Record<string, Icon> = {
-  'All services': IconGridDots,
-  'Identity and Access Management': IconKey,
-  'Service accounts': IconRobot,
-  'Add role': IconPlus,
-};
-
-// The classes that make a quoted label look like its real Console control.
-function tokenClass(label: string): string {
-  if (YA_PRIMARY.has(label)) return 'bg-gradient-to-b from-[#4a86bd] to-[#3c72a4] text-white';
-  if (YA_FILLED.has(label)) return 'bg-[#3a3a3e] text-white';
-  if (YA_CHIP.has(label)) return 'bg-[#4b5666] text-[#cdd5e0]';
-  const section = YA_SECTION[label];
-  if (section) return section;
-  return 'bg-white/[0.07] text-foreground ring-1 ring-white/10 ring-inset';
-}
-
-// Render one quoted Console label as a badge that mimics its on-site look.
-function YaToken({ label }: { label: string }) {
-  const LabelIcon = YA_ICON[label];
+// A quoted console label ("Create", "API Tokens"…) as a plain ink chip, so the owner can spot the
+// control to click without the help text imitating every provider's own colours.
+function ConsoleChip({
+  label,
+  icon: LabelIcon,
+  trailing: Trailing,
+}: {
+  label: string;
+  icon?: Icon;
+  trailing?: Icon;
+}) {
   return (
-    <span
-      className={cn(
-        'mx-0.5 inline-flex items-center gap-1 rounded-md px-1 py-0.5 align-middle text-[0.8em] font-medium leading-none whitespace-nowrap',
-        tokenClass(label),
-      )}
-    >
-      {LabelIcon && <LabelIcon className="size-3 shrink-0" />}
+    <span className="mx-0.5 inline-flex items-center gap-1 rounded-sm border border-border px-1.5 py-px align-middle text-[0.9em] leading-snug whitespace-nowrap text-foreground">
+      {LabelIcon && <LabelIcon className="size-3 shrink-0" stroke={1.75} />}
       {label}
+      {Trailing && <Trailing className="size-3 shrink-0" stroke={1.75} />}
     </span>
   );
 }
 
-// Turn a setup step into React nodes: each "quoted" Console label becomes a YaToken badge, and the
-// plain text between them keeps the center.yandex.cloud link.
-function renderYaStep(text: string): ReactNode {
-  const parts: ReactNode[] = [];
-  const re = /"([^"]+)"/g;
-  let last = 0;
-  let key = 0;
-  let m: RegExpExecArray | null = re.exec(text);
-  while (m !== null) {
-    if (m.index > last) {
-      parts.push(<Fragment key={key++}>{linkifyCenter(text.slice(last, m.index))}</Fragment>);
-    }
-    parts.push(<YaToken key={key++} label={m[1]} />);
-    last = m.index + m[0].length;
-    m = re.exec(text);
-  }
-  if (last < text.length) {
-    parts.push(<Fragment key={key++}>{linkifyCenter(text.slice(last))}</Fragment>);
-  }
-  return parts;
+interface ConsoleStepOptions {
+  host?: ConsoleHost;
+  /** Leading icons for the few menu entries that have a recognisable one on the site. */
+  icons?: Record<string, Icon>;
+  /** Overrides for labels that need their own chip (e.g. a dropdown with a chevron). */
+  chip?: (label: string) => ReactNode | undefined;
 }
 
-// Timeweb Cloud panel labels (RU/EN). Sidebar section vs primary action buttons.
-const TW_SECTION = new Set(['API и Terraform', 'API and Terraform']);
-const TW_PRIMARY = new Set(['Добавить токен', 'Выпустить', 'Add token', 'Issue']);
-const TW_ICON: Record<string, Icon> = {
-  'API и Terraform': IconCircles,
-  'API and Terraform': IconCircles,
-};
-
-function twTokenClass(label: string): string {
-  if (TW_PRIMARY.has(label)) return 'rounded-full bg-[#5c5de0] text-white';
-  if (TW_SECTION.has(label)) return 'rounded-md bg-[#282e38] text-white';
-  return 'rounded-md bg-white/[0.07] text-foreground ring-1 ring-white/10 ring-inset';
-}
-
-function TwToken({ label }: { label: string }) {
-  const LabelIcon = TW_ICON[label];
-  return (
-    <span
-      className={cn(
-        'mx-0.5 inline-flex items-center gap-1 px-1.5 py-0.5 align-middle text-[0.8em] font-medium leading-none whitespace-nowrap',
-        twTokenClass(label),
-      )}
-    >
-      {LabelIcon && <LabelIcon className="size-3 shrink-0" />}
-      {label}
-    </span>
-  );
-}
-
-function renderTwStep(text: string): ReactNode {
-  const parts: ReactNode[] = [];
-  const re = /"([^"]+)"/g;
-  let last = 0;
-  let key = 0;
-  let m: RegExpExecArray | null = re.exec(text);
-  while (m !== null) {
-    if (m.index > last) {
-      parts.push(<Fragment key={key++}>{text.slice(last, m.index)}</Fragment>);
-    }
-    parts.push(<TwToken key={key++} label={m[1]} />);
-    last = m.index + m[0].length;
-    m = re.exec(text);
-  }
-  if (last < text.length) {
-    parts.push(<Fragment key={key++}>{text.slice(last)}</Fragment>);
-  }
-  return parts;
-}
-
-// Hetzner Cloud console labels (EN/RU). Active tabs (red + underline), sidebar rows, primary buttons.
-const HZ_TAB = new Set(['Projects', 'API Tokens', 'Проекты', 'API-токены']);
-const HZ_NAV = new Set(['Default', 'Security', 'Безопасность']);
-const HZ_PRIMARY = new Set(['Generate API Token', 'Создать API-токен']);
-const HZ_ICON: Record<string, Icon> = {
-  Default: IconCrown,
-  Security: IconKey,
-  Безопасность: IconKey,
-};
-
-function linkifyHetzner(text: string): ReactNode {
-  const marker = 'console.hetzner.com';
-  const idx = text.indexOf(marker);
-  if (idx === -1) return text;
-  return (
-    <>
-      {text.slice(0, idx)}
-      <a
-        href="https://console.hetzner.com"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-brand underline underline-offset-4 hover:no-underline"
-      >
-        {marker}
-      </a>
-      {text.slice(idx + marker.length)}
-    </>
-  );
-}
-
-function hzTokenClass(label: string): string {
-  if (HZ_PRIMARY.has(label)) return 'rounded-md bg-[#a01f2a] text-white';
-  if (HZ_TAB.has(label)) return 'rounded-md bg-[#1a1a1a] text-[#ff5a68]';
-  if (HZ_NAV.has(label)) return 'rounded-md bg-[#252525] text-white';
-  return 'rounded-md bg-white/[0.07] text-foreground ring-1 ring-white/10 ring-inset';
-}
-
-function HzToken({ label }: { label: string }) {
-  const LabelIcon = HZ_ICON[label];
-  return (
-    <span
-      className={cn(
-        'mx-0.5 inline-flex items-center gap-1 px-1.5 py-0.5 align-middle text-[0.8em] font-medium leading-none whitespace-nowrap',
-        hzTokenClass(label),
-      )}
-    >
-      {LabelIcon && <LabelIcon className="size-3 shrink-0" />}
-      {label}
-    </span>
-  );
-}
-
-function renderHzStep(text: string): ReactNode {
-  const parts: ReactNode[] = [];
-  const re = /"([^"]+)"/g;
-  let last = 0;
-  let key = 0;
-  let m: RegExpExecArray | null = re.exec(text);
-  while (m !== null) {
-    if (m.index > last) {
-      parts.push(<Fragment key={key++}>{linkifyHetzner(text.slice(last, m.index))}</Fragment>);
-    }
-    parts.push(<HzToken key={key++} label={m[1]} />);
-    last = m.index + m[0].length;
-    m = re.exec(text);
-  }
-  if (last < text.length) {
-    parts.push(<Fragment key={key++}>{linkifyHetzner(text.slice(last))}</Fragment>);
-  }
-  return parts;
-}
-
-const HK_USER_MENU = new Set(['Username', 'Пользователь']);
-const HK_LINK = new Set(['API keys', 'API ключи', 'API-ключи']);
-const HK_SOFT = new Set(['Add key', 'Create', 'OK', 'Добавить ключ', 'Создать', 'ОК']);
-const HK_ICON: Record<string, Icon> = {
-  'Add key': IconPlus,
-  'Добавить ключ': IconPlus,
-};
-
-function linkifyHostkey(text: string): ReactNode {
-  const marker = 'invapi.hostkey.ru';
-  const idx = text.indexOf(marker);
-  if (idx === -1) return text;
-  return (
-    <>
-      {text.slice(0, idx)}
-      <a
-        href="https://invapi.hostkey.ru"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-brand underline underline-offset-4 hover:no-underline"
-      >
-        {marker}
-      </a>
-      {text.slice(idx + marker.length)}
-    </>
-  );
-}
-
-function hkTokenClass(label: string): string {
-  if (HK_LINK.has(label))
-    return 'rounded-md bg-white px-1.5 font-semibold text-[#8369c4] ring-1 ring-black/5 ring-inset';
-  if (HK_SOFT.has(label)) return 'rounded-md bg-[#f2ebfa] text-[#8369c4]';
-  return 'rounded-md bg-white/[0.07] text-foreground ring-1 ring-white/10 ring-inset';
-}
-
-function HkToken({ label }: { label: string }) {
-  if (HK_USER_MENU.has(label)) {
-    return (
-      <span className="mx-0.5 inline-flex items-center gap-1.5 rounded-md bg-[#f0f2f5] px-1.5 py-0.5 align-middle text-[0.8em] font-medium leading-none whitespace-nowrap text-[#1a1a1a]">
-        <span className="inline-flex size-4 items-center justify-center rounded-[5px] bg-[#e4e6eb]">
-          <IconUser className="size-2.5 shrink-0 text-[#3a3a3a]" stroke={1.75} />
-        </span>
-        <span>{label}</span>
-        <IconChevronDown className="size-2.5 shrink-0 text-[#3a3a3a]" stroke={2} />
-      </span>
-    );
-  }
-  const LabelIcon = HK_ICON[label];
-  return (
-    <span
-      className={cn(
-        'mx-0.5 inline-flex items-center gap-1 px-1.5 py-0.5 align-middle text-[0.8em] font-medium leading-none whitespace-nowrap',
-        hkTokenClass(label),
-      )}
-    >
-      {LabelIcon && <LabelIcon className="size-3 shrink-0" />}
-      {label}
-    </span>
-  );
-}
-
-function renderHkStep(text: string): ReactNode {
-  const parts: ReactNode[] = [];
-  const re = /"([^"]+)"/g;
-  let last = 0;
-  let key = 0;
-  let m: RegExpExecArray | null = re.exec(text);
-  while (m !== null) {
-    if (m.index > last) {
-      parts.push(<Fragment key={key++}>{linkifyHostkey(text.slice(last, m.index))}</Fragment>);
-    }
-    parts.push(<HkToken key={key++} label={m[1]} />);
-    last = m.index + m[0].length;
-    m = re.exec(text);
-  }
-  if (last < text.length) {
-    parts.push(<Fragment key={key++}>{linkifyHostkey(text.slice(last))}</Fragment>);
-  }
-  return parts;
-}
-
-const DS_NAV = new Set(['Profile', 'Authenticator app']);
-const DS_SECTION = new Set(['BACKUP LOGIN VIA EMAIL']);
-const DS_PRIMARY = new Set(['Attach email', 'Confirm']);
-const DS_OUTLINE = new Set(['Connect']);
-const DS_ICON: Record<string, Icon> = {
-  Profile: IconUser,
-  'BACKUP LOGIN VIA EMAIL': IconMail,
-  'Authenticator app': IconDeviceMobile,
-};
-
-function linkifyDoubleServers(text: string): ReactNode {
-  const marker = 'doubleservers.com';
-  const idx = text.indexOf(marker);
-  if (idx === -1) return text;
-  return (
-    <>
-      {text.slice(0, idx)}
-      <a
-        href="https://doubleservers.com/dashboard/profile"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-brand underline underline-offset-4 hover:no-underline"
-      >
-        {marker}
-      </a>
-      {text.slice(idx + marker.length)}
-    </>
-  );
-}
-
-function dsTokenClass(label: string): string {
-  if (DS_PRIMARY.has(label)) return 'rounded-full bg-white text-black';
-  if (DS_OUTLINE.has(label))
-    return 'rounded-full bg-[#141414] text-[#c8c8c8] ring-1 ring-[#3a3a3a] ring-inset';
-  if (DS_SECTION.has(label))
-    return 'rounded-md bg-[#141414] text-[#c8c8c8] ring-1 ring-[#3a3a3a] ring-inset';
-  if (DS_NAV.has(label))
-    return 'rounded-md bg-[#141414] text-white ring-1 ring-[#3a3a3a] ring-inset';
-  return 'rounded-md bg-white/[0.07] text-foreground ring-1 ring-white/10 ring-inset';
-}
-
-function DsToken({ label }: { label: string }) {
-  const LabelIcon = DS_ICON[label];
-  return (
-    <span
-      className={cn(
-        'mx-0.5 inline-flex items-center gap-1 px-1.5 py-0.5 align-middle text-[0.8em] font-medium leading-none whitespace-nowrap',
-        dsTokenClass(label),
-      )}
-    >
-      {LabelIcon && <LabelIcon className="size-3 shrink-0" />}
-      {label}
-    </span>
-  );
-}
-
-function renderDsStep(text: string): ReactNode {
+// Split a setup step on its "quoted" console labels: each label becomes a chip, the plain text
+// between them keeps the console host link.
+function renderConsoleStep(text: string, opts: ConsoleStepOptions = {}): ReactNode {
   const parts: ReactNode[] = [];
   const re = /"([^"]+)"/g;
   let last = 0;
@@ -476,97 +180,71 @@ function renderDsStep(text: string): ReactNode {
   while (m !== null) {
     if (m.index > last) {
       parts.push(
-        <Fragment key={key++}>{linkifyDoubleServers(text.slice(last, m.index))}</Fragment>,
+        <Fragment key={key++}>{linkifyHost(text.slice(last, m.index), opts.host)}</Fragment>,
       );
     }
-    parts.push(<DsToken key={key++} label={m[1]} />);
+    const label = m[1];
+    parts.push(
+      <Fragment key={key++}>
+        {opts.chip?.(label) ?? <ConsoleChip label={label} icon={opts.icons?.[label]} />}
+      </Fragment>,
+    );
     last = m.index + m[0].length;
     m = re.exec(text);
   }
   if (last < text.length) {
-    parts.push(<Fragment key={key++}>{linkifyDoubleServers(text.slice(last))}</Fragment>);
+    parts.push(<Fragment key={key++}>{linkifyHost(text.slice(last), opts.host)}</Fragment>);
   }
   return parts;
 }
 
-// OpenRouter console chips (dark UI): muted Home nav, lime Management Keys row, green New Key CTA,
-// outlined Create.
-const OR_NAV = new Set(['Home']);
-const OR_SECTION = new Set(['Management Keys']);
-const OR_PRIMARY = new Set(['New Key', '+ New Key']);
-const OR_CREATE = new Set(['Create']);
-const OR_ICON: Record<string, Icon> = {
-  'Management Keys': IconLock,
-  'New Key': IconPlus,
-  '+ New Key': IconPlus,
+// Yandex Console labels are English regardless of the app locale.
+const YANDEX_STEP: ConsoleStepOptions = {
+  host: { marker: 'center.yandex.cloud', href: 'https://center.yandex.cloud' },
+  icons: {
+    'All services': IconGridDots,
+    'Identity and Access Management': IconKey,
+    'Service accounts': IconRobot,
+    'Add role': IconPlus,
+  },
 };
 
-function linkifyOpenRouter(text: string): ReactNode {
-  const marker = 'openrouter.ai';
-  const idx = text.indexOf(marker);
-  if (idx === -1) return text;
-  return (
-    <>
-      {text.slice(0, idx)}
-      <a
-        href="https://openrouter.ai"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-brand underline underline-offset-4 hover:no-underline"
-      >
-        {marker}
-      </a>
-      {text.slice(idx + marker.length)}
-    </>
-  );
-}
+const TIMEWEB_STEP: ConsoleStepOptions = {
+  icons: { 'API и Terraform': IconCircles, 'API and Terraform': IconCircles },
+};
 
-function orTokenClass(label: string): string {
-  if (OR_PRIMARY.has(label)) return 'rounded-md bg-[#c8f135] text-black';
-  if (OR_SECTION.has(label))
-    return 'rounded-md bg-[#c8f135]/12 text-[#c8f135] ring-1 ring-[#c8f135]/35 ring-inset';
-  if (OR_CREATE.has(label))
-    return 'rounded-md bg-[#141414] text-white ring-1 ring-[#3a3a3a] ring-inset';
-  if (OR_NAV.has(label))
-    return 'rounded-md bg-white/[0.07] text-[#a1a1a1] ring-1 ring-white/15 ring-inset';
-  return 'rounded-md bg-white/[0.07] text-foreground ring-1 ring-white/10 ring-inset';
-}
+const HETZNER_STEP: ConsoleStepOptions = {
+  host: { marker: 'console.hetzner.com', href: 'https://console.hetzner.com' },
+  icons: { Default: IconCrown, Security: IconKey, Безопасность: IconKey },
+};
 
-function OrToken({ label }: { label: string }) {
-  const LabelIcon = OR_ICON[label];
-  const text = label === '+ New Key' ? 'New Key' : label;
-  return (
-    <span
-      className={cn(
-        'mx-0.5 inline-flex items-center gap-1 px-1.5 py-0.5 align-middle text-[0.8em] font-medium leading-none whitespace-nowrap',
-        orTokenClass(label),
-      )}
-    >
-      {LabelIcon && <LabelIcon className="size-3 shrink-0" stroke={2} />}
-      {text}
-    </span>
-  );
-}
+const HOSTKEY_USER_MENU = new Set(['Username', 'Пользователь']);
+const HOSTKEY_STEP: ConsoleStepOptions = {
+  host: { marker: 'invapi.hostkey.ru', href: 'https://invapi.hostkey.ru' },
+  icons: { 'Add key': IconPlus, 'Добавить ключ': IconPlus },
+  // The account menu is a dropdown on the site: user icon, name, chevron.
+  chip: (label) =>
+    HOSTKEY_USER_MENU.has(label) ? (
+      <ConsoleChip label={label} icon={IconUser} trailing={IconChevronDown} />
+    ) : undefined,
+};
 
-function renderOrStep(text: string): ReactNode {
-  const parts: ReactNode[] = [];
-  const re = /"([^"]+)"/g;
-  let last = 0;
-  let key = 0;
-  let m: RegExpExecArray | null = re.exec(text);
-  while (m !== null) {
-    if (m.index > last) {
-      parts.push(<Fragment key={key++}>{linkifyOpenRouter(text.slice(last, m.index))}</Fragment>);
-    }
-    parts.push(<OrToken key={key++} label={m[1]} />);
-    last = m.index + m[0].length;
-    m = re.exec(text);
-  }
-  if (last < text.length) {
-    parts.push(<Fragment key={key++}>{linkifyOpenRouter(text.slice(last))}</Fragment>);
-  }
-  return parts;
-}
+const DOUBLESERVERS_STEP: ConsoleStepOptions = {
+  host: { marker: 'doubleservers.com', href: 'https://doubleservers.com/dashboard/profile' },
+  icons: {
+    Profile: IconUser,
+    'BACKUP LOGIN VIA EMAIL': IconMail,
+    'Authenticator app': IconDeviceMobile,
+  },
+};
+
+const OPENROUTER_STEP: ConsoleStepOptions = {
+  host: { marker: 'openrouter.ai', href: 'https://openrouter.ai' },
+  icons: { 'Management Keys': IconLock, 'New Key': IconPlus },
+  // The site's button reads "+ New Key"; the plus is drawn as the icon.
+  chip: (label) =>
+    label === '+ New Key' ? <ConsoleChip label="New Key" icon={IconPlus} /> : undefined,
+};
 
 // A pasted Yandex authorized key is only worth a discovery call once it parses into the fields the
 // backend signs the JWT with. Guards against firing on every keystroke of a half-pasted key.
@@ -581,21 +259,21 @@ function isCompleteYandexKey(raw: string): boolean {
 
 export function ProviderCredentialFields({
   form,
-  providerUuid,
+  kind,
+  accountUuid,
   storedSecrets,
 }: ProviderCredentialFieldsProps) {
   const { t } = useTranslation();
-  const kind = form.watch('kind');
   const optionalPh = t('common.optional');
   const revealCache = useRef<{ uuid: string; data: ProviderCredentialsReveal } | null>(null);
   const reveal = useCallback(
     async (field: SecretField) => {
-      if (!providerUuid) return '';
-      if (!revealCache.current || revealCache.current.uuid !== providerUuid) {
+      if (!accountUuid) return '';
+      if (!revealCache.current || revealCache.current.uuid !== accountUuid) {
         try {
           revealCache.current = {
-            uuid: providerUuid,
-            data: await revealProviderCredentials(providerUuid),
+            uuid: accountUuid,
+            data: await revealAccountCredentials(accountUuid),
           };
         } catch (e) {
           notifyError(apiErrorMessage(e));
@@ -604,7 +282,7 @@ export function ProviderCredentialFields({
       }
       return revealCache.current.data[field] ?? '';
     },
-    [providerUuid],
+    [accountUuid],
   );
 
   const baseUrl = form.watch('baseUrl');
@@ -614,8 +292,8 @@ export function ProviderCredentialFields({
       ? null
       : yandexToken && isCompleteYandexKey(yandexToken)
         ? { token: yandexToken }
-        : !yandexToken && providerUuid
-          ? { providerUuid }
+        : !yandexToken && accountUuid
+          ? { accountUuid }
           : null;
   const discover = useYandexDiscover(yandexBody);
   const yandexScope = discover.data ?? null;
@@ -876,7 +554,7 @@ export function ProviderCredentialFields({
         label={t('providers.field.apiToken')}
         description={
           <div className="text-sm leading-7">
-            {renderHkStep(t('providers.field.apiTokenDescHostkey'))}
+            {renderConsoleStep(t('providers.field.apiTokenDescHostkey'), HOSTKEY_STEP)}
           </div>
         }
       >
@@ -918,7 +596,7 @@ export function ProviderCredentialFields({
           label={t('providers.field.managementKey')}
           description={
             <div className="text-sm leading-7">
-              {renderOrStep(t('providers.field.apiTokenDescOpenrouter'))}
+              {renderConsoleStep(t('providers.field.apiTokenDescOpenrouter'), OPENROUTER_STEP)}
             </div>
           }
         >
@@ -1046,8 +724,18 @@ export function ProviderCredentialFields({
           label={t('providers.field.loginEmail')}
           description={
             <div className="space-y-1.5 text-sm leading-7">
-              <p>{renderDsStep(t('providers.field.doubleserversSetupStep1'))}</p>
-              <p>{renderDsStep(t('providers.field.doubleserversSetupStep2'))}</p>
+              <p>
+                {renderConsoleStep(
+                  t('providers.field.doubleserversSetupStep1'),
+                  DOUBLESERVERS_STEP,
+                )}
+              </p>
+              <p>
+                {renderConsoleStep(
+                  t('providers.field.doubleserversSetupStep2'),
+                  DOUBLESERVERS_STEP,
+                )}
+              </p>
             </div>
           }
         >
@@ -1067,7 +755,7 @@ export function ProviderCredentialFields({
           label={t('providers.field.totpSecret')}
           description={
             <div className="text-sm leading-7">
-              {renderDsStep(t('providers.field.doubleserversSetupStep3'))}
+              {renderConsoleStep(t('providers.field.doubleserversSetupStep3'), DOUBLESERVERS_STEP)}
             </div>
           }
         >
@@ -1154,10 +842,10 @@ export function ProviderCredentialFields({
             <>
               <span className="font-medium">{t('providers.field.yandexKeySetup')}</span>
               <ol className="mt-1 list-decimal space-y-1.5 pl-4 text-sm leading-7">
-                <li>{renderYaStep(t('providers.field.yandexKeyStep1'))}</li>
-                <li>{renderYaStep(t('providers.field.yandexKeyStep2'))}</li>
-                <li>{renderYaStep(t('providers.field.yandexKeyStep3'))}</li>
-                <li>{renderYaStep(t('providers.field.yandexKeyStep4'))}</li>
+                <li>{renderConsoleStep(t('providers.field.yandexKeyStep1'), YANDEX_STEP)}</li>
+                <li>{renderConsoleStep(t('providers.field.yandexKeyStep2'), YANDEX_STEP)}</li>
+                <li>{renderConsoleStep(t('providers.field.yandexKeyStep3'), YANDEX_STEP)}</li>
+                <li>{renderConsoleStep(t('providers.field.yandexKeyStep4'), YANDEX_STEP)}</li>
               </ol>
             </>
           }
@@ -1194,11 +882,9 @@ export function ProviderCredentialFields({
           {discover.isError ? (
             <p className="text-xs text-destructive">{apiErrorMessage(discover.error)}</p>
           ) : yandexScope ? (
-            <div className="space-y-3 rounded-md border p-3">
+            <div className="space-y-3 rounded-lg bg-background p-3">
               <div className="space-y-1.5">
-                <p className="text-xs font-medium text-muted-foreground">
-                  {t('providers.field.yandexScopeFolders')}
-                </p>
+                <p className="text-[13px] text-ink-2">{t('providers.field.yandexScopeFolders')}</p>
                 {yandexScope.folders.length > 0 ? (
                   <div className="flex flex-wrap gap-1.5">
                     {yandexScope.folders.map((f) => (
@@ -1214,9 +900,7 @@ export function ProviderCredentialFields({
                 )}
               </div>
               <div className="space-y-1.5">
-                <p className="text-xs font-medium text-muted-foreground">
-                  {t('providers.field.yandexScopeBilling')}
-                </p>
+                <p className="text-[13px] text-ink-2">{t('providers.field.yandexScopeBilling')}</p>
                 {yandexScope.billingAccount ? (
                   <Badge variant="secondary" className="font-mono">
                     {yandexScope.billingAccount.id}
@@ -1247,7 +931,7 @@ export function ProviderCredentialFields({
         label={t('providers.field.apiToken')}
         description={
           <div className="text-sm leading-7">
-            {renderHzStep(t('providers.field.apiTokenDescHetzner'))}
+            {renderConsoleStep(t('providers.field.apiTokenDescHetzner'), HETZNER_STEP)}
           </div>
         }
       >
@@ -1269,12 +953,12 @@ export function ProviderCredentialFields({
         label={t('providers.field.apiToken')}
         description={
           <div className="leading-7">
-            <p>{renderTwStep(t('providers.field.apiTokenDescTimeweb'))}</p>
+            <p>{renderConsoleStep(t('providers.field.apiTokenDescTimeweb'), TIMEWEB_STEP)}</p>
             <a
               href="https://timeweb.cloud/my/api-keys"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-0.5 text-brand underline-offset-4 hover:underline"
+              className="inline-flex items-center gap-0.5 text-slate underline-offset-2 hover:underline"
             >
               timeweb.cloud/my/api-keys
               <IconExternalLink className="size-3" />

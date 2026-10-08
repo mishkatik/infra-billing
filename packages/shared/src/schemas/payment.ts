@@ -8,6 +8,7 @@ export type PaymentType = z.infer<typeof paymentTypeSchema>;
 export const paymentSchema = z.object({
   uuid: uuidSchema.describe('Payment UUID'),
   providerUuid: uuidSchema.describe('Provider UUID'),
+  accountUuid: uuidSchema.describe('Provider account UUID'),
   serviceUuid: uuidSchema.describe('Service UUID').nullable(),
   amount: moneySchema.describe('Payment amount'),
   currency: currencySchema.describe('Currency code'),
@@ -27,13 +28,20 @@ export const paginatedPaymentsSchema = z.object({
 });
 export type PaginatedPayments = z.infer<typeof paginatedPaymentsSchema>;
 
-export const createPaymentSchema = z.object({
-  providerUuid: uuidSchema.describe('Provider UUID'),
-  serviceUuid: uuidSchema.describe('Service UUID').optional(),
-  amount: moneySchema.describe('Payment amount'),
-  currency: currencySchema.describe('Currency code'),
-  description: z.string().describe('Payment description').optional(),
-  paymentDate: isoDateSchema.describe('Payment date'),
-  type: paymentTypeSchema.describe('Payment type').optional(),
-});
+export const createPaymentSchema = z
+  .object({
+    // The account the payment went to. A bare providerUuid is still accepted when that provider
+    // has exactly one account (older API clients).
+    accountUuid: uuidSchema.describe('Provider account UUID').optional(),
+    providerUuid: uuidSchema.describe('Provider UUID (single-account providers)').optional(),
+    serviceUuid: uuidSchema.describe('Service UUID').optional(),
+    amount: moneySchema.describe('Payment amount'),
+    currency: currencySchema.describe('Currency code'),
+    description: z.string().describe('Payment description').optional(),
+    paymentDate: isoDateSchema.describe('Payment date'),
+    type: paymentTypeSchema.describe('Payment type').optional(),
+  })
+  .refine((v) => Boolean(v.accountUuid || v.providerUuid), {
+    message: 'Provide the account (or a single-account provider)',
+  });
 export type CreatePayment = z.infer<typeof createPaymentSchema>;

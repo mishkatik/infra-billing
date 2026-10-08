@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { CreatePayment, PaginatedPayments, Payment } from '@infra/shared';
 import { api } from './client';
 import { API_PATH, isoDateSchema, uuidSchema } from '@infra/shared';
@@ -38,6 +38,8 @@ export function usePayments(filter: PaymentFilter = {}, opts: UsePaymentsOpts = 
   return useQuery({
     enabled,
     queryKey: ['payments', filter, page, pageSize],
+    // Switching a filter or page keeps the current rows until the new ones arrive (no blank flash).
+    placeholderData: keepPreviousData,
     queryFn: async () => {
       const params: Record<string, string> = { page: String(page), pageSize: String(pageSize) };
       if (filter.providerUuid) params.providerUuid = filter.providerUuid;
@@ -54,10 +56,12 @@ export function useCreatePayment() {
   return useMutation({
     mutationFn: async (dto: CreatePayment) =>
       (await api.post<Payment>(API_PATH.PAYMENTS.ROOT, dto)).data,
-    // ['services'] too: paymentsCount on the services list depends on payments.
+    // ['services'] too: paymentsCount on the services list depends on payments; ['analytics'] for
+    // the paid-this-month figures.
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['payments'] });
       qc.invalidateQueries({ queryKey: ['services'] });
+      qc.invalidateQueries({ queryKey: ['analytics'] });
     },
   });
 }
@@ -71,6 +75,7 @@ export function useDeletePayment() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['payments'] });
       qc.invalidateQueries({ queryKey: ['services'] });
+      qc.invalidateQueries({ queryKey: ['analytics'] });
     },
   });
 }

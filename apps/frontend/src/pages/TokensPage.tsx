@@ -1,17 +1,12 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import {
-  IconAlertTriangle,
-  IconCheck,
-  IconCopy,
-  IconLoader2,
-  IconPlus,
-  IconTrash,
-} from '@tabler/icons-react';
+import { IconCheck, IconCopy, IconLoader2, IconPlus, IconTrash } from '@tabler/icons-react';
 import type { ApiToken, CreatedApiToken } from '@infra/shared';
 import { useCreateToken, useDeleteToken, useTokens } from '@/api/tokens';
 import { apiErrorMessage } from '@/api/client';
+import { CardHeadRow } from '@/components/ink/CardHeadRow';
+import { InkGlyph } from '@/components/ink/InkGlyph';
 import { PageHeader } from '@/components/PageHeader';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -40,6 +35,9 @@ export function TokensPage() {
   const [opened, { open, close }] = useDisclosure(false);
   // The raw token, captured from the create response. Shown once, then cleared.
   const [created, setCreated] = useState<CreatedApiToken | null>(null);
+  // Keeps the token text while the reveal dialog animates closed (see onCloseAutoFocus below).
+  const lastToken = useRef('');
+  if (created) lastToken.current = created.token;
   const [copied, setCopied] = useState(false);
 
   const form = useForm<{ tokenName: string }>({
@@ -89,60 +87,62 @@ export function TokensPage() {
     <div className="space-y-6">
       <PageHeader
         title={t('tokens.title')}
-        subtitle={t('tokens.subtitle')}
         actions={
-          <Button onClick={openCreate}>
+          <Button size="sm" onClick={openCreate}>
             <IconPlus className="size-4" />
             {t('common.add')}
           </Button>
         }
       />
 
-      <Card className="overflow-hidden py-0">
+      <Card className="gap-0 overflow-hidden py-0">
+        <CardHeadRow title={t('tokens.title')} count={tokens?.length ?? 0} />
         <div className="overflow-x-auto">
           <Table className="min-w-[640px]">
             <TableHeader>
               <TableRow>
-                <TableHead className="text-muted-foreground">{t('tokens.colName')}</TableHead>
-                <TableHead className="text-muted-foreground">{t('tokens.colToken')}</TableHead>
-                <TableHead className="text-muted-foreground">{t('tokens.colCreated')}</TableHead>
-                <TableHead className="text-muted-foreground">{t('tokens.colLastUsed')}</TableHead>
-                <TableHead />
+                <TableHead className="pl-6">{t('tokens.colName')}</TableHead>
+                <TableHead>{t('tokens.colToken')}</TableHead>
+                <TableHead>{t('tokens.colCreated')}</TableHead>
+                <TableHead>{t('tokens.colLastUsed')}</TableHead>
+                <TableHead className="w-10 pr-6" />
               </TableRow>
             </TableHeader>
             <TableBody>
               {tokens?.map((tok) => (
                 <TableRow key={tok.uuid}>
-                  <TableCell className="font-semibold">{tok.tokenName}</TableCell>
+                  <TableCell className="pl-6 font-medium">{tok.tokenName}</TableCell>
                   <TableCell>
-                    <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
+                    <code className="rounded-sm bg-background px-1.5 py-0.5 font-mono text-xs">
                       {`${tok.tokenPrefix}…`}
                     </code>
                   </TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    {formatDateShort(tok.createdAt)}
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    {tok.lastUsedAt ? formatDateShort(tok.lastUsedAt) : t('tokens.lastUsedNever')}
-                  </TableCell>
+                  <TableCell>{formatDateShort(tok.createdAt)}</TableCell>
                   <TableCell>
+                    {tok.lastUsedAt ? (
+                      <span>{formatDateShort(tok.lastUsedAt)}</span>
+                    ) : (
+                      <span className="text-ink-2">{t('tokens.lastUsedNever')}</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="pr-6">
                     <div className="flex justify-end">
                       <Button
                         variant="ghost"
-                        size="icon"
-                        className="text-destructive hover:text-destructive"
+                        size="icon-xs"
+                        className="hover:text-destructive"
                         aria-label={t('common.delete')}
                         onClick={() => doDelete(tok)}
                       >
-                        <IconTrash className="size-4" />
+                        <IconTrash stroke={1.5} />
                       </Button>
                     </div>
                   </TableCell>
                 </TableRow>
               ))}
               {!isLoading && tokens?.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={5} className="py-6 text-center text-muted-foreground">
+                <TableRow className="hover:bg-transparent">
+                  <TableCell colSpan={5} className="py-8 text-center text-ink-2">
                     {t('tokens.empty')}
                   </TableCell>
                 </TableRow>
@@ -160,7 +160,7 @@ export function TokensPage() {
           <form onSubmit={submit} noValidate className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="token-name">
-                {t('tokens.fieldName')} <span className="text-destructive">*</span>
+                {t('tokens.fieldName')} <span className="text-ink-2">*</span>
               </Label>
               <Input
                 id="token-name"
@@ -182,18 +182,26 @@ export function TokensPage() {
       </Dialog>
 
       <Dialog open={!!created} onOpenChange={(o) => !o && closeReveal()}>
-        <DialogContent onInteractOutside={(e) => e.preventDefault()}>
+        <DialogContent
+          onInteractOutside={(e) => e.preventDefault()}
+          // The raw token stays on screen only while the dialog fades out, then is dropped.
+          onCloseAutoFocus={() => {
+            lastToken.current = '';
+          }}
+        >
           <DialogHeader>
             <DialogTitle>{t('tokens.reveal.title')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <Alert variant="destructive">
-              <IconAlertTriangle className="size-4" />
-              <AlertDescription>{t('tokens.reveal.warning')}</AlertDescription>
+            <Alert>
+              <InkGlyph state="warn" size={14} />
+              <AlertDescription className="text-foreground">
+                {t('tokens.reveal.warning')}
+              </AlertDescription>
             </Alert>
             <div className="flex items-center gap-1.5">
-              <code className="min-w-0 flex-1 rounded bg-muted px-1.5 py-0.5 font-mono text-xs break-all">
-                {created?.token}
+              <code className="min-w-0 flex-1 rounded-lg bg-background px-3 py-2.5 font-mono text-xs leading-relaxed break-all">
+                {created?.token ?? lastToken.current}
               </code>
               <Tooltip>
                 <TooltipTrigger asChild>

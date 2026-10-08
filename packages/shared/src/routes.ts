@@ -17,6 +17,7 @@ export const API = {
   BUILD_INFO: 'build-info',
   AUTH: 'auth',
   PROVIDERS: 'providers',
+  PROVIDER_ACCOUNTS: 'provider-accounts',
   PROJECTS: 'projects',
   SERVICES: 'services',
   PAYMENTS: 'payments',
@@ -47,10 +48,16 @@ export const API_SUB = {
   PROJECT_EMPTY: `${ID}/empty`,
   PROJECT_STATS: `${ID}/stats`,
   PROVIDER_SYNC_ALL: 'sync-all',
+  // Syncs every enabled account of the provider.
   PROVIDER_SYNC: `${ID}/sync`,
-  PROVIDER_SYNC_RUNS: `${ID}/sync-runs`,
-  PROVIDER_BALANCE_HISTORY: `${ID}/balance-history`,
-  PROVIDER_CREDENTIALS_REVEAL: `${ID}/credentials/reveal`,
+  PROVIDER_ACCOUNTS: `${ID}/accounts`,
+  PROVIDER_MERGE: `${ID}/merge`,
+  // Per-account routes (provider-accounts controller).
+  ACCOUNT_SYNC: `${ID}/sync`,
+  ACCOUNT_SYNC_RUNS: `${ID}/sync-runs`,
+  ACCOUNT_BALANCE_HISTORY: `${ID}/balance-history`,
+  ACCOUNT_SPEND: `${ID}/spend`,
+  ACCOUNT_CREDENTIALS_REVEAL: `${ID}/credentials/reveal`,
   // netcup OAuth2 device flow (in-panel token acquisition).
   PROVIDER_NETCUP_DEVICE_START: 'netcup/device/start',
   PROVIDER_NETCUP_DEVICE_POLL: 'netcup/device/poll',
@@ -92,14 +99,21 @@ export const API_PATH = {
     FAVICON: (uuid: string) => pathId(API.PROVIDERS, API_SUB.FAVICON, uuid),
     SYNC_ALL: path(API.PROVIDERS, API_SUB.PROVIDER_SYNC_ALL),
     SYNC: (uuid: string) => pathId(API.PROVIDERS, API_SUB.PROVIDER_SYNC, uuid),
-    SYNC_RUNS: (uuid: string) => pathId(API.PROVIDERS, API_SUB.PROVIDER_SYNC_RUNS, uuid),
-    BALANCE_HISTORY: (uuid: string) =>
-      pathId(API.PROVIDERS, API_SUB.PROVIDER_BALANCE_HISTORY, uuid),
-    CREDENTIALS_REVEAL: (uuid: string) =>
-      pathId(API.PROVIDERS, API_SUB.PROVIDER_CREDENTIALS_REVEAL, uuid),
+    ACCOUNTS: (uuid: string) => pathId(API.PROVIDERS, API_SUB.PROVIDER_ACCOUNTS, uuid),
+    MERGE: (uuid: string) => pathId(API.PROVIDERS, API_SUB.PROVIDER_MERGE, uuid),
     NETCUP_DEVICE_START: path(API.PROVIDERS, API_SUB.PROVIDER_NETCUP_DEVICE_START),
     NETCUP_DEVICE_POLL: path(API.PROVIDERS, API_SUB.PROVIDER_NETCUP_DEVICE_POLL),
     YANDEX_DISCOVER: path(API.PROVIDERS, API_SUB.PROVIDER_YANDEX_DISCOVER),
+  },
+  PROVIDER_ACCOUNTS: {
+    BY_ID: (uuid: string) => pathId(API.PROVIDER_ACCOUNTS, API_SUB.BY_ID, uuid),
+    SYNC: (uuid: string) => pathId(API.PROVIDER_ACCOUNTS, API_SUB.ACCOUNT_SYNC, uuid),
+    SYNC_RUNS: (uuid: string) => pathId(API.PROVIDER_ACCOUNTS, API_SUB.ACCOUNT_SYNC_RUNS, uuid),
+    BALANCE_HISTORY: (uuid: string) =>
+      pathId(API.PROVIDER_ACCOUNTS, API_SUB.ACCOUNT_BALANCE_HISTORY, uuid),
+    SPEND: (uuid: string) => pathId(API.PROVIDER_ACCOUNTS, API_SUB.ACCOUNT_SPEND, uuid),
+    CREDENTIALS_REVEAL: (uuid: string) =>
+      pathId(API.PROVIDER_ACCOUNTS, API_SUB.ACCOUNT_CREDENTIALS_REVEAL, uuid),
   },
   PROJECTS: {
     ROOT: path(API.PROJECTS),

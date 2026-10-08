@@ -14,9 +14,9 @@ export function DocsLink() {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <Button asChild variant="ghost" size="icon" aria-label={t('app.apiDocs')}>
+        <Button asChild variant="ghost" size="icon-sm" aria-label={t('app.apiDocs')}>
           <a href={`/${API_PREFIX}/docs`} target="_blank" rel="noopener noreferrer">
-            <IconFileText className="size-[18px]" />
+            <IconFileText stroke={1.5} className="size-4" />
           </a>
         </Button>
       </TooltipTrigger>

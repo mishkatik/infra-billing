@@ -97,7 +97,7 @@ export function SecretInput({
       disabled={disabled || revealing || (showMask && !onReveal)}
       aria-label={visible ? 'hide secret' : 'show secret'}
       className={cn(
-        'absolute right-0 flex w-9 items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-50',
+        'absolute right-0 flex w-9 items-center justify-center text-ink-3 transition-colors hover:text-foreground disabled:opacity-50',
         multiline && value && visible ? 'top-0 h-9' : 'inset-y-0',
       )}
       onClick={() => void toggle()}

@@ -1,280 +1,93 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '@generated/prisma/client';
 import {
+  ProviderAccount as ProviderAccountDto,
   Provider as ProviderDto,
-  ProviderCredentialsReveal,
   Service as ServiceDto,
   YandexDiscoverResult,
 } from '@infra/shared';
+import { ProviderAccountsRepository } from '@repositories/provider-accounts/provider-accounts.repository';
 import { ProvidersRepository } from '@repositories/providers/providers.repository';
-import {
-  AEZA_BASE_URLS,
-  AezaCredentials,
-  normalizeAezaBaseUrl,
-  parseAezaCredentials,
-} from '@connectors/aeza/aeza.types';
-import {
-  OpenRouterCredentials,
-  parseOpenRouterCredentials,
-} from '@connectors/openrouter/openrouter.types';
-import { VDSINA_BASE_URLS } from '@connectors/vdsina/vdsina.types';
 import { YandexConnector } from '../connectors/yandex/yandex.connector';
 import type { YandexCredentials } from '../connectors/yandex/yandex.types';
-import { CryptoService } from '../crypto/crypto.service';
 import { FaviconsService } from '../favicons/favicons.service';
-import { mapProvider, mapService } from '@common/mappers';
-import { CreateProviderDto, UpdateProviderDto, YandexDiscoverDto } from './dto/provider.dto';
+import { mapProvider, mapProviderAccount, mapService } from '@common/mappers';
+import { ProviderCredentialsService } from './provider-credentials.service';
+import { labelTaken, mergeError, mergedIdentity, mergedLabels } from './provider-rules';
+import {
+  CreateProviderDto,
+  MergeProviderDto,
+  UpdateProviderDto,
+  YandexDiscoverDto,
+} from './dto/provider.dto';
+import { CreateProviderAccountDto } from './dto/provider-account.dto';
 
 // Cap the discovery call so a hanging Yandex API request can't wedge the request handler.
 const DISCOVER_TIMEOUT_MS = 20_000;
+
+type ProviderWithAccounts = NonNullable<
+  Awaited<ReturnType<ProvidersRepository['findWithAccounts']>>
+>;
 
 @Injectable()
 export class ProvidersService {
   constructor(
     private readonly providers: ProvidersRepository,
-    private readonly crypto: CryptoService,
+    private readonly accounts: ProviderAccountsRepository,
+    private readonly credentials: ProviderCredentialsService,
     private readonly favicons: FaviconsService,
   ) {}
 
   async list(): Promise<ProviderDto[]> {
-    const rows = await this.providers.listWithCounts();
-    return rows.map((r) => this.withCredentialHints(mapProvider(r), r.kind, r.credentialsEnc));
+    const rows = await this.providers.listWithAccounts();
+    return rows.map((r) => this.toDto(r));
   }
 
   async getWithServices(uuid: string): Promise<ProviderDto & { services: ServiceDto[] }> {
     const p = await this.providers.findWithServices(uuid);
     if (!p) throw new NotFoundException('Provider not found');
-    const dto = this.withCredentialHints(mapProvider(p), p.kind, p.credentialsEnc);
-    return { ...dto, services: p.services.map(mapService) };
+    const services = p.accounts
+      .flatMap((a) => a.services)
+      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+    return { ...this.toDto(p), services: services.map(mapService) };
   }
 
-  /** Expose non-secret hints + secret-presence flags for the edit form (never plaintext). */
-  private withCredentialHints(dto: ProviderDto, kind: string, enc: Uint8Array | null): ProviderDto {
-    return {
-      ...dto,
-      ...this.nonSecretHints(kind, enc),
-      ...this.secretPresence(kind, enc),
-    };
-  }
-
-  private nonSecretHints(kind: string, enc: Uint8Array | null): Partial<ProviderDto> {
-    if (kind === 'selectel') {
-      const c = this.decodeCredentials(enc);
-      return {
-        accountId: c.accountId ?? null,
-        username: c.username ?? null,
-        projectName: c.projectName ?? null,
-      };
-    }
-    if (kind === '4vps') {
-      const c = this.decodeCredentials(enc);
-      return { panelId: c.panelId ?? null };
-    }
-    if (kind === 'vdsina') {
-      const c = this.decodeCredentials(enc);
-      return { baseUrl: c.baseUrl ?? null };
-    }
-    if (kind === 'aeza') {
-      return { baseUrl: this.decodeAezaCredentials(enc).baseUrl ?? null };
-    }
-    if (kind === 'openrouter') {
-      const c = this.decodeOpenRouterCredentials(enc);
-      return {
-        useCatalogNames: c.useCatalogNames !== false,
-      };
-    }
-    if (kind === 'beget' || kind === 'doubleservers') {
-      const c = this.decodeCredentials(enc);
-      return { username: c.username ?? null };
-    }
-    if (kind === 'cloudflare') {
-      const c = this.decodeCredentials(enc);
-      return { accountId: c.accountId ?? null };
-    }
-    if (kind === 'hostbill' || kind === 'billmgr') {
-      const c = this.decodeCredentials(enc);
-      return { baseUrl: c.baseUrl ?? null, username: c.username ?? null };
-    }
-    return {};
-  }
-
-  private secretPresence(kind: string, enc: Uint8Array | null): Partial<ProviderDto> {
-    if (kind === 'manual' || !enc) {
-      return {
-        hasToken: false,
-        hasPassword: false,
-        hasTotpSecret: false,
-        hasApiPassword: false,
-        hasSecretKey: false,
-      };
-    }
-    if (
-      kind === 'timeweb' ||
-      kind === 'hetzner' ||
-      kind === 'hostkey' ||
-      kind === 'netcup' ||
-      kind === 'netlen' ||
-      kind === 'vultr' ||
-      kind === 'linode' ||
-      kind === 'stormwall'
-    ) {
-      return { hasToken: true };
-    }
-    if (kind === 'openrouter') {
-      return { hasToken: Boolean(this.decodeOpenRouterCredentials(enc).token) };
-    }
-    if (kind === 'aeza') return { hasToken: Boolean(this.decodeAezaCredentials(enc).token) };
-    const c = this.decodeCredentials(enc);
-    if (kind === '4vps' || kind === 'vdsina') return { hasToken: Boolean(c.token) };
-    if (kind === 'cloudflare') return { hasToken: Boolean(c.apiToken) };
-    if (kind === 'porkbun') {
-      return { hasToken: Boolean(c.apiKey), hasSecretKey: Boolean(c.secretApiKey) };
-    }
-    if (kind === 'spaceship') {
-      return { hasToken: Boolean(c.apiKey), hasSecretKey: Boolean(c.apiSecret) };
-    }
-    if (kind === 'yandex') {
-      return { hasToken: Boolean(c.keyId && c.serviceAccountId && c.privateKey) };
-    }
-    if (kind === 'selectel') {
-      return { hasPassword: Boolean(c.password) };
-    }
-    if (kind === 'billmgr' || kind === 'hostbill') {
-      return { hasPassword: Boolean(c.password), hasTotpSecret: Boolean(c.totpSecret) };
-    }
-    if (kind === 'beget') {
-      return {
-        hasPassword: Boolean(c.password),
-        hasTotpSecret: Boolean(c.totpSecret),
-        hasApiPassword: Boolean(c.apiPassword),
-      };
-    }
-    if (kind === 'doubleservers') {
-      return { hasPassword: Boolean(c.password), hasTotpSecret: Boolean(c.totpSecret) };
-    }
-    return { hasToken: true };
-  }
-
-  /** Decrypt stored secrets for an explicit reveal (edit form eye toggle). */
-  async revealCredentials(uuid: string): Promise<ProviderCredentialsReveal> {
-    const existing = await this.providers.findCredentials(uuid);
-    if (!existing) throw new NotFoundException('Provider not found');
-    const { kind, credentialsEnc: enc } = existing;
-    if (!enc || kind === 'manual') return {};
-
-    if (
-      kind === 'timeweb' ||
-      kind === 'hetzner' ||
-      kind === 'hostkey' ||
-      kind === 'netcup' ||
-      kind === 'netlen' ||
-      kind === 'vultr' ||
-      kind === 'linode' ||
-      kind === 'stormwall'
-    ) {
-      const token = this.decryptRaw(enc);
-      return token ? { token } : {};
-    }
-
-    if (kind === 'openrouter') {
-      const token = this.decodeOpenRouterCredentials(enc).token;
-      return token ? { token } : {};
-    }
-
-    if (kind === 'aeza') {
-      const token = this.decodeAezaCredentials(enc).token;
-      return token ? { token } : {};
-    }
-
-    const c = this.decodeCredentials(enc);
-    if (kind === '4vps' || kind === 'vdsina') {
-      return c.token ? { token: c.token } : {};
-    }
-    if (kind === 'cloudflare') {
-      return c.apiToken ? { token: c.apiToken } : {};
-    }
-    if (kind === 'porkbun') {
-      const out: ProviderCredentialsReveal = {};
-      if (c.apiKey) out.token = c.apiKey;
-      if (c.secretApiKey) out.secretKey = c.secretApiKey;
-      return out;
-    }
-    if (kind === 'spaceship') {
-      const out: ProviderCredentialsReveal = {};
-      if (c.apiKey) out.token = c.apiKey;
-      if (c.apiSecret) out.secretKey = c.apiSecret;
-      return out;
-    }
-    if (kind === 'yandex') {
-      if (!c.keyId || !c.serviceAccountId || !c.privateKey) return {};
-      return {
-        token: JSON.stringify(
-          {
-            id: c.keyId,
-            service_account_id: c.serviceAccountId,
-            private_key: c.privateKey,
-          },
-          null,
-          2,
-        ),
-      };
-    }
-    if (kind === 'selectel') {
-      return c.password ? { password: c.password } : {};
-    }
-    if (kind === 'billmgr' || kind === 'hostbill') {
-      const out: ProviderCredentialsReveal = {};
-      if (c.password) out.password = c.password;
-      if (c.totpSecret) out.totpSecret = c.totpSecret;
-      return out;
-    }
-    if (kind === 'beget') {
-      const out: ProviderCredentialsReveal = {};
-      if (c.password) out.password = c.password;
-      if (c.totpSecret) out.totpSecret = c.totpSecret;
-      if (c.apiPassword) out.apiPassword = c.apiPassword;
-      return out;
-    }
-    if (kind === 'doubleservers') {
-      const out: ProviderCredentialsReveal = {};
-      if (c.password) out.password = c.password;
-      if (c.totpSecret) out.totpSecret = c.totpSecret;
-      return out;
-    }
-    const token = this.decryptRaw(enc);
-    return token ? { token } : {};
-  }
-
+  /** Creates the provider together with its first account. */
   async create(dto: CreateProviderDto): Promise<ProviderDto> {
+    const account = dto.account ?? {};
     const p = await this.providers.create({
       name: dto.name,
       kind: dto.kind,
       loginUrl: dto.loginUrl ?? null,
       iconName: dto.iconName ?? null,
       iconBg: dto.iconBg ?? null,
-      isPostpaid: dto.isPostpaid ?? false,
-      credentialsEnc: this.buildCredentials(dto.kind, dto),
+      accounts: {
+        create: {
+          label: account.label ?? null,
+          isPostpaid: account.isPostpaid ?? false,
+          credentialsEnc: this.credentials.buildCredentials(dto.kind, account),
+        },
+      },
     });
-    return this.withCredentialHints(mapProvider(p), p.kind, p.credentialsEnc);
+    return this.toDto(p);
   }
 
+  /** Identity only; account settings and credentials are edited through the account routes. */
   async update(uuid: string, dto: UpdateProviderDto): Promise<ProviderDto> {
-    const existing = await this.providers.findCredentials(uuid);
-    if (!existing) throw new NotFoundException('Provider not found');
+    await this.ensureExists(uuid);
     const data: Prisma.ProviderUpdateInput = {};
     if (dto.name !== undefined) data.name = dto.name;
     if (dto.loginUrl !== undefined) data.loginUrl = dto.loginUrl;
     if (dto.iconName !== undefined) data.iconName = dto.iconName;
     if (dto.iconBg !== undefined) data.iconBg = dto.iconBg;
-    if (dto.isPostpaid !== undefined) data.isPostpaid = dto.isPostpaid;
-    if (dto.isEnabled !== undefined) data.isEnabled = dto.isEnabled;
-    // Merge onto existing credentials so a partial edit works, e.g. adding only a TOTP
-    // secret to an existing BILLmanager provider without re-entering the password.
-    const creds = this.buildCredentials(existing.kind, dto, existing.credentialsEnc);
-    if (creds !== null) data.credentialsEnc = creds;
     const p = await this.providers.update(uuid, data);
     if (dto.loginUrl !== undefined) this.favicons.invalidateProvider(uuid);
-    return this.withCredentialHints(mapProvider(p), p.kind, p.credentialsEnc);
+    return this.toDto(p);
   }
 
   async remove(uuid: string): Promise<void> {
@@ -283,209 +96,49 @@ export class ProvidersService {
     this.favicons.invalidateProvider(uuid);
   }
 
-  // Encrypt creds for storage: timeweb/hetzner → raw token; hostbill/billmgr/selectel/4vps → JSON.
-  // Merged onto existingEnc so a partial edit (e.g. only a TOTP secret) keeps the rest. Returns null
-  // when nothing credential-related was supplied (update leaves creds intact).
-  private buildCredentials(
-    kind: string,
-    dto: {
-      token?: string;
-      baseUrl?: string;
-      username?: string;
-      password?: string;
-      totpSecret?: string;
-      accountId?: string;
-      projectName?: string;
-      panelId?: string;
-      apiPassword?: string;
-      secretKey?: string;
-      useCatalogNames?: boolean;
-    },
-    existingEnc?: Uint8Array | null,
-  ): Uint8Array<ArrayBuffer> | null {
-    if (kind === 'openrouter') {
-      if (!dto.token && dto.useCatalogNames === undefined) {
-        return null;
-      }
-      const base = this.decodeOpenRouterCredentials(existingEnc);
-      const token = dto.token ?? base.token;
-      if (!token) throw new BadRequestException('Provide the OpenRouter Management API key');
-      const creds: OpenRouterCredentials = {
-        token,
-        useCatalogNames:
-          dto.useCatalogNames !== undefined ? dto.useCatalogNames : base.useCatalogNames !== false,
-      };
-      return this.crypto.encrypt(JSON.stringify(creds));
+  /** Adds another account at the same hoster; the label must be unique within the provider. */
+  async addAccount(
+    providerUuid: string,
+    dto: CreateProviderAccountDto,
+  ): Promise<ProviderAccountDto> {
+    const p = await this.findWithAccounts(providerUuid);
+    if (labelTaken(p.accounts, dto.label)) {
+      throw new ConflictException('This provider already has an account with that label');
     }
-    if (kind === '4vps') {
-      // JSON { token, panelId? }; merge so a panel-id-only edit keeps the token.
-      if (!dto.token && !dto.panelId) return null;
-      const base = this.decodeCredentials(existingEnc);
-      const token = dto.token ?? base.token;
-      if (!token) throw new BadRequestException('Provide the 4VPS API token');
-      const creds: Record<string, string> = { token };
-      const panelId = dto.panelId ?? base.panelId;
-      if (panelId) creds.panelId = panelId;
-      return this.crypto.encrypt(JSON.stringify(creds));
-    }
-    if (kind === 'vdsina') {
-      // JSON { token, baseUrl? }; merge so a base-url-only edit keeps the token. Two official
-      // branches share one API; the base URL picks the branch and its billing currency
-      // (.ru — RUB, .com — USD). Anything else would leak the token to a foreign host.
-      if (!dto.token && !dto.baseUrl) return null;
-      const base = this.decodeCredentials(existingEnc);
-      const token = dto.token ?? base.token;
-      if (!token) throw new BadRequestException('Provide the VDSina API token');
-      const creds: Record<string, string> = { token };
-      const baseUrl = (dto.baseUrl ?? base.baseUrl)?.replace(/\/+$/, '');
-      if (baseUrl && !VDSINA_BASE_URLS[baseUrl]) {
-        throw new BadRequestException(
-          'VDSina base URL must be https://userapi.vdsina.ru or https://userapi.vdsina.com',
-        );
-      }
-      if (baseUrl) creds.baseUrl = baseUrl;
-      return this.crypto.encrypt(JSON.stringify(creds));
-    }
-    if (kind === 'aeza') {
-      // JSON { token, baseUrl? }; merge so a branch-only edit keeps the key. The .net and the
-      // Russian .ru branches are separate accounts on an identical API — the base URL picks one,
-      // and the allowlist keeps the key from reaching a foreign host.
-      if (!dto.token && !dto.baseUrl) return null;
-      const base = this.decodeAezaCredentials(existingEnc);
-      const token = dto.token ?? base.token;
-      if (!token) throw new BadRequestException('Provide the Aeza API key');
-      const creds: AezaCredentials = { token };
-      const supplied = dto.baseUrl ?? base.baseUrl;
-      if (supplied) {
-        const baseUrl = normalizeAezaBaseUrl(supplied);
-        if (!baseUrl) {
-          throw new BadRequestException(`Aeza base URL must be ${AEZA_BASE_URLS.join(' or ')}`);
-        }
-        creds.baseUrl = baseUrl;
-      }
-      return this.crypto.encrypt(JSON.stringify(creds));
-    }
-    if (kind === 'selectel') {
-      // Keystone service user: JSON { accountId, username, password, projectName? }; merge edits.
-      const supplied = dto.accountId || dto.username || dto.password || dto.projectName;
-      if (!supplied) return null;
-      const base = this.decodeCredentials(existingEnc);
-      const accountId = dto.accountId ?? base.accountId;
-      const username = dto.username ?? base.username;
-      const password = dto.password ?? base.password;
-      if (!accountId || !username || !password) {
-        throw new BadRequestException('Provide the account number, username and password together');
-      }
-      const creds: Record<string, string> = { accountId, username, password };
-      const projectName = dto.projectName ?? base.projectName;
-      if (projectName) creds.projectName = projectName;
-      return this.crypto.encrypt(JSON.stringify(creds));
-    }
-    if (kind === 'hostbill' || kind === 'billmgr') {
-      const supportsTotp = kind === 'billmgr' || kind === 'hostbill';
-      const supplied =
-        dto.baseUrl || dto.username || dto.password || (supportsTotp && dto.totpSecret);
-      if (!supplied) return null;
+    const a = await this.accounts.create({
+      providerUuid,
+      label: dto.label,
+      isPostpaid: dto.isPostpaid ?? false,
+      credentialsEnc: this.credentials.buildCredentials(p.kind, dto),
+    });
+    return mapProviderAccount(a, this.credentials.hints(p.kind, a.credentialsEnc));
+  }
 
-      const base = this.decodeCredentials(existingEnc);
-      const baseUrl = dto.baseUrl ?? base.baseUrl;
-      const username = dto.username ?? base.username;
-      const password = dto.password ?? base.password;
-      if (!baseUrl || !username || !password) {
-        throw new BadRequestException('Provide baseUrl, username and password together');
-      }
-      const creds: Record<string, string> = { baseUrl, username, password };
-      const totpSecret = supportsTotp ? (dto.totpSecret ?? base.totpSecret) : undefined;
-      if (totpSecret) creds.totpSecret = totpSecret;
-      return this.crypto.encrypt(JSON.stringify(creds));
-    }
-    if (kind === 'beget') {
-      // JSON { username (login), password, totpSecret?, apiPassword? }; merge so a partial edit
-      // (e.g. adding only the API password) keeps the rest.
-      const supplied = dto.username || dto.password || dto.totpSecret || dto.apiPassword;
-      if (!supplied) return null;
-      const base = this.decodeCredentials(existingEnc);
-      const username = dto.username ?? base.username;
-      const password = dto.password ?? base.password;
-      if (!username || !password) {
-        throw new BadRequestException('Provide the Beget account login and password together');
-      }
-      const creds: Record<string, string> = { username, password };
-      const totpSecret = dto.totpSecret ?? base.totpSecret;
-      if (totpSecret) creds.totpSecret = totpSecret;
-      const apiPassword = dto.apiPassword ?? base.apiPassword;
-      if (apiPassword) creds.apiPassword = apiPassword;
-      return this.crypto.encrypt(JSON.stringify(creds));
-    }
-    if (kind === 'doubleservers') {
-      // JSON { username (email), password, totpSecret? }; merge so a partial edit works.
-      const supplied = dto.username || dto.password || dto.totpSecret;
-      if (!supplied) return null;
-      const base = this.decodeCredentials(existingEnc);
-      const username = dto.username ?? base.username;
-      const password = dto.password ?? base.password;
-      if (!username || !password) {
-        throw new BadRequestException('Provide the Double Servers email and password together');
-      }
-      const creds: Record<string, string> = { username, password };
-      const totpSecret = dto.totpSecret ?? base.totpSecret;
-      if (totpSecret) creds.totpSecret = totpSecret;
-      return this.crypto.encrypt(JSON.stringify(creds));
-    }
-    if (kind === 'cloudflare') {
-      // JSON { accountId, apiToken }. `token` carries the API token. Merge so a partial edit works.
-      if (!dto.accountId && !dto.token) return null;
-      const base = this.decodeCredentials(existingEnc);
-      const accountId = dto.accountId ?? base.accountId;
-      const apiToken = dto.token ?? base.apiToken;
-      if (!accountId || !apiToken) {
-        throw new BadRequestException('Provide the Cloudflare account ID and API token together');
-      }
-      return this.crypto.encrypt(JSON.stringify({ accountId, apiToken }));
-    }
-    if (kind === 'porkbun') {
-      // JSON { apiKey, secretApiKey }. `token` carries the API key. Merge so a partial edit works.
-      if (!dto.token && !dto.secretKey) return null;
-      const base = this.decodeCredentials(existingEnc);
-      const apiKey = dto.token ?? base.apiKey;
-      const secretApiKey = dto.secretKey ?? base.secretApiKey;
-      if (!apiKey || !secretApiKey) {
-        throw new BadRequestException('Provide both the Porkbun API key and secret key');
-      }
-      return this.crypto.encrypt(JSON.stringify({ apiKey, secretApiKey }));
-    }
-    if (kind === 'spaceship') {
-      // JSON { apiKey, apiSecret }. `token` carries the API key. Merge so a partial edit works.
-      if (!dto.token && !dto.secretKey) return null;
-      const base = this.decodeCredentials(existingEnc);
-      const apiKey = dto.token ?? base.apiKey;
-      const apiSecret = dto.secretKey ?? base.apiSecret;
-      if (!apiKey || !apiSecret) {
-        throw new BadRequestException('Provide both the Spaceship API key and secret');
-      }
-      return this.crypto.encrypt(JSON.stringify({ apiKey, apiSecret }));
-    }
-    if (kind === 'yandex') {
-      // `token` carries the service-account authorized key (JSON); parse it into { keyId,
-      // serviceAccountId, privateKey }. Scope (folders, billing account) is auto-resolved, never
-      // stored. Nothing to merge — an edit without a new key leaves the stored one intact.
-      if (!dto.token) return null;
-      const key = this.parseYandexKey(dto.token);
-      if (!key.keyId || !key.serviceAccountId || !key.privateKey) {
-        throw new BadRequestException(
-          'Provide the Yandex Cloud service account authorized key (JSON)',
-        );
-      }
-      return this.crypto.encrypt(JSON.stringify(key));
-    }
-    if (kind !== 'manual' && dto.token) return this.crypto.encrypt(dto.token);
-    return null;
+  /**
+   * Folds the source provider into a target of the same kind: every source account (with its
+   * services, payments, balance history and sync log) moves over, the target keeps its identity
+   * and only borrows the fields it lacks, and the source is deleted.
+   */
+  async merge(sourceUuid: string, dto: MergeProviderDto): Promise<ProviderDto> {
+    const source = await this.findWithAccounts(sourceUuid);
+    const target = await this.findWithAccounts(dto.targetProviderUuid);
+    const error = mergeError(source, target);
+    if (error) throw new BadRequestException(error);
+    const merged = await this.providers.merge(
+      source.uuid,
+      target.uuid,
+      mergedLabels(source.name, source.accounts, target.accounts),
+      mergedIdentity(source, target),
+    );
+    this.favicons.invalidateProvider(source.uuid);
+    this.favicons.invalidateProvider(target.uuid);
+    return this.toDto(merged);
   }
 
   /**
    * Resolve the Yandex scope (folders scanned for servers + billing account) for the form badges,
    * using either the just-entered authorized key (create flow) or the stored credentials of an
-   * existing provider (edit flow).
+   * existing account (edit flow).
    */
   async discoverYandex(dto: YandexDiscoverDto): Promise<YandexDiscoverResult> {
     const creds = await this.yandexCredsFor(dto);
@@ -499,92 +152,26 @@ export class ProvidersService {
     }
   }
 
-  /** Resolve the auth part of the Yandex credentials from a raw key or a stored provider. */
   private async yandexCredsFor(dto: YandexDiscoverDto): Promise<YandexCredentials> {
-    if (dto.token) {
-      const key = this.parseYandexKey(dto.token);
-      if (!key.keyId || !key.serviceAccountId || !key.privateKey) {
-        throw new BadRequestException(
-          'Provide the Yandex Cloud service account authorized key (JSON)',
-        );
+    if (dto.token) return this.credentials.yandexCredsFromKey(dto.token);
+    if (dto.accountUuid) {
+      const existing = await this.accounts.findCredentials(dto.accountUuid);
+      if (existing?.provider.kind !== 'yandex') {
+        throw new NotFoundException('Yandex account not found');
       }
-      return {
-        keyId: key.keyId,
-        serviceAccountId: key.serviceAccountId,
-        privateKey: key.privateKey,
-      };
+      return this.credentials.yandexCredsFromStored(existing.credentialsEnc);
     }
-    if (dto.providerUuid) {
-      const existing = await this.providers.findCredentials(dto.providerUuid);
-      if (existing?.kind !== 'yandex') {
-        throw new NotFoundException('Yandex provider not found');
-      }
-      const c = this.decodeCredentials(existing.credentialsEnc);
-      if (!c.keyId || !c.serviceAccountId || !c.privateKey) {
-        throw new BadRequestException('Stored Yandex credentials are incomplete');
-      }
-      return {
-        keyId: c.keyId,
-        serviceAccountId: c.serviceAccountId,
-        privateKey: c.privateKey,
-      };
-    }
-    throw new BadRequestException('Provide the authorized key or an existing provider');
+    throw new BadRequestException('Provide the authorized key or an existing account');
   }
 
-  /** Parse a Yandex Cloud authorized-key JSON into the fields we sign the JWT with. */
-  private parseYandexKey(raw: string): {
-    keyId?: string;
-    serviceAccountId?: string;
-    privateKey?: string;
-  } {
-    let obj: { id?: string; service_account_id?: string; private_key?: string };
-    try {
-      obj = JSON.parse(raw);
-    } catch {
-      throw new BadRequestException('Yandex Cloud authorized key must be the JSON key file');
-    }
-    if (!obj.id || !obj.service_account_id || !obj.private_key) {
-      throw new BadRequestException(
-        'Yandex Cloud authorized key is missing id, service_account_id or private_key',
-      );
-    }
-    return { keyId: obj.id, serviceAccountId: obj.service_account_id, privateKey: obj.private_key };
+  private toDto(p: ProviderWithAccounts): ProviderDto {
+    return mapProvider(p, (a) => this.credentials.hints(p.kind, a.credentialsEnc));
   }
 
-  /** Decrypt the stored JSON credentials (hostbill/billmgr), or {} if none/unparseable. */
-  private decodeCredentials(enc?: Uint8Array | null): Record<string, string> {
-    if (!enc) return {};
-    try {
-      return JSON.parse(this.crypto.decrypt(enc)) as Record<string, string>;
-    } catch {
-      return {};
-    }
-  }
-
-  /**
-   * Aeza credentials: JSON { token, baseUrl? }, or the bare API key for providers saved before the
-   * branch field existed — hence its own decoder instead of `decodeCredentials`.
-   */
-  private decodeAezaCredentials(enc?: Uint8Array | null): Partial<AezaCredentials> {
-    if (!enc) return {};
-    const raw = this.decryptRaw(enc);
-    return raw ? parseAezaCredentials(raw) : {};
-  }
-
-  private decodeOpenRouterCredentials(enc?: Uint8Array | null): Partial<OpenRouterCredentials> {
-    if (!enc) return {};
-    const raw = this.decryptRaw(enc);
-    return raw ? parseOpenRouterCredentials(raw) : {};
-  }
-
-  private decryptRaw(enc: Uint8Array): string | null {
-    try {
-      const raw = this.crypto.decrypt(enc);
-      return raw || null;
-    } catch {
-      return null;
-    }
+  private async findWithAccounts(uuid: string): Promise<ProviderWithAccounts> {
+    const p = await this.providers.findWithAccounts(uuid);
+    if (!p) throw new NotFoundException('Provider not found');
+    return p;
   }
 
   private async ensureExists(uuid: string): Promise<void> {

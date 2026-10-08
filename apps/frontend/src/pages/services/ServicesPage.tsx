@@ -20,6 +20,7 @@ import {
 } from '@/api/services';
 import { useSettings } from '@/api/settings';
 import { PageHeader } from '@/components/PageHeader';
+import { ResetViewButton } from '@/components/ResetViewButton';
 import { Button } from '@/components/ui/button';
 import { useEnums } from '@/constants';
 import { useDisclosure } from '@/hooks/useDisclosure';
@@ -30,12 +31,14 @@ import { useCountryOptions } from '@/utils/countries';
 import { trimMoney } from '@/utils/format';
 import { buildRubMap } from '@/utils/money';
 import { notifyError, notifySuccess } from '@/utils/notify';
+import { accountDisplayName, buildAccountIndex } from '@/utils/providerState';
+import { accountsOf, impliedAccount } from './AccountSelect';
 import { BumpNextBillingDialog } from './BumpNextBillingDialog';
 import { ServiceDetailModal } from './ServiceDetailModal';
 import { ServiceFormModal } from './ServiceFormModal';
 import { LOCATED_TYPES } from './ServiceTypeIcon';
 import { clientMetaFromForm, metaString, toIso, type SForm } from './serviceForm';
-import { ServicesFilters } from './ServicesFilters';
+import { ServicesActivityControl, ServicesFilterPopover } from './ServicesFilters';
 import { SERVICE_SORT_KEYS, serviceSortAccessors } from './servicesSort';
 import { ServicesTable } from './ServicesTable';
 
@@ -80,7 +83,20 @@ export function ServicesPage() {
     setFilter((f) => ({ ...f, providerUuid: undefined }));
   if (isStaleUuid(filter.projectUuid, projects))
     setFilter((f) => ({ ...f, projectUuid: undefined }));
-  const { data: services, isLoading } = useServices(filter);
+  const { data: services, isLoading, isPlaceholderData } = useServices(filter);
+  // While a new filter loads, `services` still holds the previous rows; deep-link handling below
+  // must only act on the real result.
+  const settledServices = isPlaceholderData ? undefined : services;
+  // ?selected= can also arrive while this page is already mounted (the command palette): if the
+  // current filter hides that service, drop the filter so the row loads and its detail opens.
+  const selectedParam = searchParams.get('selected');
+  if (
+    selectedParam &&
+    settledServices &&
+    !settledServices.some((s) => s.uuid === selectedParam) &&
+    Object.values(filter).some((v) => v !== undefined)
+  )
+    setFilter({});
   const create = useCreateService();
   const update = useUpdateService();
   const del = useDeleteService();
@@ -92,7 +108,13 @@ export function ServicesPage() {
   const selected = services?.find((s) => s.uuid === detailUuid) ?? null;
 
   const providerOptions = (providers ?? []).map((p) => ({ value: p.uuid, label: p.name }));
-  const providerOf = (uuid: string) => providers?.find((p) => p.uuid === uuid);
+  const accountIndex = useMemo(() => buildAccountIndex(providers), [providers]);
+  const accountOf = (uuid: string) => accountIndex.get(uuid);
+  const mainLabel = t('common.accountMain');
+  const accountName = (s: Service) => {
+    const ref = accountOf(s.accountUuid);
+    return ref ? accountDisplayName(ref.provider, ref.account, mainLabel) : null;
+  };
   const projectOptions = (projects ?? []).map((p) => ({ value: p.uuid, label: p.name }));
   const projectOf = (uuid: string) => projects?.find((p) => p.uuid === uuid);
   // Default a new service to the default project (or the first one).
@@ -106,7 +128,7 @@ export function ServicesPage() {
     serviceSortAccessors({
       rub: buildRubMap(rates),
       base: settings?.baseCurrency ?? 'RUB',
-      providerOf,
+      accountName,
       projectOf,
       serviceTypeLabel: enums.serviceTypeLabel,
     }),
@@ -116,6 +138,7 @@ export function ServicesPage() {
   const form = useForm<SForm>({
     defaultValues: {
       providerUuid: '',
+      accountUuid: '',
       projectUuid: '',
       name: '',
       description: '',
@@ -176,6 +199,7 @@ export function ServicesPage() {
   const openCreate = () => {
     form.reset({
       providerUuid: providerOptions[0]?.value ?? '',
+      accountUuid: impliedAccount(accountsOf(providers, providerOptions[0]?.value ?? '')),
       projectUuid: defaultProjectUuid,
       name: '',
       description: '',
@@ -198,6 +222,7 @@ export function ServicesPage() {
     const vendorFromModel = model.split('/')[0]?.replace(/^~/, '').trim().toLowerCase() ?? '';
     form.reset({
       providerUuid: s.providerUuid,
+      accountUuid: s.accountUuid,
       projectUuid: s.projectUuid,
       name: s.name,
       description: s.description ?? '',
@@ -213,7 +238,7 @@ export function ServicesPage() {
     });
     setDetailUuid(s.uuid);
   };
-  useSelectedParam(services, openDetail);
+  useSelectedParam(settledServices, openDetail);
 
   const submit = form.handleSubmit(async (v) => {
     const meta = clientMetaFromForm(v);
@@ -224,7 +249,8 @@ export function ServicesPage() {
         await update.mutateAsync({
           uuid: selected.uuid,
           dto: {
-            providerUuid: v.providerUuid,
+            // Only a manual service can move between accounts; synced ones belong to their sync.
+            ...(selected.isManaged ? {} : { accountUuid: v.accountUuid }),
             projectUuid: v.projectUuid,
             name: v.name,
             description: v.description.trim() || null,
@@ -241,7 +267,7 @@ export function ServicesPage() {
         notifySuccess(t('services.updatedToast'));
       } else {
         await create.mutateAsync({
-          providerUuid: v.providerUuid,
+          accountUuid: v.accountUuid,
           projectUuid: v.projectUuid,
           name: v.name,
           ...(v.description.trim() ? { description: v.description.trim() } : {}),
@@ -298,7 +324,7 @@ export function ServicesPage() {
       // fails, re-clicking with "bump only" completes the operation without a duplicate.
       if (withPayment) {
         await createPayment.mutateAsync({
-          providerUuid: s.providerUuid,
+          accountUuid: s.accountUuid,
           serviceUuid: s.uuid,
           amount: s.cost,
           currency: s.currency,
@@ -319,36 +345,44 @@ export function ServicesPage() {
     }
   };
 
+  // The reset button doubles as the "view is not default" cue: a restored filter or sort is
+  // otherwise easy to miss on a list that just looks short or oddly ordered.
+  const viewActive = sort !== null || Object.values(filter).some((v) => v !== undefined);
+
   return (
     <div className="space-y-6">
       <PageHeader
         title={t('services.title')}
-        subtitle={t('services.subtitle')}
+        controls={<ServicesActivityControl filter={filter} setFilter={setFilter} />}
         actions={
-          <Button onClick={openCreate} disabled={providerOptions.length === 0}>
-            <IconPlus className="size-4" />
-            {t('common.add')}
-          </Button>
+          <>
+            {viewActive && (
+              <ResetViewButton
+                onClick={() => {
+                  setFilter({});
+                  resetSort();
+                }}
+              />
+            )}
+            <ServicesFilterPopover
+              filter={filter}
+              setFilter={setFilter}
+              providerOptions={providerOptions}
+              projectOptions={projectOptions}
+              typeOptions={typeOptions}
+            />
+            <Button size="sm" onClick={openCreate} disabled={providerOptions.length === 0}>
+              <IconPlus className="size-4" />
+              {t('common.add')}
+            </Button>
+          </>
         }
-      />
-
-      <ServicesFilters
-        filter={filter}
-        setFilter={setFilter}
-        providerOptions={providerOptions}
-        projectOptions={projectOptions}
-        typeOptions={typeOptions}
-        sortActive={sort !== null}
-        onReset={() => {
-          setFilter({});
-          resetSort();
-        }}
       />
 
       <ServicesTable
         services={sorted}
         isLoading={isLoading}
-        providerOf={providerOf}
+        accountOf={accountOf}
         projectOf={projectOf}
         serviceTypeLabel={enums.serviceTypeLabel}
         periodLabel={enums.periodLabel}
@@ -362,7 +396,7 @@ export function ServicesPage() {
         opened={createOpened}
         form={form}
         isPending={create.isPending}
-        providerOptions={providerOptions}
+        providers={providers}
         projectOptions={projectOptions}
         typeOptions={typeOptions}
         periodOptions={enums.periodOptions}
@@ -376,7 +410,7 @@ export function ServicesPage() {
       <ServiceDetailModal
         service={selected}
         form={form}
-        providerOptions={providerOptions}
+        providers={providers}
         projectOptions={projectOptions}
         typeOptions={typeOptions}
         periodOptions={enums.periodOptions}

@@ -1,14 +1,17 @@
 model Service {
   uuid String @id @default(uuid()) @map("uuid")
 
+  // Denormalized from the account (kept consistent by the composite FK below) so lists and
+  // breakdowns can filter and group by provider directly.
   providerUuid   String    @map("provider_uuid")
+  accountUuid    String    @map("account_uuid")
   projectUuid    String    @map("project_uuid")
   name           String    @map("name")
   description    String?   @map("description")
   type           String    @map("type")
   externalId     String?   @map("external_id")
   countryCode    String?   @default("XX") @map("country_code")
-  cost           Decimal   @db.Decimal(14, 2) @map("cost")
+  cost           Decimal   @map("cost") @db.Decimal(14, 2)
   currency       String    @map("currency")
   period         String    @map("period")
   nextBillingAt  DateTime? @map("next_billing_at")
@@ -20,13 +23,14 @@ model Service {
   meta           Json      @default("{}") @map("meta")
 
   createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt      @map("updated_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  provider Provider  @relation(fields: [providerUuid], references: [uuid], onDelete: Cascade)
-  project  Project   @relation(fields: [projectUuid], references: [uuid], onDelete: Restrict)
+  account  ProviderAccount @relation(fields: [accountUuid, providerUuid], references: [uuid, providerUuid], onDelete: Cascade, onUpdate: Cascade, map: "services_account_provider_fkey")
+  project  Project         @relation(fields: [projectUuid], references: [uuid], onDelete: Restrict)
   payments Payment[]
 
-  @@unique([providerUuid, externalId], map: "services_provider_external_id_key")
+  // Per account: two accounts at one hoster can report the same external id.
+  @@unique([accountUuid, externalId], map: "services_account_external_id_key")
   @@index([providerUuid], map: "services_provider_uuid_idx")
   @@index([projectUuid], map: "services_project_uuid_idx")
   @@map("services")

@@ -1,13 +1,13 @@
 import type { ReactNode } from 'react';
 
-// Neutral theme palette: keys pop in foreground, values keep restrained hues that read on
-// both the white light bg and the dark card/popover; punctuation stays muted (see <pre> below).
+// Quiet highlighting: no syntax rainbow, just text tones — keys in the main colour, strings in
+// the secondary one, literals italic, null faint; punctuation stays faint (see <pre> below).
 const CLS = {
   key: 'text-foreground',
-  string: 'text-teal-700 dark:text-teal-300',
-  number: 'text-blue-600 dark:text-blue-300',
-  boolean: 'text-amber-600 dark:text-amber-300',
-  nul: 'text-muted-foreground',
+  string: 'text-ink-2',
+  number: 'text-foreground',
+  boolean: 'italic text-foreground',
+  nul: 'text-ink-3',
 };
 
 // Tokenize pretty-printed JSON into colored spans. Safe by construction (no innerHTML).
@@ -42,7 +42,7 @@ export function JsonView({ data, maxHeight = 460 }: { data: unknown; maxHeight?:
   const text = JSON.stringify(data, null, 2);
   return (
     <pre
-      className="m-0 overflow-auto rounded-lg border bg-muted p-3 font-mono text-xs leading-relaxed break-words whitespace-pre-wrap text-muted-foreground"
+      className="m-0 overflow-auto rounded-lg bg-background p-4 font-mono text-xs leading-relaxed break-words whitespace-pre-wrap text-ink-3"
       style={{ maxHeight }}
     >
       {highlight(text)}

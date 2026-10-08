@@ -9,7 +9,7 @@ export function SettingsPage() {
   const { t } = useTranslation();
   return (
     <div className="space-y-6">
-      <PageHeader title={t('settings.title')} subtitle={t('settings.subtitle')} />
+      <PageHeader title={t('settings.title')} />
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <GeneralSettingsCard />

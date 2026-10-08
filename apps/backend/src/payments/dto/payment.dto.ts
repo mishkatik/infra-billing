@@ -15,6 +15,7 @@ export class PaginatedPaymentsDto extends createZodDto(paginatedPaymentsSchema) 
 
 export const paymentQuerySchema = z.object({
   providerUuid: uuidSchema.optional(),
+  accountUuid: uuidSchema.optional(),
   serviceUuid: uuidSchema.optional(),
   from: z.coerce.date().optional(),
   to: z.coerce.date().optional(),

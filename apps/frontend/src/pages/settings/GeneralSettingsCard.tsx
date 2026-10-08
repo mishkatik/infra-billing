@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { apiErrorMessage } from '@/api/client';
 import { useSettings, useUpdateSettings } from '@/api/settings';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -66,8 +66,11 @@ export function GeneralSettingsCard() {
 
   return (
     <Card>
+      <CardHeader>
+        <h2 className="text-[15px] leading-none font-medium">{t('settings.general')}</h2>
+      </CardHeader>
       <CardContent>
-        <form onSubmit={saveSettings} className="space-y-4">
+        <form onSubmit={saveSettings} className="space-y-5">
           <div className="space-y-1.5">
             <Label htmlFor="settings-base-currency">{t('settings.baseCurrency')}</Label>
             <Controller

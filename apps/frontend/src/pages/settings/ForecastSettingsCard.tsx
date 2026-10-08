@@ -1,14 +1,15 @@
 import { providerKindSupportsPaymentImport } from '@infra/shared';
-import { IconAlertTriangle, IconChartBar, IconInfoCircle, IconLoader2 } from '@tabler/icons-react';
+import { IconInfoCircle, IconLoader2 } from '@tabler/icons-react';
 import { useEffect, useMemo } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { apiErrorMessage } from '@/api/client';
 import { useProviders } from '@/api/providers';
 import { useSettings, useUpdateSettings } from '@/api/settings';
+import { InkGlyph } from '@/components/ink/InkGlyph';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
@@ -46,10 +47,10 @@ function ForecastToggle({
         className="mt-0.5"
       />
       <div className="space-y-1">
-        <Label htmlFor={id} className={cn(disabled && 'text-muted-foreground')}>
+        <Label htmlFor={id} className={cn(disabled && 'text-ink-2')}>
           {label}
         </Label>
-        <p className="text-xs text-muted-foreground">{description}</p>
+        <p className="text-[13px] text-ink-2">{description}</p>
       </div>
     </div>
   );
@@ -114,18 +115,17 @@ export function ForecastSettingsCard() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex flex-wrap items-center gap-2">
-          <IconChartBar className="size-5" />
-          {t('settings.forecast.title')}
-        </CardTitle>
-        <CardDescription>{t('settings.forecast.description')}</CardDescription>
+        <h2 className="text-[15px] leading-none font-medium">{t('settings.forecast.title')}</h2>
+        <CardDescription className="max-w-3xl">
+          {t('settings.forecast.description')}
+        </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={saveForecast} className="space-y-4">
+        <form onSubmit={saveForecast} className="space-y-5">
           {showWarn && (
-            <Alert className="border-warning/30 bg-warning/10 text-warning [&>svg]:text-warning">
-              <IconAlertTriangle className="size-4.5" />
-              <AlertDescription className="text-warning">
+            <Alert>
+              <InkGlyph state="warn" />
+              <AlertDescription className="text-foreground">
                 {t('settings.forecast.paymentImportWarn', {
                   missing: paymentImportCounts.missing,
                   total: paymentImportCounts.total,
@@ -135,7 +135,7 @@ export function ForecastSettingsCard() {
           )}
           {showOk && (
             <Alert>
-              <IconInfoCircle className="size-4.5" />
+              <IconInfoCircle />
               <AlertDescription>
                 {t('settings.forecast.paymentImportOk', {
                   total: paymentImportCounts.total,
@@ -144,7 +144,7 @@ export function ForecastSettingsCard() {
             </Alert>
           )}
 
-          <div className="space-y-4">
+          <div className="space-y-5">
             <Controller
               control={control}
               name="forecastTariffBackfill"

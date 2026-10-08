@@ -47,7 +47,7 @@ export function ProjectFormModal({
         <form onSubmit={onSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="project-name">
-              {t('projects.fieldName')} <span className="text-destructive">*</span>
+              {t('projects.fieldName')} <span className="text-ink-3">*</span>
             </Label>
             <Input
               id="project-name"
@@ -62,7 +62,7 @@ export function ProjectFormModal({
           </div>
           <div className="space-y-2">
             <Label htmlFor="project-favicon">{t('projects.fieldFavicon')}</Label>
-            <p className="text-xs text-muted-foreground">{t('projects.faviconHint')}</p>
+            <p className="text-xs text-ink-2">{t('projects.faviconHint')}</p>
             <Input
               id="project-favicon"
               placeholder={t('projects.faviconPlaceholder')}

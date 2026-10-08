@@ -3,6 +3,8 @@ import { LOCATED_TYPES } from './ServiceTypeIcon';
 
 export interface SForm {
   providerUuid: string;
+  // Required; set silently when the provider has a single account.
+  accountUuid: string;
   projectUuid: string;
   name: string;
   description: string;

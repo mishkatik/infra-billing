@@ -1,13 +1,13 @@
 model BalanceSnapshot {
   id BigInt @id @default(autoincrement()) @map("id")
 
-  providerUuid String   @map("provider_uuid")
-  balance      Decimal  @db.Decimal(14, 2) @map("balance")
-  currency     String   @map("currency")
-  capturedAt   DateTime @default(now()) @map("captured_at")
+  accountUuid String   @map("account_uuid")
+  balance     Decimal  @map("balance") @db.Decimal(14, 2)
+  currency    String   @map("currency")
+  capturedAt  DateTime @default(now()) @map("captured_at")
 
-  provider Provider @relation(fields: [providerUuid], references: [uuid], onDelete: Cascade)
+  account ProviderAccount @relation(fields: [accountUuid], references: [uuid], onDelete: Cascade)
 
-  @@index([providerUuid, capturedAt], map: "balance_snapshots_provider_captured_idx")
+  @@index([accountUuid, capturedAt], map: "balance_snapshots_account_captured_idx")
   @@map("balance_snapshots")
 }

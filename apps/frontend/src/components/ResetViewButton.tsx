@@ -10,8 +10,8 @@ import { Button } from '@/components/ui/button';
 export function ResetViewButton({ onClick }: { onClick: () => void }) {
   const { t } = useTranslation();
   return (
-    <Button variant="ghost" onClick={onClick}>
-      <IconFilterOff className="size-4" />
+    <Button variant="ghost" size="sm" onClick={onClick}>
+      <IconFilterOff className="size-3.5" />
       {t('common.resetView')}
     </Button>
   );

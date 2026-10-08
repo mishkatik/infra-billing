@@ -27,8 +27,12 @@ export function ThemeToggle() {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label={label} onClick={toggle}>
-          {isDark ? <IconSun className="size-[18px]" /> : <IconMoon className="size-[18px]" />}
+        <Button variant="ghost" size="icon-sm" aria-label={label} onClick={toggle}>
+          {isDark ? (
+            <IconSun stroke={1.5} className="size-4" />
+          ) : (
+            <IconMoon stroke={1.5} className="size-4" />
+          )}
         </Button>
       </TooltipTrigger>
       <TooltipContent>{label}</TooltipContent>

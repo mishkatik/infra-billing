@@ -1,3 +1,4 @@
+import type { Provider } from '@infra/shared';
 import { IconLoader2 } from '@tabler/icons-react';
 import type { FormEventHandler } from 'react';
 import { Controller, type UseFormReturn } from 'react-hook-form';
@@ -16,6 +17,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { trimMoney } from '@/utils/format';
+import { AccountSelect, accountsOf, impliedAccount } from '../services/AccountSelect';
 import type { PForm } from './paymentForm';
 
 // Radix Select forbids value="" — sentinel for the "no service" item.
@@ -30,7 +32,7 @@ interface PaymentFormModalProps {
   opened: boolean;
   form: UseFormReturn<PForm>;
   isPending: boolean;
-  providerOptions: Option[];
+  providers: Provider[] | undefined;
   serviceOptions: Option[];
   currencyOptions: Option[];
   onSubmit: FormEventHandler<HTMLFormElement>;
@@ -41,7 +43,7 @@ export function PaymentFormModal({
   opened,
   form,
   isPending,
-  providerOptions,
+  providers,
   serviceOptions,
   currencyOptions,
   onSubmit,
@@ -52,8 +54,10 @@ export function PaymentFormModal({
     control,
     register,
     setValue,
+    watch,
     formState: { errors },
   } = form;
+  const accounts = accountsOf(providers, watch('providerUuid'));
   return (
     <Dialog open={opened} onOpenChange={(o) => !o && onClose()}>
       <DialogContent>
@@ -68,7 +72,15 @@ export function PaymentFormModal({
               name="providerUuid"
               rules={{ validate: (v) => (v ? true : t('validation.selectProvider')) }}
               render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange}>
+                <Select
+                  value={field.value}
+                  onValueChange={(v) => {
+                    field.onChange(v);
+                    setValue('accountUuid', impliedAccount(accountsOf(providers, v)));
+                    // A service picked under the previous provider no longer fits.
+                    setValue('serviceUuid', '');
+                  }}
+                >
                   <SelectTrigger
                     id="payment-provider"
                     className="w-full"
@@ -77,9 +89,9 @@ export function PaymentFormModal({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {providerOptions.map((o) => (
-                      <SelectItem key={o.value} value={o.value}>
-                        {o.label}
+                    {(providers ?? []).map((p) => (
+                      <SelectItem key={p.uuid} value={p.uuid}>
+                        {p.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -90,6 +102,28 @@ export function PaymentFormModal({
               <p className="text-xs text-destructive">{errors.providerUuid.message}</p>
             )}
           </div>
+
+          {accounts.length > 1 && (
+            <Controller
+              control={control}
+              name="accountUuid"
+              rules={{ validate: (v) => (v ? true : t('validation.selectAccount')) }}
+              render={({ field }) => (
+                <AccountSelect
+                  id="payment-account"
+                  label={t('payments.fieldAccount')}
+                  accounts={accounts}
+                  value={field.value}
+                  onChange={(v) => {
+                    field.onChange(v);
+                    setValue('serviceUuid', '');
+                  }}
+                  error={errors.accountUuid?.message}
+                  className="space-y-1.5"
+                />
+              )}
+            />
+          )}
 
           <div className="space-y-1.5">
             <Label htmlFor="payment-service">
@@ -122,7 +156,7 @@ export function PaymentFormModal({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="payment-amount">
-                {t('payments.fieldAmount')} <span className="text-destructive">*</span>
+                {t('payments.fieldAmount')} <span className="text-ink-3">*</span>
               </Label>
               <Input
                 id="payment-amount"
@@ -160,7 +194,7 @@ export function PaymentFormModal({
 
           <div className="space-y-1.5">
             <Label htmlFor="payment-date">
-              {t('payments.fieldDate')} <span className="text-destructive">*</span>
+              {t('payments.fieldDate')} <span className="text-ink-3">*</span>
             </Label>
             <Controller
               control={control}

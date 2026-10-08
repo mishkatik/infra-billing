@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { CreateService, Service, UpdateService } from '@infra/shared';
 import { api } from './client';
 import { API_PATH, serviceTypeSchema, uuidSchema } from '@infra/shared';
@@ -28,9 +28,15 @@ export function parseServiceFilter(raw: unknown): ServiceFilter | null {
   return f;
 }
 
-export function useServices(filter: ServiceFilter = {}) {
+export function useServices(
+  filter: ServiceFilter = {},
+  { enabled = true }: { enabled?: boolean } = {},
+) {
   return useQuery({
+    enabled,
     queryKey: ['services', filter],
+    // Switching a filter or page keeps the current rows until the new ones arrive (no blank flash).
+    placeholderData: keepPreviousData,
     queryFn: async () => {
       const params: Record<string, string> = {};
       if (filter.providerUuid) params.providerUuid = filter.providerUuid;
@@ -47,7 +53,11 @@ export function useCreateService() {
   return useMutation({
     mutationFn: async (dto: CreateService) =>
       (await api.post<Service>(API_PATH.SERVICES.ROOT, dto)).data,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['services'] }),
+    // Service cost, period and next billing feed the dashboard summary.
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['services'] });
+      qc.invalidateQueries({ queryKey: ['analytics'] });
+    },
   });
 }
 
@@ -56,7 +66,10 @@ export function useUpdateService() {
   return useMutation({
     mutationFn: async ({ uuid, dto }: { uuid: string; dto: UpdateService }) =>
       (await api.patch<Service>(API_PATH.SERVICES.BY_ID(uuid), dto)).data,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['services'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['services'] });
+      qc.invalidateQueries({ queryKey: ['analytics'] });
+    },
   });
 }
 
@@ -66,6 +79,9 @@ export function useDeleteService() {
     mutationFn: async (uuid: string) => {
       await api.delete(API_PATH.SERVICES.BY_ID(uuid));
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['services'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['services'] });
+      qc.invalidateQueries({ queryKey: ['analytics'] });
+    },
   });
 }

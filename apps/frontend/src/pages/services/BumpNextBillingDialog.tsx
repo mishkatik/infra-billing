@@ -1,5 +1,6 @@
 import type { Service } from '@infra/shared';
-import { useTranslation } from 'react-i18next';
+import { useRef } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -28,24 +29,35 @@ export function BumpNextBillingDialog({
   onClose,
 }: BumpNextBillingDialogProps) {
   const { t } = useTranslation();
+  // The parent nulls `service` on close while the dialog is still fading out; keep showing the
+  // last one so the text doesn't vanish and the box doesn't shrink mid-animation.
+  const last = useRef({ service, nextDate });
+  if (service) last.current = { service, nextDate };
+  const shown = last.current;
+
   return (
     <Dialog open={!!service} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{t('services.bumpTitle')}</DialogTitle>
           <DialogDescription>
-            {service &&
-              t('services.bumpText', {
-                date: formatDateShort(nextDate),
-                amount: formatCost(service.cost, service.currency),
-              })}
+            {shown.service && (
+              <Trans
+                i18nKey="services.bumpText"
+                values={{
+                  date: formatDateShort(shown.nextDate),
+                  amount: formatCost(shown.service.cost, shown.service.currency),
+                }}
+                components={{ mono: <span className="text-foreground" /> }}
+              />
+            )}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className="flex-row flex-wrap gap-1.5 sm:justify-end">
-          <Button variant="outline" onClick={onClose} disabled={isPending}>
+          <Button variant="ghost" onClick={onClose} disabled={isPending}>
             {t('common.cancel')}
           </Button>
-          <Button variant="secondary" onClick={() => onConfirm(false)} disabled={isPending}>
+          <Button variant="outline" onClick={() => onConfirm(false)} disabled={isPending}>
             {t('services.bumpOnly')}
           </Button>
           <Button onClick={() => onConfirm(true)} disabled={isPending}>

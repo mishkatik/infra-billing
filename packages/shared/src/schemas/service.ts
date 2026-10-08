@@ -19,6 +19,7 @@ export type ServiceClientMeta = z.infer<typeof serviceClientMetaSchema>;
 export const serviceSchema = z.object({
   uuid: uuidSchema.describe('Service UUID'),
   providerUuid: uuidSchema.describe('Provider UUID'),
+  accountUuid: uuidSchema.describe('Provider account UUID'),
   projectUuid: uuidSchema.describe('Project UUID'),
   name: z.string().describe('Service name'),
   description: z.string().describe('Owner note about the service').nullable(),
@@ -41,25 +42,34 @@ export const serviceSchema = z.object({
 });
 export type Service = z.infer<typeof serviceSchema>;
 
-export const createServiceSchema = z.object({
-  providerUuid: uuidSchema.describe('Provider UUID'),
-  projectUuid: uuidSchema.describe('Project UUID'),
-  name: z.string().min(1).describe('Service name'),
-  description: z.string().trim().max(500).describe('Owner note about the service').optional(),
-  type: serviceTypeSchema.describe('Service type'),
-  cost: moneySchema.describe('Cost per period'),
-  currency: currencySchema.describe('Cost currency'),
-  period: periodSchema.describe('Billing period'),
-  countryCode: countryCodeSchema.describe('ISO country code').optional(),
-  nextBillingAt: isoDateSchema.describe('Next billing date').optional(),
-  isActive: z.boolean().describe('Counted in current expenses').optional(),
-  meta: serviceClientMetaSchema.describe('Display marker fields').optional(),
-});
+export const createServiceSchema = z
+  .object({
+    // The account the service is billed on. A bare providerUuid is still accepted when that
+    // provider has exactly one account (older API clients).
+    accountUuid: uuidSchema.describe('Provider account UUID').optional(),
+    providerUuid: uuidSchema.describe('Provider UUID (single-account providers)').optional(),
+    projectUuid: uuidSchema.describe('Project UUID'),
+    name: z.string().min(1).describe('Service name'),
+    description: z.string().trim().max(500).describe('Owner note about the service').optional(),
+    type: serviceTypeSchema.describe('Service type'),
+    cost: moneySchema.describe('Cost per period'),
+    currency: currencySchema.describe('Cost currency'),
+    period: periodSchema.describe('Billing period'),
+    countryCode: countryCodeSchema.describe('ISO country code').optional(),
+    nextBillingAt: isoDateSchema.describe('Next billing date').optional(),
+    isActive: z.boolean().describe('Counted in current expenses').optional(),
+    meta: serviceClientMetaSchema.describe('Display marker fields').optional(),
+  })
+  .refine((v) => Boolean(v.accountUuid || v.providerUuid), {
+    message: 'Provide the account (or a single-account provider)',
+  });
 export type CreateService = z.infer<typeof createServiceSchema>;
 
 export const updateServiceSchema = z.object({
   // Only honoured for manual services. Moving a synced one would orphan it from sync.
-  providerUuid: uuidSchema.describe('Provider UUID').optional(),
+  accountUuid: uuidSchema.describe('Provider account UUID').optional(),
+  // Same as on create: accepted for a provider with exactly one account.
+  providerUuid: uuidSchema.describe('Provider UUID (single-account providers)').optional(),
   // Reassign the service to another project (honoured for synced services too).
   projectUuid: uuidSchema.describe('Project UUID').optional(),
   name: z.string().min(1).describe('Service name').optional(),

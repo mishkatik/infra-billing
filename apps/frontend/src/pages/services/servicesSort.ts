@@ -1,4 +1,4 @@
-import type { Period, Project, Provider, Service } from '@infra/shared';
+import type { Period, Project, Service } from '@infra/shared';
 import type { SortValue } from '@/hooks/useTableSort';
 import { monthlyAmount, toBaseAmount } from '@/utils/money';
 
@@ -28,7 +28,8 @@ interface ServiceSortContext {
   rub: Map<string, number>;
   /** Base currency from settings. */
   base: string;
-  providerOf: (uuid: string) => Provider | undefined;
+  /** What the provider cell shows: "Provider · label" for multi-account providers. */
+  accountName: (s: Service) => string | null;
   projectOf: (uuid: string) => Project | undefined;
   /** Translated type label — the cell shows it, so the order must follow it. */
   serviceTypeLabel: (type: string) => string;
@@ -39,7 +40,7 @@ export function serviceSortAccessors(
 ): Record<ServiceSortKey, (s: Service) => SortValue> {
   return {
     name: (s) => s.name,
-    provider: (s) => ctx.providerOf(s.providerUuid)?.name ?? null,
+    provider: (s) => ctx.accountName(s),
     project: (s) => ctx.projectOf(s.projectUuid)?.name ?? null,
     type: (s) => ctx.serviceTypeLabel(s.type),
     // Monthly-normalized base-currency cost. Zero means "—"/onetime (no recurring

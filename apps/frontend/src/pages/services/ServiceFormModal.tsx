@@ -1,3 +1,4 @@
+import type { Provider } from '@infra/shared';
 import { IconLoader2 } from '@tabler/icons-react';
 import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
@@ -11,7 +12,7 @@ interface ServiceFormModalProps {
   opened: boolean;
   form: UseFormReturn<SForm>;
   isPending: boolean;
-  providerOptions: { value: string; label: string }[];
+  providers: Provider[] | undefined;
   projectOptions: { value: string; label: string }[];
   typeOptions: { value: string; label: string }[];
   periodOptions: { value: string; label: string }[];
@@ -27,7 +28,7 @@ export function ServiceFormModal({
   opened,
   form,
   isPending,
-  providerOptions,
+  providers,
   projectOptions,
   typeOptions,
   periodOptions,
@@ -49,7 +50,7 @@ export function ServiceFormModal({
           <ServiceFormFields
             form={form}
             editing={null}
-            providerOptions={providerOptions}
+            providers={providers}
             projectOptions={projectOptions}
             typeOptions={typeOptions}
             periodOptions={periodOptions}

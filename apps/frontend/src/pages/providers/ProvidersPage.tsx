@@ -1,19 +1,19 @@
-import type { Provider, ProviderKind } from '@infra/shared';
-import { IconLoader2, IconPlus, IconRefresh } from '@tabler/icons-react';
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import type { Provider } from '@infra/shared';
+import { IconPlus, IconRefresh } from '@tabler/icons-react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import { apiErrorMessage } from '@/api/client';
 import {
-  useCreateProvider,
-  useDeleteProvider,
   useProviders,
+  useSyncAccount,
+  useSyncActivity,
   useSyncAllProviders,
-  useSyncProvider,
-  useUpdateProvider,
 } from '@/api/providers';
 import { useRates } from '@/api/rates';
 import { useSettings } from '@/api/settings';
+import { InkGlyph } from '@/components/ink/InkGlyph';
+import { Segmented } from '@/components/ink/Segmented';
 import { PageHeader } from '@/components/PageHeader';
 import { ResetViewButton } from '@/components/ResetViewButton';
 import { Button } from '@/components/ui/button';
@@ -21,37 +21,36 @@ import { useEnums } from '@/constants';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { useSelectedParam } from '@/hooks/useSelectedParam';
 import { sortRows, useTableSort } from '@/hooks/useTableSort';
-import { formatDate } from '@/utils/format';
 import { buildRubMap } from '@/utils/money';
 import { notifyError, notifySuccess } from '@/utils/notify';
+import { accountSyncState, countSyncStates } from '@/utils/providerState';
+import { notifySyncAll, notifySyncRun } from '@/utils/syncNotify';
 import { ProviderDetailModal } from './ProviderDetailModal';
 import { ProviderFormModal } from './ProviderFormModal';
-import { ProvidersTable } from './ProvidersTable';
-import { DEFAULT_ICON_BG, canonicalTablerIconName } from '@/components/tablerIconCatalog';
-import {
-  EMPTY_FORM,
-  type FormValues,
-  buildCredentials,
-  validateProviderCredentials,
-} from './providerForm';
+import { type ProviderTableRow, ProvidersTable } from './ProvidersTable';
 import { PROVIDER_SORT_KEYS, providerSortAccessors } from './providersSort';
+
+// States the header filter understands (the sidebar sync group links here with ?state=).
+const STATE_FILTERS = ['ok', 'failed', 'off', 'never'] as const;
+type StateFilter = (typeof STATE_FILTERS)[number] | 'all';
+
+function parseStateFilter(raw: string | null): StateFilter {
+  return STATE_FILTERS.find((s) => s === raw) ?? 'all';
+}
 
 export function ProvidersPage() {
   const { t, i18n } = useTranslation();
   const enums = useEnums();
   const { data: providers, isLoading } = useProviders();
   const { data: rates } = useRates();
-  const create = useCreateProvider();
-  const update = useUpdateProvider();
-  const del = useDeleteProvider();
-  const sync = useSyncProvider();
+  const sync = useSyncAccount();
   const syncAll = useSyncAllProviders();
   const { data: settings } = useSettings();
   // The detail modal reads the provider from the query cache by uuid, so counters/balance/sync
   // status stay live while the modal is open (e.g. after "Sync now").
-  const [detailUuid, setDetailUuid] = useState<string | null>(null);
-  const selected = providers?.find((p) => p.uuid === detailUuid) ?? null;
-  const [createOpened, { open: openCreateModal, close: closeCreateModal }] = useDisclosure(false);
+  const [detail, setDetail] = useState<{ uuid: string; account: string | null } | null>(null);
+  const selected = providers?.find((p) => p.uuid === detail?.uuid) ?? null;
+  const [createOpened, { open: openCreate, close: closeCreate }] = useDisclosure(false);
 
   const { sort, toggleSort, resetSort } = useTableSort('providers-sort', PROVIDER_SORT_KEYS);
   const sorted = sortRows(
@@ -61,122 +60,94 @@ export function ProvidersPage() {
     i18n.language,
   );
 
-  const form = useForm<FormValues>({ defaultValues: EMPTY_FORM, mode: 'onSubmit' });
+  const activity = useSyncActivity();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const stateFilter = parseStateFilter(searchParams.get('state'));
+  const setStateFilter = (next: StateFilter) =>
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        if (next === 'all') params.delete('state');
+        else params.set('state', next);
+        return params;
+      },
+      { replace: true },
+    );
+  // Counts and the filter go by the stored sync result, not the live one: an account that is being
+  // synced must not drop out of "Failed" (or every one out of "Synced" during sync all) until the
+  // run ends. They count accounts; a provider stays listed while any of its accounts matches, with
+  // only the matching ones under it.
+  const counts = countSyncStates(providers);
+  const accountsTotal = providers?.reduce((n, p) => n + p.accounts.length, 0) ?? 0;
+  const rows: ProviderTableRow[] | undefined = sorted
+    ?.map((p) => ({
+      provider: p,
+      accounts:
+        stateFilter === 'all'
+          ? p.accounts
+          : p.accounts.filter((a) => accountSyncState(p.kind, a) === stateFilter),
+    }))
+    .filter((r) => stateFilter === 'all' || r.accounts.length > 0);
+  const filterOption = (value: StateFilter, label: string, count: number) => ({
+    value,
+    label: (
+      <>
+        {label}
+        <span className="font-normal text-ink-3">{count}</span>
+      </>
+    ),
+  });
+  const filterOptions = [
+    filterOption('all', t('common.all'), accountsTotal),
+    filterOption('ok', t('syncState.ok'), counts.ok),
+    filterOption('failed', t('syncState.failed'), counts.failed),
+    filterOption('off', t('syncState.off'), counts.off),
+    ...(counts.never > 0 || stateFilter === 'never'
+      ? [filterOption('never', t('syncState.never'), counts.never)]
+      : []),
+  ];
 
-  const openCreate = () => {
-    form.reset({ ...EMPTY_FORM });
-    openCreateModal();
-  };
-  const openDetail = (p: Provider) => {
-    form.reset({
-      ...EMPTY_FORM,
-      name: p.name,
-      kind: p.kind,
-      loginUrl: p.loginUrl ?? '',
-      iconName: p.iconName ?? '',
-      iconBg: p.iconBg ?? '',
-      // Non-secret fields are prefilled; secrets stay blank until reveal-on-demand.
-      baseUrl: p.baseUrl ?? '',
-      username: p.username ?? '',
-      accountId: p.accountId ?? '',
-      projectName: p.projectName ?? '',
-      panelId: p.panelId ?? '',
-      isPostpaid: p.isPostpaid,
-      useCatalogNames: p.useCatalogNames !== false,
-    });
-    setDetailUuid(p.uuid);
-  };
-  useSelectedParam(providers, openDetail);
+  // Deep links: ?selected=<provider> opens the modal, an accompanying ?account=<uuid> focuses that
+  // account's card. The account param is read when the modal opens and dropped right after.
+  const accountParam = searchParams.get('account');
+  useSelectedParam(providers, (p: Provider) => setDetail({ uuid: p.uuid, account: accountParam }));
+  useEffect(() => {
+    if (!accountParam || searchParams.has('selected')) return;
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        params.delete('account');
+        return params;
+      },
+      { replace: true },
+    );
+  }, [accountParam, searchParams, setSearchParams]);
 
-  const doSync = async (uuid: string) => {
+  const syncAccount = async (uuid: string) => {
     try {
-      const run = await sync.mutateAsync(uuid);
-      if (run.status === 'ok')
-        notifySuccess(t('providers.syncedOne', { count: run.servicesFound }));
-      else notifyError((run.error ?? '').slice(0, 200) || t('providers.syncFailed'));
+      notifySyncRun(t, await sync.mutateAsync(uuid));
     } catch (e) {
       notifyError(apiErrorMessage(e));
     }
   };
 
-  // Instant on/off from the detail modal footer. The form deliberately does not carry
-  // isEnabled, so a later Save can't revert it.
-  const [togglingUuid, setTogglingUuid] = useState<string | null>(null);
-  const toggleEnabled = async (p: Provider) => {
-    setTogglingUuid(p.uuid);
-    try {
-      await update.mutateAsync({ uuid: p.uuid, dto: { isEnabled: !p.isEnabled } });
-      notifySuccess(
-        t(p.isEnabled ? 'providers.disabledToast' : 'providers.enabledToast', { name: p.name }),
-      );
-    } catch (e) {
-      notifyError(apiErrorMessage(e));
-    } finally {
-      setTogglingUuid(null);
-    }
-  };
-
-  const submit = form.handleSubmit(async (v) => {
-    const err = validateProviderCredentials(v, t, { requireCreds: !selected });
-    if (err) {
-      notifyError(err);
+  // A provider row syncs every enabled account; several runs end in one summary toast.
+  const syncProvider = async (p: Provider) => {
+    const enabled = p.accounts.filter((a) => a.isEnabled);
+    if (enabled.length <= 1) {
+      if (enabled[0]) await syncAccount(enabled[0].uuid);
       return;
     }
-    const creds = buildCredentials(v);
-    const iconName = canonicalTablerIconName(v.iconName);
-    const icon = iconName
-      ? { iconName, iconBg: v.iconBg || DEFAULT_ICON_BG }
-      : { iconName: null as string | null, iconBg: null as string | null };
-    try {
-      let saved: Provider;
-      if (selected) {
-        saved = await update.mutateAsync({
-          uuid: selected.uuid,
-          dto: {
-            name: v.name,
-            loginUrl: v.loginUrl || undefined,
-            ...icon,
-            isPostpaid: v.isPostpaid,
-            ...creds,
-          },
-        });
-        setDetailUuid(null);
-      } else {
-        saved = await create.mutateAsync({
-          name: v.name,
-          kind: v.kind as ProviderKind,
-          loginUrl: v.loginUrl || undefined,
-          ...(iconName ? { iconName, iconBg: v.iconBg || DEFAULT_ICON_BG } : {}),
-          isPostpaid: v.isPostpaid,
-          ...creds,
-        });
-        closeCreateModal();
-      }
-      notifySuccess(selected ? t('providers.updated') : t('providers.created'));
-      // Auto-sync syncable providers so credential/token changes take effect right away
-      // (not a switched-off one: its sync endpoint answers 400).
-      if (saved.kind !== 'manual' && saved.isEnabled) void doSync(saved.uuid);
-    } catch (e) {
-      notifyError(apiErrorMessage(e));
-    }
-  });
+    const results = await Promise.allSettled(enabled.map((a) => sync.mutateAsync(a.uuid)));
+    const ok = results.filter((r) => r.status === 'fulfilled' && r.value.status === 'ok').length;
+    const failed = results.length - ok;
+    if (failed === 0) notifySuccess(t('providers.account.syncedMany', { count: ok }));
+    else notifyError(t('providers.syncedMixed', { ok, failed }));
+  };
 
   const doSyncAll = async () => {
     try {
-      const res = await syncAll.mutateAsync();
-      if (res.failed === 0) notifySuccess(t('providers.syncedAll', { count: res.ok }));
-      else notifyError(t('providers.syncedMixed', { ok: res.ok, failed: res.failed }));
-    } catch (e) {
-      notifyError(apiErrorMessage(e));
-    }
-  };
-
-  const doDelete = async (p: Provider) => {
-    if (!window.confirm(t('providers.confirmDelete', { name: p.name }))) return;
-    try {
-      await del.mutateAsync(p.uuid);
-      setDetailUuid(null);
-      notifySuccess(t('common.deleted'));
+      notifySyncAll(t, await syncAll.mutateAsync());
     } catch (e) {
       notifyError(apiErrorMessage(e));
     }
@@ -184,68 +155,73 @@ export function ProvidersPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <PageHeader
-          title={t('providers.title')}
-          subtitle={t('providers.subtitle')}
-          actions={
-            <>
-              {sort && <ResetViewButton onClick={resetSort} />}
-              <Button variant="outline" disabled={syncAll.isPending} onClick={doSyncAll}>
-                {syncAll.isPending ? (
-                  <IconLoader2 className="size-4 animate-spin" />
-                ) : (
-                  <IconRefresh className="size-4" />
-                )}
-                {t('providers.syncAll')}
-              </Button>
-              <Button onClick={openCreate}>
-                <IconPlus className="size-4" />
-                {t('common.add')}
-              </Button>
-            </>
-          }
-        />
-        {settings?.nextSyncAt && (
-          <p className="mt-1 text-sm text-muted-foreground">
-            {t('providers.nextSync', { when: formatDate(settings.nextSyncAt) })}
-          </p>
-        )}
-      </div>
+      <PageHeader
+        title={t('providers.title')}
+        controls={
+          <Segmented
+            value={stateFilter}
+            onChange={setStateFilter}
+            options={filterOptions}
+            ariaLabel={t('providers.stateFilter')}
+          />
+        }
+        actions={
+          <>
+            {(sort || stateFilter !== 'all') && (
+              <ResetViewButton
+                onClick={() => {
+                  resetSort();
+                  setStateFilter('all');
+                }}
+              />
+            )}
+            {/* A sync-all may also be running from the palette or the dashboard. */}
+            <Button variant="ghost" size="sm" disabled={activity.all} onClick={doSyncAll}>
+              {activity.all ? (
+                <InkGlyph state="progress" />
+              ) : (
+                <IconRefresh className="size-3.5" stroke={1.5} />
+              )}
+              {t('providers.syncAll')}
+            </Button>
+            <Button size="sm" onClick={openCreate}>
+              <IconPlus className="size-3.5" stroke={1.5} />
+              {t('common.add')}
+            </Button>
+          </>
+        }
+      />
 
       <ProvidersTable
-        providers={sorted}
+        rows={rows}
         isLoading={isLoading}
-        syncingUuid={sync.isPending ? sync.variables : undefined}
+        activity={activity}
+        filtered={stateFilter !== 'all' && (providers?.length ?? 0) > 0}
+        nextSyncAt={settings?.nextSyncAt}
         kindLabel={enums.providerKindLabel}
         sort={sort}
         onToggleSort={toggleSort}
-        onRowClick={openDetail}
-        onSync={doSync}
+        onRowClick={(p, account) => setDetail({ uuid: p.uuid, account: account ?? null })}
+        onSyncProvider={syncProvider}
+        onSyncAccount={syncAccount}
       />
 
       <ProviderFormModal
         opened={createOpened}
-        form={form}
         kindOptions={enums.providerKindOptions}
-        isPending={create.isPending}
-        onSubmit={submit}
-        onClose={closeCreateModal}
+        onSyncAccount={syncAccount}
+        onClose={closeCreate}
       />
 
       <ProviderDetailModal
         provider={selected}
-        form={form}
+        providers={providers ?? []}
+        focusAccountUuid={detail?.account ?? null}
         kindOptions={enums.providerKindOptions}
         kindLabel={enums.providerKindLabel}
-        isSaving={update.isPending}
-        isSyncing={sync.isPending && sync.variables === selected?.uuid}
-        isToggling={togglingUuid !== null && togglingUuid === selected?.uuid}
-        onSubmit={submit}
-        onSync={doSync}
-        onToggleEnabled={toggleEnabled}
-        onDelete={doDelete}
-        onClose={() => setDetailUuid(null)}
+        onSyncAccount={syncAccount}
+        onOpenProvider={(uuid) => setDetail({ uuid, account: null })}
+        onClose={() => setDetail(null)}
       />
     </div>
   );

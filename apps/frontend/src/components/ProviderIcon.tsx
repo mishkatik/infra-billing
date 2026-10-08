@@ -8,8 +8,9 @@ import { type IconTone, analyzeIconTone, toneOf } from '@/utils/iconTone';
 // icons that carry an opaque plate show that plate with rounded corners, transparent glyphs
 // float on the row. The one exception is contrast rescue, decided from the icon's own
 // luminance via data-tone + theme variants (no theme subscription in JS): a white glyph gets a
-// dark plate on the light theme, a black glyph a light one on the dark theme. Only the letter
-// placeholder keeps a grey tile. A custom Tabler icon + bg overrides all of this.
+// dark plate in the light theme, a black glyph a light plate in the dark one. Only the letter
+// placeholder keeps a tile. A custom Tabler icon + bg overrides all of this. Every image renders
+// in grayscale: the stored colours still read as distinct grays.
 
 interface Resolved {
   key: string;
@@ -54,14 +55,15 @@ export function ProviderIcon({
   const favicon = current?.src ?? null;
   const tone = current?.tone ?? null;
   const initial = (name.trim().charAt(0) || '?').toUpperCase();
-  const radius = Math.round(size * 0.25);
+  // Same proportion as an 8px corner on a 32px tile, so small and large icons look alike.
+  const radius = Math.max(3, Math.round(size * 0.25));
 
   if (TablerIcon) {
     const bg = iconBg || DEFAULT_ICON_BG;
     const fg = iconFgForBg(bg);
     return (
       <div
-        className="flex shrink-0 items-center justify-center ring-1 ring-black/10 ring-inset select-none"
+        className="flex shrink-0 items-center justify-center ring-1 ring-foreground/10 ring-inset grayscale select-none"
         style={{ width: size, height: size, borderRadius: radius, backgroundColor: bg, color: fg }}
       >
         {createElement(TablerIcon, {
@@ -78,10 +80,10 @@ export function ProviderIcon({
     <div
       data-tone={toneOf(tone) ?? undefined}
       className={cn(
-        'flex shrink-0 items-center justify-center overflow-hidden select-none',
+        'flex shrink-0 items-center justify-center overflow-hidden grayscale select-none',
         favicon
-          ? 'data-[tone=light]:bg-neutral-800 dark:data-[tone=light]:bg-transparent dark:data-[tone=dark]:bg-neutral-200'
-          : 'bg-secondary ring-1 ring-foreground/10 ring-inset',
+          ? 'data-[tone=light]:bg-foreground dark:data-[tone=light]:bg-transparent dark:data-[tone=dark]:bg-foreground'
+          : 'bg-secondary',
       )}
       style={{ width: size, height: size, borderRadius: radius }}
     >
@@ -95,7 +97,7 @@ export function ProviderIcon({
         />
       ) : (
         <span
-          className="font-semibold text-foreground/70"
+          className="font-medium text-ink-2"
           style={{ fontSize: Math.max(10, Math.round(size * 0.46)) }}
         >
           {initial}

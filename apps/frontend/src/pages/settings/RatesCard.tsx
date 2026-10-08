@@ -3,9 +3,10 @@ import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { apiErrorMessage } from '@/api/client';
 import { useAddRate, useBackfillRates, useRates, useRefreshRates } from '@/api/rates';
+import { CardHeadRow } from '@/components/ink/CardHeadRow';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -71,13 +72,17 @@ export function RatesCard() {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{t('settings.rates.title')}</CardTitle>
-        <CardAction className="flex flex-wrap gap-2">
+    <Card className="gap-0 overflow-hidden py-0">
+      <CardHeadRow
+        title={t('settings.rates.title')}
+        count={rates?.length ?? 0}
+        className="flex-wrap"
+      >
+        <div className="flex flex-wrap gap-1">
           <Button
             type="button"
-            variant="secondary"
+            variant="ghost"
+            size="sm"
             disabled={backfill.isPending}
             onClick={doBackfill}
           >
@@ -90,7 +95,8 @@ export function RatesCard() {
           </Button>
           <Button
             type="button"
-            variant="secondary"
+            variant="ghost"
+            size="sm"
             disabled={refresh.isPending}
             onClick={doRefresh}
           >
@@ -101,36 +107,40 @@ export function RatesCard() {
             )}
             {t('settings.rates.refreshFromCbr')}
           </Button>
-        </CardAction>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <form onSubmit={submitRate}>
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="w-[120px] space-y-1.5">
-              <Label htmlFor="rate-code">{t('settings.rates.code')}</Label>
-              <Input
-                id="rate-code"
-                placeholder={t('settings.rates.codePlaceholder')}
-                aria-invalid={!!errors.code}
-                {...register('code', {
-                  validate: (v) => /^[A-Za-z]{3,4}$/.test(v) || t('validation.currencyCode'),
-                })}
-              />
-              {errors.code && <p className="text-xs text-destructive">{errors.code.message}</p>}
-            </div>
-            <div className="w-[160px] space-y-1.5">
-              <Label htmlFor="rate-value">{t('settings.rates.rate')}</Label>
-              <Input
-                id="rate-value"
-                placeholder={t('settings.rates.ratePlaceholder')}
-                aria-invalid={!!errors.rate}
-                {...register('rate', {
-                  validate: (v) => /^\d+(\.\d{1,8})?$/.test(v) || t('validation.ratePositive'),
-                })}
-              />
-              {errors.rate && <p className="text-xs text-destructive">{errors.rate.message}</p>}
-            </div>
-            <Button type="submit" variant="outline" disabled={addRate.isPending}>
+        </div>
+      </CardHeadRow>
+
+      <form onSubmit={submitRate} className="border-b border-hairline px-6 py-5">
+        <div className="flex flex-wrap items-start gap-3">
+          <div className="w-[120px] space-y-1.5">
+            <Label htmlFor="rate-code">{t('settings.rates.code')}</Label>
+            <Input
+              id="rate-code"
+              placeholder={t('settings.rates.codePlaceholder')}
+              aria-invalid={!!errors.code}
+              {...register('code', {
+                validate: (v) => /^[A-Za-z]{3,4}$/.test(v) || t('validation.currencyCode'),
+              })}
+            />
+            {errors.code && <p className="text-xs text-destructive">{errors.code.message}</p>}
+          </div>
+          <div className="w-[160px] space-y-1.5">
+            <Label htmlFor="rate-value">{t('settings.rates.rate')}</Label>
+            <Input
+              id="rate-value"
+              inputMode="decimal"
+              placeholder={t('settings.rates.ratePlaceholder')}
+              aria-invalid={!!errors.rate}
+              {...register('rate', {
+                validate: (v) => /^\d+(\.\d{1,8})?$/.test(v) || t('validation.ratePositive'),
+              })}
+            />
+            {errors.rate && <p className="text-xs text-destructive">{errors.rate.message}</p>}
+          </div>
+          {/* Spacer the height of a label keeps the button on the input row when an error shows. */}
+          <div className="space-y-1.5">
+            <span aria-hidden className="block h-3.5" />
+            <Button type="submit" variant="secondary" disabled={addRate.isPending}>
               {addRate.isPending ? (
                 <IconLoader2 className="size-4 animate-spin" />
               ) : (
@@ -139,47 +149,35 @@ export function RatesCard() {
               {t('settings.rates.addManual')}
             </Button>
           </div>
-        </form>
+        </div>
+      </form>
 
-        <Table className="min-w-[420px]">
-          <TableHeader>
-            <TableRow>
-              <TableHead className="text-muted-foreground">
-                {t('settings.rates.thCurrency')}
-              </TableHead>
-              <TableHead className="text-muted-foreground">{t('settings.rates.thRate')}</TableHead>
-              <TableHead className="text-muted-foreground">
-                {t('settings.rates.thSource')}
-              </TableHead>
-              <TableHead className="text-muted-foreground">
-                {t('settings.rates.thUpdated')}
-              </TableHead>
+      <Table className="min-w-[420px]">
+        <TableHeader>
+          <TableRow>
+            <TableHead className="pl-6">{t('settings.rates.thCurrency')}</TableHead>
+            <TableHead>{t('settings.rates.thRate')}</TableHead>
+            <TableHead>{t('settings.rates.thSource')}</TableHead>
+            <TableHead className="pr-6">{t('settings.rates.thUpdated')}</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {rates?.map((r) => (
+            <TableRow key={r.code}>
+              <TableCell className="pl-6 font-medium">{r.code}</TableCell>
+              <TableCell>{r.rate}</TableCell>
+              <TableCell>
+                {r.source === 'manual' ? (
+                  <Badge variant="secondary">{t('settings.rates.sourceManual')}</Badge>
+                ) : (
+                  <Badge variant="outline">{t(`settings.rates.source_${r.source}`)}</Badge>
+                )}
+              </TableCell>
+              <TableCell className="pr-6 text-ink-2">{formatDate(r.capturedAt)}</TableCell>
             </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rates?.map((r) => (
-              <TableRow key={r.code}>
-                <TableCell className="font-medium">{r.code}</TableCell>
-                <TableCell>{r.rate}</TableCell>
-                <TableCell>
-                  {r.source === 'manual' ? (
-                    <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">
-                      {t('settings.rates.sourceManual')}
-                    </Badge>
-                  ) : (
-                    <Badge className="border-transparent bg-brand/15 text-[10px] text-brand uppercase tracking-wide">
-                      {t(`settings.rates.source_${r.source}`)}
-                    </Badge>
-                  )}
-                </TableCell>
-                <TableCell className="text-sm text-muted-foreground">
-                  {formatDate(r.capturedAt)}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </CardContent>
+          ))}
+        </TableBody>
+      </Table>
     </Card>
   );
 }

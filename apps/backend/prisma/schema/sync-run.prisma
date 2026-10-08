@@ -1,15 +1,15 @@
 model SyncRun {
   id BigInt @id @default(autoincrement()) @map("id")
 
-  providerUuid  String    @map("provider_uuid")
+  accountUuid   String    @map("account_uuid")
   status        String    @map("status")
   servicesFound Int       @default(0) @map("services_found")
   error         String?   @map("error")
   startedAt     DateTime  @default(now()) @map("started_at")
   finishedAt    DateTime? @map("finished_at")
 
-  provider Provider @relation(fields: [providerUuid], references: [uuid], onDelete: Cascade)
+  account ProviderAccount @relation(fields: [accountUuid], references: [uuid], onDelete: Cascade)
 
-  @@index([providerUuid, startedAt], map: "sync_runs_provider_started_idx")
+  @@index([accountUuid, startedAt], map: "sync_runs_account_started_idx")
   @@map("sync_runs")
 }

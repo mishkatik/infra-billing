@@ -118,17 +118,17 @@ export function AuthSettingsPage() {
   if (!config) {
     return (
       <div className="flex h-60 items-center justify-center">
-        <IconLoader2 className="size-5 animate-spin text-muted-foreground" />
+        <IconLoader2 className="size-5 animate-spin text-ink-3" />
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <PageHeader title={t('auth.title')} subtitle={t('auth.subtitle')} />
+      <PageHeader title={t('auth.title')} />
 
       {/* items-start: expanding one card (passkey settings) must not stretch the other. */}
-      <div className="grid items-start gap-4 lg:grid-cols-2">
+      <div className="grid items-start gap-6 lg:grid-cols-2">
         <AuthMethodsCard
           form={methodsForm}
           pkOpen={pkOpen}

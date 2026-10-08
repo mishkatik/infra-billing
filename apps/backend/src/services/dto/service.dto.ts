@@ -14,6 +14,7 @@ export class UpdateServiceDto extends createZodDto(updateServiceSchema) {}
 
 export const serviceQuerySchema = z.object({
   providerUuid: uuidSchema.optional(),
+  accountUuid: uuidSchema.optional(),
   projectUuid: uuidSchema.optional(),
   type: serviceTypeSchema.optional(),
   isActive: z

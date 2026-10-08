@@ -1,10 +1,21 @@
-import { ApiToken, Payment, Project, Provider, Service, SyncRun } from '@generated/prisma/client';
+import {
+  ApiToken,
+  Payment,
+  Prisma,
+  Project,
+  Provider,
+  ProviderAccount,
+  Service,
+  SyncRun,
+} from '@generated/prisma/client';
 import {
   ApiToken as ApiTokenDto,
+  MoneyAmount,
   Payment as PaymentDto,
   PaymentType,
   Period,
   Project as ProjectDto,
+  ProviderAccount as ProviderAccountDto,
   Provider as ProviderDto,
   ProviderKind,
   Service as ServiceDto,
@@ -13,10 +24,52 @@ import {
 } from '@infra/shared';
 import { dateToIso, decimalToString } from './serialize';
 
-/** Prisma Provider → API DTO. The API token (credentialsEnc) is NEVER included. */
+type AccountRow = ProviderAccount & { _count?: { services: number; payments: number } };
+
+/** Non-secret credential hints and has* flags, computed by the caller (they need decryption). */
+type CredentialHints = Partial<ProviderAccountDto>;
+
+/**
+ * Prisma ProviderAccount → API DTO. credentialsEnc is NEVER included; only whatever `hints` the
+ * caller derived from it.
+ */
+export function mapProviderAccount(a: AccountRow, hints: CredentialHints = {}): ProviderAccountDto {
+  return {
+    uuid: a.uuid,
+    providerUuid: a.providerUuid,
+    label: a.label,
+    isEnabled: a.isEnabled,
+    isPostpaid: a.isPostpaid,
+    balance: decimalToString(a.balance),
+    balanceCurrency: a.balanceCurrency,
+    balanceSyncedAt: dateToIso(a.balanceSyncedAt),
+    lastSyncAt: dateToIso(a.lastSyncAt),
+    lastSyncError: a.lastSyncError,
+    servicesCount: a._count?.services ?? 0,
+    paymentsCount: a._count?.payments ?? 0,
+    ...hints,
+    createdAt: dateToIso(a.createdAt)!,
+    updatedAt: dateToIso(a.updatedAt)!,
+  };
+}
+
+/** Account balances summed per currency, in the order the currencies first appear. */
+function sumBalances(accounts: AccountRow[]): MoneyAmount[] {
+  const sums = new Map<string, Prisma.Decimal>();
+  for (const a of accounts) {
+    if (a.balance === null || a.balanceCurrency === null) continue;
+    const prev = sums.get(a.balanceCurrency);
+    sums.set(a.balanceCurrency, prev ? prev.plus(a.balance) : a.balance);
+  }
+  return [...sums].map(([currency, amount]) => ({ amount: amount.toFixed(2), currency }));
+}
+
+/** Prisma Provider with its accounts → API DTO; counts and balances are summed over accounts. */
 export function mapProvider(
-  p: Provider & { _count?: { services: number; payments?: number } },
+  p: Provider & { accounts: AccountRow[] },
+  hintsFor: (a: AccountRow) => CredentialHints = () => ({}),
 ): ProviderDto {
+  const accounts = p.accounts.map((a) => mapProviderAccount(a, hintsFor(a)));
   return {
     uuid: p.uuid,
     name: p.name,
@@ -25,15 +78,10 @@ export function mapProvider(
     loginUrl: p.loginUrl,
     iconName: p.iconName,
     iconBg: p.iconBg,
-    balance: decimalToString(p.balance),
-    balanceCurrency: p.balanceCurrency,
-    isPostpaid: p.isPostpaid,
-    isEnabled: p.isEnabled,
-    balanceSyncedAt: dateToIso(p.balanceSyncedAt),
-    lastSyncAt: dateToIso(p.lastSyncAt),
-    lastSyncError: p.lastSyncError,
-    servicesCount: p._count?.services,
-    paymentsCount: p._count?.payments,
+    accounts,
+    balances: sumBalances(p.accounts),
+    servicesCount: accounts.reduce((n, a) => n + a.servicesCount, 0),
+    paymentsCount: accounts.reduce((n, a) => n + a.paymentsCount, 0),
     createdAt: dateToIso(p.createdAt)!,
     updatedAt: dateToIso(p.updatedAt)!,
   };
@@ -56,6 +104,7 @@ export function mapService(s: Service & { _count?: { payments: number } }): Serv
   return {
     uuid: s.uuid,
     providerUuid: s.providerUuid,
+    accountUuid: s.accountUuid,
     projectUuid: s.projectUuid,
     name: s.name,
     description: s.description,
@@ -81,7 +130,7 @@ export function mapService(s: Service & { _count?: { payments: number } }): Serv
 export function mapSyncRun(r: SyncRun): SyncRunDto {
   return {
     id: r.id.toString(),
-    providerUuid: r.providerUuid,
+    accountUuid: r.accountUuid,
     status: r.status as SyncRunDto['status'],
     servicesFound: r.servicesFound,
     error: r.error,
@@ -105,6 +154,7 @@ export function mapPayment(p: Payment): PaymentDto {
   return {
     uuid: p.uuid,
     providerUuid: p.providerUuid,
+    accountUuid: p.accountUuid,
     serviceUuid: p.serviceUuid,
     amount: decimalToString(p.amount)!,
     currency: p.currency,

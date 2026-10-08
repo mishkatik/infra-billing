@@ -114,7 +114,7 @@ export function DateField({
           <button
             type="button"
             aria-label="clear"
-            className="absolute inset-y-0 right-9 flex w-6 items-center justify-center text-muted-foreground hover:text-foreground"
+            className="absolute inset-y-0 right-9 flex w-6 items-center justify-center text-ink-3 transition-colors hover:text-foreground"
             onClick={() => {
               setText('');
               onChange('');
@@ -128,7 +128,7 @@ export function DateField({
             type="button"
             aria-label="calendar"
             disabled={disabled}
-            className="absolute inset-y-0 right-0 flex w-9 items-center justify-center text-muted-foreground hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+            className="absolute inset-y-0 right-0 flex w-9 items-center justify-center text-ink-3 transition-colors hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
           >
             <IconCalendar className="size-4" />
           </button>

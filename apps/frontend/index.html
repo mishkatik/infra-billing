@@ -7,16 +7,13 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>Infra Billing</title>
     <script>
-      // Pre-paint theming while the bundle loads: without this the empty body flashes
-      // white on reload (always noticeable on /login, which is force-dark artwork).
+      // Pre-paint theming while the bundle loads: without this a reload in the dark theme
+      // flashes the light background first.
       try {
         const s = localStorage.getItem('color-scheme');
         const dark =
           s === 'dark' || (s !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
         if (dark) document.documentElement.classList.add('dark');
-        if (location.pathname === '/login') {
-          document.documentElement.style.backgroundColor = '#0a0a0c';
-        }
       } catch {}
     </script>
   </head>

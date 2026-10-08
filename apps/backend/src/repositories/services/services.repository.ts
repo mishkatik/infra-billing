@@ -4,6 +4,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 
 export interface ServiceFilters {
   providerUuid?: string;
+  accountUuid?: string;
   projectUuid?: string;
   type?: string;
   isActive?: boolean;
@@ -16,6 +17,7 @@ export class ServicesRepository {
   listFiltered(filters: ServiceFilters) {
     const where: Prisma.ServiceWhereInput = {};
     if (filters.providerUuid) where.providerUuid = filters.providerUuid;
+    if (filters.accountUuid) where.accountUuid = filters.accountUuid;
     if (filters.projectUuid) where.projectUuid = filters.projectUuid;
     if (filters.type) where.type = filters.type;
     if (filters.isActive !== undefined) where.isActive = filters.isActive;
@@ -41,10 +43,10 @@ export class ServicesRepository {
     });
   }
 
-  /** (uuid, externalId) pairs of a provider's services — for linking imported payments. */
-  listExternalIds(providerUuid: string) {
+  /** (uuid, externalId) pairs of an account's services, for linking imported payments. */
+  listExternalIds(accountUuid: string) {
     return this.prisma.service.findMany({
-      where: { providerUuid },
+      where: { accountUuid },
       select: { uuid: true, externalId: true },
     });
   }
@@ -53,8 +55,10 @@ export class ServicesRepository {
     return this.prisma.service.findUnique({ where: { uuid } });
   }
 
-  findByExternalId(providerUuid: string, externalId: string) {
-    return this.prisma.service.findFirst({ where: { providerUuid, externalId } });
+  findByExternalId(accountUuid: string, externalId: string) {
+    return this.prisma.service.findUnique({
+      where: { accountUuid_externalId: { accountUuid, externalId } },
+    });
   }
 
   async exists(uuid: string): Promise<boolean> {
@@ -69,20 +73,28 @@ export class ServicesRepository {
     return this.prisma.service.create({ data });
   }
 
-  update(uuid: string, data: Prisma.ServiceUpdateInput) {
+  update(uuid: string, data: Prisma.ServiceUncheckedUpdateInput) {
     return this.prisma.service.update({ where: { uuid }, data });
   }
 
-  /** Move a service to another provider, relinking its payments in the same transaction. */
-  moveToProvider(uuid: string, providerUuid: string, data: Prisma.ServiceUpdateInput) {
+  /**
+   * Move a service to another account (possibly at another provider). Its payments follow in the
+   * same transaction; both uuids change together so the (account, provider) foreign key holds.
+   */
+  moveToAccount(
+    uuid: string,
+    accountUuid: string,
+    providerUuid: string,
+    data: Prisma.ServiceUncheckedUpdateInput,
+  ) {
     return this.prisma.$transaction(async (tx) => {
       await tx.payment.updateMany({
         where: { serviceUuid: uuid },
-        data: { providerUuid },
+        data: { accountUuid, providerUuid },
       });
       return tx.service.update({
         where: { uuid },
-        data: { ...data, provider: { connect: { uuid: providerUuid } } },
+        data: { ...data, accountUuid, providerUuid },
       });
     });
   }
@@ -91,10 +103,10 @@ export class ServicesRepository {
     await this.prisma.service.delete({ where: { uuid } });
   }
 
-  /** Managed services no longer returned by the provider API → mark inactive (never delete). */
-  async deactivateMissing(providerUuid: string, seenExternalIds: string[]): Promise<void> {
+  /** Managed services no longer returned by the account's API → mark inactive (never delete). */
+  async deactivateMissing(accountUuid: string, seenExternalIds: string[]): Promise<void> {
     await this.prisma.service.updateMany({
-      where: { providerUuid, isManaged: true, externalId: { notIn: seenExternalIds } },
+      where: { accountUuid, isManaged: true, externalId: { notIn: seenExternalIds } },
       data: { isActive: false },
     });
   }

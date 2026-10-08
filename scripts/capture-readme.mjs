@@ -9,7 +9,7 @@
  * Optional:
  *   CAPTURE_URL=http://127.0.0.1:5173
  *   CAPTURE_LANG=en
- *   CAPTURE_WIDTH=1480
+ *   CAPTURE_WIDTH=1600
  *   CAPTURE_HEIGHT=1135
  *   CAPTURE_SCALE=2
  *
@@ -37,17 +37,19 @@ const viewportH = Number(process.env.CAPTURE_HEIGHT ?? 1135);
 const scale = Number(process.env.CAPTURE_SCALE ?? 2);
 const outMaxWidth = Number(process.env.CAPTURE_OUT_WIDTH ?? 1680);
 
-const radius = 20;
+// The frame follows the panel's own look: the stone canvas, one soft line, rounded corners.
+const radius = 14;
 const pad = 36;
 const gap = 8;
-const strokeW = 3;
-const shadowBlur = 32;
-const shadowOffsetY = 16;
-const shadowAlpha = 0.4;
+const strokeW = 2;
 
 const PANEL = {
-  dark: { r: 0x11, g: 0x11, b: 0x15, alpha: 1 },
-  light: { r: 0xff, g: 0xff, b: 0xff, alpha: 1 },
+  dark: { r: 0x15, g: 0x15, b: 0x14, alpha: 1 },
+  light: { r: 0xf4, g: 0xf4, b: 0xf1, alpha: 1 },
+};
+const HAIRLINE = {
+  dark: '#2d2d2a',
+  light: '#ebebe7',
 };
 
 function fail(msg) {
@@ -55,7 +57,7 @@ function fail(msg) {
   process.exit(1);
 }
 
-async function frameScreenshot(pngBuf, panelColor) {
+async function frameScreenshot(pngBuf, panelColor, hairline) {
   let img = sharp(pngBuf).ensureAlpha();
   const meta = await img.metadata();
   if (meta.width > outMaxWidth) {
@@ -87,16 +89,9 @@ async function frameScreenshot(pngBuf, panelColor) {
 
   const border = Buffer.from(`<?xml version="1.0" encoding="UTF-8"?>
 <svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="stroke" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#fb7be2"/>
-      <stop offset="45%" stop-color="#c084fc"/>
-      <stop offset="100%" stop-color="#5b8cff"/>
-    </linearGradient>
-  </defs>
   <rect x="${strokeW / 2}" y="${strokeW / 2}" width="${w - strokeW}" height="${h - strokeW}"
         rx="${outerR - strokeW / 2}" ry="${outerR - strokeW / 2}"
-        fill="none" stroke="url(#stroke)" stroke-width="${strokeW}" stroke-opacity="0.92"/>
+        fill="none" stroke="${hairline}" stroke-width="${strokeW}"/>
 </svg>`);
 
   const framed = await sharp(rounded)
@@ -104,29 +99,15 @@ async function frameScreenshot(pngBuf, panelColor) {
     .png()
     .toBuffer();
 
-  const canvasW = w + pad * 2;
-  const canvasH = h + pad * 2 + Math.ceil(shadowOffsetY * 0.35);
-  const sw = w + shadowBlur * 2;
-  const sh = h + shadowBlur * 2;
-  const shadowSvg = Buffer.from(`<?xml version="1.0" encoding="UTF-8"?>
-<svg width="${sw}" height="${sh}" xmlns="http://www.w3.org/2000/svg">
-  <rect x="${shadowBlur}" y="${shadowBlur}" width="${w}" height="${h}" rx="${outerR}" ry="${outerR}"
-        fill="rgba(0,0,0,${shadowAlpha})"/>
-</svg>`);
-  const shadow = await sharp(shadowSvg).blur(14).png().toBuffer();
-
   return sharp({
     create: {
-      width: canvasW,
-      height: canvasH,
+      width: w + pad * 2,
+      height: h + pad * 2,
       channels: 4,
       background: { r: 0, g: 0, b: 0, alpha: 0 },
     },
   })
-    .composite([
-      { input: shadow, left: pad - shadowBlur, top: pad - shadowBlur + shadowOffsetY },
-      { input: framed, left: pad, top: pad },
-    ])
+    .composite([{ input: framed, left: pad, top: pad }])
     .webp({ quality: 92, alphaQuality: 95, effort: 5 })
     .toBuffer();
 }
@@ -178,7 +159,8 @@ async function captureTheme(browser, scheme) {
   await context.addInitScript(
     ({ scheme: s, lng }) => {
       localStorage.setItem('color-scheme', s);
-      localStorage.setItem('i18nextLng', lng);
+      // The app's language detector reads the 'lang' key.
+      localStorage.setItem('lang', lng);
     },
     { scheme, lng: lang },
   );
@@ -217,7 +199,7 @@ async function main() {
       const png = await captureTheme(browser, scheme);
       const rawPath = path.join(docsDir, `screenshot-${scheme}.raw.png`);
       await writeFile(rawPath, png);
-      const webp = await frameScreenshot(png, PANEL[scheme]);
+      const webp = await frameScreenshot(png, PANEL[scheme], HAIRLINE[scheme]);
       const outPath = path.join(docsDir, `screenshot-${scheme}.webp`);
       await writeFile(outPath, webp);
       const meta = await sharp(webp).metadata();

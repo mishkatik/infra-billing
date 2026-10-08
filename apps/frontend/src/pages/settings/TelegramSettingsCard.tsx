@@ -1,13 +1,13 @@
-import { IconBrandTelegram, IconLoader2, IconSend } from '@tabler/icons-react';
+import { IconLoader2, IconSend } from '@tabler/icons-react';
 import { useEffect } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { apiErrorMessage } from '@/api/client';
 import { useSettings, useTestTelegram, useUpdateSettings } from '@/api/settings';
+import { InkGlyph } from '@/components/ink/InkGlyph';
 import { PasswordInput } from '@/components/PasswordInput';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardAction, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -84,22 +84,16 @@ export function TelegramSettingsCard() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex flex-wrap items-center gap-2">
-          <IconBrandTelegram className="size-5" />
-          {t('settings.telegram.title')}
-          {settings?.telegramConfigured ? (
-            <Badge className="border-transparent bg-success/15 text-[10px] text-success uppercase tracking-wide">
-              {t('settings.telegram.tokenSet')}
-            </Badge>
-          ) : (
-            <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">
-              {t('settings.telegram.notConfigured')}
-            </Badge>
-          )}
-        </CardTitle>
+        <h2 className="text-[15px] leading-none font-medium">{t('settings.telegram.title')}</h2>
+        <CardAction className="flex items-center gap-1.5 self-center text-[13px] text-ink-2">
+          <InkGlyph state={settings?.telegramConfigured ? 'ok' : 'pending'} />
+          {settings?.telegramConfigured
+            ? t('settings.telegram.tokenSet')
+            : t('settings.telegram.notConfigured')}
+        </CardAction>
       </CardHeader>
       <CardContent>
-        <form onSubmit={saveTelegram} className="space-y-4">
+        <form onSubmit={saveTelegram} className="space-y-5">
           <div className="flex items-start gap-3">
             <Controller
               control={control}
@@ -115,17 +109,13 @@ export function TelegramSettingsCard() {
             />
             <div className="space-y-1">
               <Label htmlFor="tg-enabled">{t('settings.telegram.enabled')}</Label>
-              <p className="text-xs text-muted-foreground">
-                {t('settings.telegram.enabledDescription')}
-              </p>
+              <p className="text-[13px] text-ink-2">{t('settings.telegram.enabledDescription')}</p>
             </div>
           </div>
 
           <div className="space-y-1.5">
             <Label htmlFor="tg-bot-token">{t('settings.telegram.botToken')}</Label>
-            <p className="text-xs text-muted-foreground">
-              {t('settings.telegram.botTokenDescription')}
-            </p>
+            <p className="text-[13px] text-ink-2">{t('settings.telegram.botTokenDescription')}</p>
             <PasswordInput
               id="tg-bot-token"
               placeholder={
@@ -133,35 +123,31 @@ export function TelegramSettingsCard() {
                   ? t('settings.telegram.botTokenPlaceholderSet')
                   : t('settings.telegram.botTokenPlaceholderNew')
               }
+              className="font-mono"
               {...register('telegramBotToken')}
             />
           </div>
 
           <div className="space-y-1.5">
             <Label htmlFor="tg-chat-id">{t('settings.telegram.chatId')}</Label>
-            <p className="text-xs text-muted-foreground">
-              {t('settings.telegram.chatIdDescription')}
-            </p>
+            <p className="text-[13px] text-ink-2">{t('settings.telegram.chatIdDescription')}</p>
             <Input
               id="tg-chat-id"
               placeholder={t('settings.telegram.chatIdPlaceholder')}
+              className="font-mono"
               {...register('telegramChatId')}
             />
           </div>
 
           <div className="space-y-1.5">
             <Label htmlFor="tg-topic-id">{t('settings.telegram.topicId')}</Label>
-            <p className="text-xs text-muted-foreground">
-              {t('settings.telegram.topicIdDescription')}
-            </p>
-            <Input id="tg-topic-id" {...register('telegramTopicId')} />
+            <p className="text-[13px] text-ink-2">{t('settings.telegram.topicIdDescription')}</p>
+            <Input id="tg-topic-id" className="font-mono" {...register('telegramTopicId')} />
           </div>
 
           <div className="space-y-1.5">
             <Label htmlFor="tg-proxy-url">{t('settings.telegram.proxyUrl')}</Label>
-            <p className="text-xs text-muted-foreground">
-              {t('settings.telegram.proxyUrlDescription')}
-            </p>
+            <p className="text-[13px] text-ink-2">{t('settings.telegram.proxyUrlDescription')}</p>
             <Input
               id="tg-proxy-url"
               placeholder={t('settings.telegram.proxyUrlPlaceholder')}
@@ -184,7 +170,7 @@ export function TelegramSettingsCard() {
           <div className="flex flex-wrap items-center justify-between gap-2">
             <Button
               type="button"
-              variant="outline"
+              variant="ghost"
               disabled={testTelegram.isPending}
               onClick={doTestTelegram}
             >

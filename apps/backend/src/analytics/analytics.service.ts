@@ -1,10 +1,18 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import Decimal from 'decimal.js';
 import dayjs from 'dayjs';
-import { AnalyticsSummary, BalancePoint, ForecastPoint, Period, ProjectStats } from '@infra/shared';
+import {
+  AccountSpend,
+  AnalyticsSummary,
+  BalancePoint,
+  ForecastPoint,
+  Period,
+  ProjectStats,
+} from '@infra/shared';
 import { BalanceSnapshotsRepository } from '@repositories/balance-snapshots/balance-snapshots.repository';
 import { PaymentsRepository } from '@repositories/payments/payments.repository';
 import { ProjectsRepository } from '@repositories/projects/projects.repository';
+import { ProviderAccountsRepository } from '@repositories/provider-accounts/provider-accounts.repository';
 import { ProvidersRepository } from '@repositories/providers/providers.repository';
 import { ServicesRepository } from '@repositories/services/services.repository';
 import { SettingsRepository } from '@repositories/settings/settings.repository';
@@ -13,8 +21,10 @@ import { chargeSeverity } from '@common/billing-severity';
 import { isMeteredPeriod, monthlyCost } from '@common/money';
 import { overdueDays } from '@common/overdue';
 import { burnFromMonthlyCost, burnFromSnapshots, daysOfRunway } from '@common/runway';
+import { accountSpend, spendWindow } from '@common/spend';
 
 const ZERO = () => new Decimal(0);
+const SPEND_DAYS = 30; // the account spend window, complete UTC days
 
 interface Agg {
   monthly: Decimal;
@@ -37,8 +47,10 @@ function serviceBadgeFields(s: { type: string; countryCode: string | null; meta:
   };
 }
 
+type AccountWithProvider = Awaited<ReturnType<ProviderAccountsRepository['listAll']>>[number];
+
 interface TariffService {
-  providerUuid: string;
+  accountUuid: string;
   cost: { toString(): string };
   currency: string;
   period: string;
@@ -49,6 +61,7 @@ interface TariffService {
 export class AnalyticsService {
   constructor(
     private readonly providersRepo: ProvidersRepository,
+    private readonly accountsRepo: ProviderAccountsRepository,
     private readonly projectsRepo: ProjectsRepository,
     private readonly servicesRepo: ServicesRepository,
     private readonly paymentsRepo: PaymentsRepository,
@@ -63,14 +76,17 @@ export class AnalyticsService {
     // Past spend uses the rate of its payment date; everything else uses today's.
     const history = await this.currency.getHistoricalRates(rates);
 
-    const [providers, projects, services, payments] = await Promise.all([
+    const [providers, accounts, projects, services, payments] = await Promise.all([
       this.providersRepo.listAll(),
+      this.accountsRepo.listAll(),
       this.projectsRepo.listAll(),
       this.servicesRepo.listActive(),
       this.paymentsRepo.listAll(),
     ]);
-    const providerName = new Map(providers.map((p) => [p.uuid, p.name]));
-    const providerByUuid = new Map(providers.map((p) => [p.uuid, p]));
+    // Balance, coverage, runway and top-ups are per account: each account at a hoster has its own
+    // balance and ledger. Spend and monthly cost still roll up per provider.
+    const accountByUuid = new Map(accounts.map((a) => [a.uuid, a]));
+    const owner = ownerFieldsFactory(accounts);
 
     let monthlyTotal = ZERO();
     const byProvider = new Map<string, Agg>();
@@ -100,14 +116,14 @@ export class AnalyticsService {
     let currentMonthPayments = ZERO();
     let totalSpent = ZERO();
     const spentByProvider = new Map<string, Decimal>();
-    // Providers that expose top-ups (BILLmanager, Timeweb…): their spend is the top-ups, and their
-    // `charge` rows are just per-service detail. Consumption-only providers (Yandex, Selectel) have
+    // Accounts that expose top-ups (BILLmanager, Timeweb…): their spend is the top-ups, and their
+    // `charge` rows are just per-service detail. Consumption-only accounts (Yandex, Selectel) have
     // no top-ups, so their charges ARE the spend and can be counted without double-counting.
-    const providersWithTopups = new Set(
-      payments.filter((p) => p.type !== 'charge').map((p) => p.providerUuid),
+    const accountsWithTopups = new Set(
+      payments.filter((p) => p.type !== 'charge').map((p) => p.accountUuid),
     );
     for (const p of payments) {
-      if (p.type === 'charge' && providersWithTopups.has(p.providerUuid)) continue;
+      if (p.type === 'charge' && accountsWithTopups.has(p.accountUuid)) continue;
       const base = this.currency.convert(
         new Decimal(p.amount.toString()),
         p.currency,
@@ -152,93 +168,81 @@ export class AnalyticsService {
       }))
       .sort((a, b) => a.date.valueOf() - b.date.valueOf());
 
-    // Running balance per provider (base currency); charges deplete it in date order, so once a
-    // provider's funds run out the later charges in the window are flagged uncovered.
-    // A parallel map in the provider's own currency drives the top-up suggestion amount.
+    // Running balance per account (base currency); charges deplete it in date order, so once an
+    // account's funds run out the later charges in the window are flagged uncovered.
+    // A parallel map in the account's own currency drives the top-up suggestion amount.
     const runningBalance = new Map<string, Decimal | null>();
     const runningBalanceNative = new Map<string, Decimal | null>();
-    for (const p of providers) {
-      const hasPrepaid = p.balance != null && p.balanceCurrency && !p.isPostpaid;
+    for (const a of accounts) {
+      const hasPrepaid = a.balance != null && a.balanceCurrency && !a.isPostpaid;
       runningBalance.set(
-        p.uuid,
+        a.uuid,
         hasPrepaid
           ? this.currency.convert(
-              new Decimal(p.balance!.toString()),
-              p.balanceCurrency!,
+              new Decimal(a.balance!.toString()),
+              a.balanceCurrency!,
               baseCurrency,
               rates,
             )
           : null,
       );
-      runningBalanceNative.set(p.uuid, hasPrepaid ? new Decimal(p.balance!.toString()) : null);
+      runningBalanceNative.set(a.uuid, hasPrepaid ? new Decimal(a.balance!.toString()) : null);
     }
 
     const upcomingBillings = upcomingSorted.map(({ s, date, costBase }) => {
-      const bal = runningBalance.get(s.providerUuid) ?? null;
-      const provider = providerByUuid.get(s.providerUuid);
+      const bal = runningBalance.get(s.accountUuid) ?? null;
+      const account = accountByUuid.get(s.accountUuid);
       let covered: boolean | null;
       if (bal == null) {
-        covered = null; // provider has no balance API → unknown
+        covered = null; // account has no balance API → unknown
       } else {
         covered = bal.gte(costBase);
-        runningBalance.set(s.providerUuid, bal.sub(costBase));
-        const native = runningBalanceNative.get(s.providerUuid);
-        if (native != null && provider?.balanceCurrency) {
+        runningBalance.set(s.accountUuid, bal.sub(costBase));
+        const native = runningBalanceNative.get(s.accountUuid);
+        if (native != null && account?.balanceCurrency) {
           const costNative = this.currency.convert(
             new Decimal(s.cost.toString()),
             s.currency,
-            provider.balanceCurrency,
+            account.balanceCurrency,
             rates,
           );
-          runningBalanceNative.set(s.providerUuid, native.sub(costNative));
+          runningBalanceNative.set(s.accountUuid, native.sub(costNative));
         }
       }
       const daysUntil = Math.max(0, date.startOf('day').diff(today, 'day'));
-      const severity = chargeSeverity(covered, daysUntil, provider?.isPostpaid ?? false);
+      const severity = chargeSeverity(covered, daysUntil, account?.isPostpaid ?? false);
       return {
         serviceUuid: s.uuid,
         name: s.name,
-        providerUuid: s.providerUuid,
-        providerName: providerName.get(s.providerUuid) ?? '',
-        providerKind: provider?.kind ?? 'manual',
-        providerLoginUrl: provider?.loginUrl ?? null,
-        providerFaviconLink: provider?.faviconLink ?? null,
-        providerIconName: provider?.iconName ?? null,
-        providerIconBg: provider?.iconBg ?? null,
+        ...owner(s),
         ...serviceBadgeFields(s),
         nextBillingAt: s.nextBillingAt!.toISOString(),
         cost: new Decimal(s.cost.toString()).toFixed(2),
         currency: s.currency,
         costBase: costBase.toFixed(2),
         daysUntil,
-        providerBalance: provider?.balance != null ? provider.balance.toFixed(2) : null,
-        providerBalanceCurrency: provider?.balanceCurrency ?? null,
+        accountBalance: account?.balance != null ? account.balance.toFixed(2) : null,
+        accountBalanceCurrency: account?.balanceCurrency ?? null,
         covered,
         severity,
       };
     });
 
-    // Top-up = shortfall after simulating upcoming charges. Only for providers that already have
+    // Top-up = shortfall after simulating upcoming charges. Only for accounts that already have
     // a critical line — matches the dashboard critical banner. Unknown-coverage criticals carry
     // no native balance, so the null guard below keeps them out of top-up suggestions.
-    const criticalProviderUuids = new Set(
-      upcomingBillings.filter((b) => b.severity === 'critical').map((b) => b.providerUuid),
+    const criticalAccountUuids = new Set(
+      upcomingBillings.filter((b) => b.severity === 'critical').map((b) => b.accountUuid),
     );
     const balanceTopUps: AnalyticsSummary['balanceTopUps'] = [];
-    for (const p of providers) {
-      if (!criticalProviderUuids.has(p.uuid) || !p.balanceCurrency) continue;
-      const native = runningBalanceNative.get(p.uuid);
+    for (const a of accounts) {
+      if (!criticalAccountUuids.has(a.uuid) || !a.balanceCurrency) continue;
+      const native = runningBalanceNative.get(a.uuid);
       if (native == null || native.gte(0)) continue;
       balanceTopUps.push({
-        providerUuid: p.uuid,
-        providerName: p.name,
-        providerKind: p.kind,
-        providerLoginUrl: p.loginUrl ?? null,
-        providerFaviconLink: p.faviconLink ?? null,
-        providerIconName: p.iconName ?? null,
-        providerIconBg: p.iconBg ?? null,
+        ...owner(a),
         amount: native.abs().toFixed(2),
-        currency: p.balanceCurrency,
+        currency: a.balanceCurrency,
       });
     }
     balanceTopUps.sort((a, b) => new Decimal(b.amount).cmp(new Decimal(a.amount)));
@@ -246,23 +250,16 @@ export class AnalyticsService {
     // Dated charges whose billing day is already behind us (yesterday or earlier): pay-or-fix
     // reminders, most overdue first. Metered services can't be overdue — the paid-until date
     // passing at night merely means the next sync hasn't refreshed it yet, and a real shortfall
-    // surfaces as the provider's runway.
+    // surfaces as the account's runway.
     const overdueBillings: AnalyticsSummary['overdueBillings'] = [];
     for (const s of services) {
       if (isMeteredPeriod(s.period as Period)) continue;
       const daysOverdue = overdueDays(s.nextBillingAt, now);
       if (daysOverdue == null) continue;
-      const provider = providerByUuid.get(s.providerUuid);
       overdueBillings.push({
         serviceUuid: s.uuid,
         name: s.name,
-        providerUuid: s.providerUuid,
-        providerName: providerName.get(s.providerUuid) ?? '',
-        providerKind: provider?.kind ?? 'manual',
-        providerLoginUrl: provider?.loginUrl ?? null,
-        providerFaviconLink: provider?.faviconLink ?? null,
-        providerIconName: provider?.iconName ?? null,
-        providerIconBg: provider?.iconBg ?? null,
+        ...owner(s),
         ...serviceBadgeFields(s),
         nextBillingAt: s.nextBillingAt!.toISOString(),
         cost: new Decimal(s.cost.toString()).toFixed(2),
@@ -275,37 +272,37 @@ export class AnalyticsService {
     }
     overdueBillings.sort((a, b) => b.daysOverdue - a.daysOverdue);
 
-    // Balance runway: prepaid providers with a draining balance but no upcoming dated charge.
+    // Balance runway: prepaid accounts with a draining balance but no upcoming dated charge.
     // Estimate days-left from snapshot decline (fallback: monthly service cost), and reuse the
-    // charge-coverage severity model. A provider with any dated service is governed by the dated
+    // charge-coverage severity model. An account with any dated service is governed by the dated
     // logic above (even if the date is beyond the upcoming window), so it's not a runway candidate.
     // Metered services don't count as dated: their balance drain is exactly what runway measures.
-    // Known simplification: a provider mixing metered and monthly dated services stays on the
+    // Known simplification: an account mixing metered and monthly dated services stays on the
     // dated path, and the metered drain is not folded into the running-balance coverage.
-    const datedProviderUuids = new Set(
+    const datedAccountUuids = new Set(
       services
         .filter((s) => s.nextBillingAt != null && !isMeteredPeriod(s.period as Period))
-        .map((s) => s.providerUuid),
+        .map((s) => s.accountUuid),
     );
     const runwayWindowStart = now.subtract(30, 'day').toDate();
     const snapshots = await this.snapshotsRepo.listSince(runwayWindowStart);
-    const snapsByProvider = new Map<string, typeof snapshots>();
+    const snapsByAccount = new Map<string, typeof snapshots>();
     for (const snap of snapshots) {
-      const list = snapsByProvider.get(snap.providerUuid);
+      const list = snapsByAccount.get(snap.accountUuid);
       if (list) list.push(snap);
-      else snapsByProvider.set(snap.providerUuid, [snap]);
+      else snapsByAccount.set(snap.accountUuid, [snap]);
     }
 
     const balanceRunway: AnalyticsSummary['balanceRunway'] = [];
-    for (const p of providers) {
-      if (p.balance == null || !p.balanceCurrency) continue;
-      if (p.isPostpaid) continue; // invoice-billed → balance isn't prepaid funds
-      if (datedProviderUuids.has(p.uuid)) continue;
-      const balance = new Decimal(p.balance.toString());
+    for (const a of accounts) {
+      if (a.balance == null || !a.balanceCurrency) continue;
+      if (a.isPostpaid) continue; // invoice-billed → balance isn't prepaid funds
+      if (datedAccountUuids.has(a.uuid)) continue;
+      const balance = new Decimal(a.balance.toString());
 
-      // Primary: actual decline measured from snapshots (in the provider's balance currency).
-      const points = (snapsByProvider.get(p.uuid) ?? [])
-        .filter((snap) => snap.currency === p.balanceCurrency)
+      // Primary: actual decline measured from snapshots (in the account's balance currency).
+      const points = (snapsByAccount.get(a.uuid) ?? [])
+        .filter((snap) => snap.currency === a.balanceCurrency)
         .map((snap) => ({
           balance: new Decimal(snap.balance.toString()),
           capturedAt: snap.capturedAt,
@@ -313,15 +310,15 @@ export class AnalyticsService {
       let burn = burnFromSnapshots(points);
       let basis: 'snapshots' | 'services' = 'snapshots';
       if (burn == null) {
-        // Fallback: sum the provider's active services' monthly cost in the balance currency.
+        // Fallback: sum the account's active services' monthly cost in the balance currency.
         let monthly = ZERO();
         for (const s of services) {
-          if (s.providerUuid !== p.uuid) continue;
+          if (s.accountUuid !== a.uuid) continue;
           monthly = monthly.add(
             this.currency.convert(
               monthlyCost(new Decimal(s.cost.toString()), s.period as Period),
               s.currency,
-              p.balanceCurrency,
+              a.balanceCurrency,
               rates,
             ),
           );
@@ -339,15 +336,9 @@ export class AnalyticsService {
       if (severity === 'ok') continue; // > 7 days of runway → not surfaced
 
       balanceRunway.push({
-        providerUuid: p.uuid,
-        providerName: p.name,
-        providerKind: p.kind,
-        providerLoginUrl: p.loginUrl ?? null,
-        providerFaviconLink: p.faviconLink ?? null,
-        providerIconName: p.iconName ?? null,
-        providerIconBg: p.iconBg ?? null,
+        ...owner(a),
         balance: balance.toFixed(2),
-        currency: p.balanceCurrency,
+        currency: a.balanceCurrency,
         burnPerDay: burn.toFixed(2),
         daysLeft,
         depletionAt: now.add(daysLeft, 'day').toISOString(),
@@ -368,8 +359,7 @@ export class AnalyticsService {
         name: p.name,
         monthlyCost: (byProvider.get(p.uuid)?.monthly ?? ZERO()).toFixed(2),
         spent: (spentByProvider.get(p.uuid) ?? ZERO()).toFixed(2),
-        balance: p.balance ? p.balance.toFixed(2) : null,
-        balanceCurrency: p.balanceCurrency,
+        balances: balancesOf(accounts.filter((a) => a.providerUuid === p.uuid)),
         servicesCount: byProvider.get(p.uuid)?.count ?? 0,
       })),
       byProject: projects.map((p) => ({
@@ -485,28 +475,28 @@ export class AnalyticsService {
       projBuckets.set(key, ZERO());
     }
 
-    // Actuals: top-ups + manual payments, plus charges for consumption-only providers (no top-ups).
+    // Actuals: top-ups + manual payments, plus charges for consumption-only accounts (no top-ups).
     // Same definition as currentMonthPayments/totalSpent in summary() — keeps "Actual" consistent
     // with the KPI card. Skipped entirely in force mode (tariff fill overwrites actual below).
     const needTariffs = backfill || force;
     const needBackdate = needTariffs && respectCreatedAt && backdateFromPayments;
-    const [payments, topupProviderUuids, activeServices, billedServices, earliestPayments] =
+    const [payments, topupAccountUuids, activeServices, billedServices, earliestPayments] =
       await Promise.all([
         force
           ? Promise.resolve([] as Awaited<ReturnType<PaymentsRepository['listSince']>>)
           : this.paymentsRepo.listSince(windowStart.toDate()),
-        force ? Promise.resolve([] as string[]) : this.paymentsRepo.providerUuidsWithTopups(),
+        force ? Promise.resolve([] as string[]) : this.paymentsRepo.accountUuidsWithTopups(),
         needTariffs
           ? this.servicesRepo.listActive()
           : Promise.resolve([] as Awaited<ReturnType<ServicesRepository['listActive']>>),
         this.servicesRepo.listActiveBilled(),
         needBackdate
-          ? this.paymentsRepo.earliestPaymentDateByProvider()
+          ? this.paymentsRepo.earliestPaymentDateByAccount()
           : Promise.resolve(new Map<string, Date>()),
       ]);
-    const providersWithTopups = new Set(topupProviderUuids);
+    const accountsWithTopups = new Set(topupAccountUuids);
     for (const p of payments) {
-      if (p.type === 'charge' && providersWithTopups.has(p.providerUuid)) continue;
+      if (p.type === 'charge' && accountsWithTopups.has(p.accountUuid)) continue;
       const key = dayjs(p.paymentDate).format('YYYY-MM');
       if (!actualBuckets.has(key) || key > currentKey) continue; // future-dated payments ignored
       // Same rate date as totalSpent — otherwise the KPI card and the chart disagree.
@@ -521,10 +511,11 @@ export class AnalyticsService {
 
     if (needTariffs) {
       // Portfolio monthly cost (same basis as the Monthly expenses KPI) for every past month.
-      // Optional createdAt gate, optionally backdated to the provider's first payment.
+      // Optional createdAt gate, optionally backdated to the account's first payment (per account,
+      // so an account merged in later isn't backdated to another account's older history).
       const earliestPaymentMonth = new Map<string, string>();
-      for (const [providerUuid, date] of earliestPayments) {
-        earliestPaymentMonth.set(providerUuid, dayjs(date).format('YYYY-MM'));
+      for (const [accountUuid, date] of earliestPayments) {
+        earliestPaymentMonth.set(accountUuid, dayjs(date).format('YYYY-MM'));
       }
       for (const key of monthsList) {
         if (key > currentKey) continue;
@@ -584,14 +575,95 @@ export class AnalyticsService {
     }));
   }
 
-  async balanceHistory(uuid: string, from?: Date, to?: Date): Promise<BalancePoint[]> {
-    const rows = await this.snapshotsRepo.listForProvider(uuid, from, to);
+  async balanceHistory(accountUuid: string, from?: Date, to?: Date): Promise<BalancePoint[]> {
+    const rows = await this.snapshotsRepo.listForAccount(accountUuid, from, to);
     return rows.map((r) => ({
       balance: r.balance.toFixed(2),
       currency: r.currency,
       capturedAt: r.capturedAt.toISOString(),
     }));
   }
+
+  /** Daily spend of one account over the last 30 complete UTC days. */
+  async accountSpend(accountUuid: string): Promise<AccountSpend> {
+    const account = await this.accountsRepo.findByUuid(accountUuid);
+    if (!account) throw new NotFoundException('Account not found');
+    const now = new Date();
+    const { start, end } = spendWindow(now, SPEND_DAYS);
+    const [charges, firstChargeAt, snapshots, anchor] = await Promise.all([
+      this.paymentsRepo.chargesForAccount(accountUuid, start, end),
+      this.paymentsRepo.firstChargeAt(accountUuid),
+      this.snapshotsRepo.listForAccount(accountUuid, start),
+      this.snapshotsRepo.lastBefore(accountUuid, start),
+    ]);
+    const result = accountSpend({
+      charges: charges.map((c) => ({
+        amount: new Decimal(c.amount.toString()),
+        currency: c.currency,
+        paymentDate: c.paymentDate,
+      })),
+      firstChargeAt,
+      snapshots: (anchor ? [anchor, ...snapshots] : snapshots).map((s) => ({
+        balance: new Decimal(s.balance.toString()),
+        currency: s.currency,
+        capturedAt: s.capturedAt,
+      })),
+      balanceCurrency: account.balanceCurrency,
+      useSnapshots: !account.isPostpaid,
+      days: SPEND_DAYS,
+      now,
+    });
+    return {
+      ...result,
+      days: result.days.map((d) => ({ ...d, amount: d.amount?.toFixed(2) ?? null })),
+      last7d: result.last7d?.toFixed(2) ?? null,
+      last30d: result.last30d?.toFixed(2) ?? null,
+      perDay: result.perDay?.toFixed(2) ?? null,
+    };
+  }
+}
+
+/**
+ * Builds the provider/account columns shared by upcoming, overdue, top-up and runway rows. The
+ * account label is only filled when its provider has several accounts: with one there is nothing
+ * to tell apart.
+ */
+function ownerFieldsFactory(accounts: AccountWithProvider[]) {
+  const byUuid = new Map(accounts.map((a) => [a.uuid, a]));
+  const perProvider = new Map<string, number>();
+  for (const a of accounts)
+    perProvider.set(a.providerUuid, (perProvider.get(a.providerUuid) ?? 0) + 1);
+  // Accepts an account row itself, or a service row pointing at one.
+  return (row: { uuid: string; providerUuid: string; accountUuid?: string }) => {
+    const accountUuid = row.accountUuid ?? row.uuid;
+    const a = byUuid.get(accountUuid);
+    const p = a?.provider;
+    return {
+      providerUuid: row.providerUuid,
+      providerName: p?.name ?? '',
+      accountUuid,
+      // '' marks the original unlabelled account among several, so clients can name it "main".
+      accountLabel: a && (perProvider.get(a.providerUuid) ?? 0) > 1 ? (a.label ?? '') : null,
+      providerKind: p?.kind ?? 'manual',
+      providerLoginUrl: p?.loginUrl ?? null,
+      providerFaviconLink: p?.faviconLink ?? null,
+      providerIconName: p?.iconName ?? null,
+      providerIconBg: p?.iconBg ?? null,
+    };
+  };
+}
+
+/** Known account balances summed per currency (in first-seen order). */
+function balancesOf(
+  accounts: { balance: { toString(): string } | null; balanceCurrency: string | null }[],
+): { amount: string; currency: string }[] {
+  const sums = new Map<string, Decimal>();
+  for (const a of accounts) {
+    if (a.balance == null || !a.balanceCurrency) continue;
+    const cur = sums.get(a.balanceCurrency) ?? ZERO();
+    sums.set(a.balanceCurrency, cur.add(new Decimal(a.balance.toString())));
+  }
+  return [...sums].map(([currency, amount]) => ({ amount: amount.toFixed(2), currency }));
 }
 
 function bump(map: Map<string, Agg>, key: string, amount: Decimal): void {
@@ -617,7 +689,7 @@ function tariffForMonth(
     if (opts.respectCreatedAt) {
       let startKey = dayjs(s.createdAt).format('YYYY-MM');
       if (opts.backdateFromPayments) {
-        const payKey = opts.earliestPaymentMonth.get(s.providerUuid);
+        const payKey = opts.earliestPaymentMonth.get(s.accountUuid);
         if (payKey && payKey < startKey) startKey = payKey;
       }
       if (startKey > monthKey) continue;

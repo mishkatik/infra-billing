@@ -4,7 +4,7 @@ import { isoDateSchema, uuidSchema } from './common';
 
 export const syncRunSchema = z.object({
   id: z.string().describe('Sync run ID'), // BigInt serialized as string
-  providerUuid: uuidSchema.describe('Provider UUID'),
+  accountUuid: uuidSchema.describe('Provider account UUID'),
   status: syncStatusSchema.describe('Sync status'),
   servicesFound: z.number().int().describe('Services found count'),
   error: z.string().describe('Sync error message').nullable(),

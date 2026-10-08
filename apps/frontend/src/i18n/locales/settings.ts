@@ -2,7 +2,7 @@
 export const settings = {
   en: {
     title: 'Settings',
-    subtitle: 'Base currency, synchronization, exchange rates',
+    general: 'General',
     baseCurrency: 'Base currency',
     syncInterval: 'Sync interval (hours)',
     rateSource: 'Rate source',
@@ -79,7 +79,7 @@ export const settings = {
   },
   ru: {
     title: 'Настройки',
-    subtitle: 'Базовая валюта, синхронизация, курсы',
+    general: 'Основные',
     baseCurrency: 'Базовая валюта',
     syncInterval: 'Интервал синхронизации (часы)',
     rateSource: 'Источник курсов',

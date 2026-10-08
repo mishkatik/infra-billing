@@ -1,4 +1,10 @@
-import { IconCheck, IconChevronDown, IconMoodSmile, IconX } from '@tabler/icons-react';
+import {
+  IconCheck,
+  IconChevronDown,
+  IconColorPicker,
+  IconMoodSmile,
+  IconX,
+} from '@tabler/icons-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -54,9 +60,10 @@ export function ServiceMarkerPreview({
     const Icon = entry.Icon;
     const color = markerBg || DEFAULT_ICON_BG;
     const glyph = Math.max(12, Math.round(size * 0.9));
+    // The stored colour survives as a gray tone, like every other icon in the app.
     return (
       <span
-        className="inline-flex shrink-0 items-center justify-center self-center"
+        className="inline-flex shrink-0 items-center justify-center self-center grayscale"
         style={{ width: size, height: size }}
       >
         <Icon size={glyph} stroke={1.75} color={color} className="block" aria-hidden />
@@ -66,7 +73,7 @@ export function ServiceMarkerPreview({
   if (marker) {
     return (
       <span
-        className="inline-flex shrink-0 items-center justify-center self-center leading-none"
+        className="inline-flex shrink-0 items-center justify-center self-center leading-none grayscale"
         style={{ width: size, height: size, fontSize: Math.round(size * 0.85) }}
       >
         {marker}
@@ -115,11 +122,11 @@ export function ServiceMarkerField({
 
   return (
     <div className="flex items-center gap-2">
-      <span className="flex size-9 shrink-0 items-center justify-center rounded-md border border-input">
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-field">
         {marker ? (
           <ServiceMarkerPreview marker={marker} markerBg={markerBg} size={20} />
         ) : (
-          <IconMoodSmile className="size-4 text-muted-foreground opacity-50" />
+          <IconMoodSmile className="size-4 text-ink-3" />
         )}
       </span>
 
@@ -129,7 +136,7 @@ export function ServiceMarkerField({
             <button
               type="button"
               aria-label={t('common.iconBg')}
-              className="size-9 shrink-0 rounded-md border border-input shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+              className="size-9 shrink-0 rounded-md border border-foreground/10 outline-none grayscale focus-visible:border-ring/40 focus-visible:ring-3 focus-visible:ring-ring/15"
               style={{ backgroundColor: color }}
             />
           </PopoverTrigger>
@@ -141,8 +148,9 @@ export function ServiceMarkerField({
                   type="button"
                   aria-label={swatch}
                   className={cn(
-                    'aspect-square w-full rounded-sm border border-black/10 shadow-xs',
-                    color.toLowerCase() === swatch.toLowerCase() && 'ring-2 ring-inset ring-ring',
+                    'aspect-square w-full rounded-sm border border-foreground/10 grayscale transition-[outline]',
+                    color.toLowerCase() === swatch.toLowerCase() &&
+                      'outline-2 outline-offset-2 outline-ring',
                   )}
                   style={{ backgroundColor: swatch }}
                   onClick={() => {
@@ -151,7 +159,7 @@ export function ServiceMarkerField({
                   }}
                 />
               ))}
-              <label className="relative aspect-square w-full cursor-pointer overflow-hidden rounded-sm border border-input shadow-xs">
+              <label className="relative flex aspect-square w-full cursor-pointer items-center justify-center overflow-hidden rounded-sm bg-field text-ink-2 hover:text-foreground">
                 <span className="sr-only">{t('common.iconBgCustom')}</span>
                 <input
                   type="color"
@@ -159,13 +167,7 @@ export function ServiceMarkerField({
                   onChange={(e) => onMarkerBgChange(e.target.value.toUpperCase())}
                   className="absolute inset-0 size-full cursor-pointer opacity-0"
                 />
-                <span
-                  className="block size-full"
-                  style={{
-                    background:
-                      'conic-gradient(#f43f5e, #eab308, #22c55e, #06b6d4, #3b82f6, #a855f7, #f43f5e)',
-                  }}
-                />
+                <IconColorPicker className="pointer-events-none size-4" stroke={1.75} />
               </label>
             </div>
           </PopoverContent>
@@ -186,7 +188,7 @@ export function ServiceMarkerField({
             type="button"
             role="combobox"
             aria-expanded={open}
-            className="flex h-9 min-w-0 flex-1 items-center justify-between gap-2 rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30"
+            className="flex h-9 min-w-0 flex-1 items-center justify-between gap-2 rounded-md border border-transparent bg-field px-3 py-2 text-sm outline-none transition-[color,box-shadow,border-color] focus-visible:border-ring/40 focus-visible:ring-3 focus-visible:ring-ring/15"
           >
             <span className={cn('truncate', !selected && !emojiMode && 'text-muted-foreground')}>
               {selected ? selected.label : emojiMode ? marker : t('services.markerPlaceholder')}
@@ -220,7 +222,7 @@ export function ServiceMarkerField({
                     value={`emoji:${searchEmoji}`}
                     onSelect={() => pickEmoji(searchEmoji)}
                   >
-                    <span className="text-base leading-none">{searchEmoji}</span>
+                    <span className="text-base leading-none grayscale">{searchEmoji}</span>
                     <span className="truncate">{t('services.markerUseEmoji')}</span>
                   </CommandItem>
                 ) : null}
@@ -231,7 +233,7 @@ export function ServiceMarkerField({
                     keywords={[label, ...keywords]}
                     onSelect={(value) => pickIcon(value)}
                   >
-                    <Icon size={16} stroke={1.75} color={color} aria-hidden />
+                    <Icon className="size-4 text-foreground" stroke={1.75} aria-hidden />
                     <span className="truncate">{label}</span>
                     {name === selected?.name && <IconCheck className="ml-auto size-4" />}
                   </CommandItem>

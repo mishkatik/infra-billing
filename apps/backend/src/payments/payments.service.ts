@@ -1,16 +1,17 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PaginatedPayments, Payment as PaymentDto } from '@infra/shared';
 import { PaymentsRepository } from '@repositories/payments/payments.repository';
-import { ProvidersRepository } from '@repositories/providers/providers.repository';
+import { ProviderAccountsRepository } from '@repositories/provider-accounts/provider-accounts.repository';
 import { ServicesRepository } from '@repositories/services/services.repository';
 import { mapPayment } from '@common/mappers';
+import { resolveAccountOwner } from '../services/account-owner';
 import { CreatePaymentDto, PaymentQueryDto } from './dto/payment.dto';
 
 @Injectable()
 export class PaymentsService {
   constructor(
     private readonly payments: PaymentsRepository,
-    private readonly providers: ProvidersRepository,
+    private readonly accounts: ProviderAccountsRepository,
     private readonly services: ServicesRepository,
   ) {}
 
@@ -22,10 +23,10 @@ export class PaymentsService {
   }
 
   async create(dto: CreatePaymentDto): Promise<PaymentDto> {
-    await this.ensureProvider(dto.providerUuid);
+    const owner = await resolveAccountOwner(this.accounts, dto);
     if (dto.serviceUuid) await this.ensureService(dto.serviceUuid);
     const p = await this.payments.create({
-      providerUuid: dto.providerUuid,
+      ...owner,
       serviceUuid: dto.serviceUuid ?? null,
       amount: dto.amount,
       currency: dto.currency,
@@ -39,10 +40,6 @@ export class PaymentsService {
   async remove(uuid: string): Promise<void> {
     if (!(await this.payments.exists(uuid))) throw new NotFoundException('Payment not found');
     await this.payments.delete(uuid);
-  }
-
-  private async ensureProvider(uuid: string): Promise<void> {
-    if (!(await this.providers.exists(uuid))) throw new NotFoundException('Provider not found');
   }
 
   private async ensureService(uuid: string): Promise<void> {

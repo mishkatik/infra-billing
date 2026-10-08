@@ -1,186 +1,140 @@
-import {
-  IconFolders,
-  IconKey,
-  IconLayoutDashboard,
-  IconLogout,
-  IconReceipt2,
-  IconServer2,
-  IconSettings,
-  IconShieldLock,
-  IconStack2,
-  type Icon,
-} from '@tabler/icons-react';
+import { IconSearch } from '@tabler/icons-react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { NavLink as RouterNavLink, Outlet, useLocation } from 'react-router-dom';
-import { useLogout, useMe } from '@/api/auth';
+import { Outlet } from 'react-router-dom';
 import { BrandWordmark } from '@/components/BrandWordmark';
 import { BuildInfo } from '@/components/BuildInfo';
+import { CommandPalette } from '@/components/CommandPalette';
 import { DocsLink } from '@/components/DocsLink';
 import { GithubStars } from '@/components/GithubStars';
+import { Kbd } from '@/components/ink/Kbd';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { RwpPromo } from '@/components/RwpPromo';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarInset,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
   SidebarProvider,
   SidebarTrigger,
   useSidebar,
 } from '@/components/ui/sidebar';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { PageChromeProvider, usePageChrome } from './pageChrome';
+import { NavGroups, PaidMeter, SyncStatusGroup, UserBlock } from './SidebarParts';
 
-interface NavItem {
-  to: string;
-  labelKey: string;
-  icon: Icon;
-  end?: boolean;
-}
+const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.userAgent);
 
-const NAV: { sectionKey: string; items: NavItem[] }[] = [
-  {
-    sectionKey: 'nav.overview',
-    items: [{ to: '/', labelKey: 'nav.dashboard', icon: IconLayoutDashboard, end: true }],
-  },
-  {
-    sectionKey: 'nav.infrastructure',
-    items: [
-      { to: '/providers', labelKey: 'nav.providers', icon: IconServer2 },
-      { to: '/projects', labelKey: 'nav.projects', icon: IconFolders },
-      { to: '/services', labelKey: 'nav.services', icon: IconStack2 },
-      { to: '/payments', labelKey: 'nav.payments', icon: IconReceipt2 },
-    ],
-  },
-  {
-    sectionKey: 'nav.settings',
-    items: [
-      { to: '/settings', labelKey: 'nav.settingsItem', icon: IconSettings, end: true },
-      { to: '/settings/auth', labelKey: 'nav.authItem', icon: IconShieldLock },
-      { to: '/settings/tokens', labelKey: 'nav.tokensItem', icon: IconKey },
-    ],
-  },
-];
-
-function NavGroups() {
-  const { pathname } = useLocation();
+function SearchField({ onOpen }: { onOpen: () => void }) {
   const { t } = useTranslation();
   const { setOpenMobile } = useSidebar();
-
   return (
-    <>
-      {NAV.map((group) => (
-        <SidebarGroup key={group.sectionKey}>
-          <SidebarGroupLabel className="section-label">{t(group.sectionKey)}</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {group.items.map((it) => {
-                const active = it.end ? pathname === it.to : pathname.startsWith(it.to);
-                const ItemIcon = it.icon;
-                return (
-                  <SidebarMenuItem key={it.to}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={active}
-                      className="h-10 gap-2.5 px-3 text-[15px] data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground data-[active=true]:font-semibold"
-                    >
-                      <RouterNavLink to={it.to} end={it.end} onClick={() => setOpenMobile(false)}>
-                        <ItemIcon className="size-5" stroke={1.5} />
-                        <span>{t(it.labelKey)}</span>
-                      </RouterNavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      ))}
-    </>
+    <button
+      type="button"
+      onClick={() => {
+        setOpenMobile(false);
+        onOpen();
+      }}
+      className="flex h-8 w-full items-center gap-2 rounded-md bg-background px-2.5 text-left text-[13px] text-ink-2 outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring/50"
+    >
+      <IconSearch aria-hidden stroke={1.5} className="size-4 shrink-0 text-ink-3" />
+      <span className="flex-1 truncate">{t('shell.search')}</span>
+      <Kbd>{IS_MAC ? '⌘F' : 'Ctrl F'}</Kbd>
+    </button>
   );
 }
 
-function UserBlock() {
+/**
+ * The 64px header bar: breadcrumb on the left, the page's controls in the middle and its actions
+ * on the right. Pages fill the three slots through PageHeader; on narrow screens the controls drop
+ * to a second row. On wide screens it is a three-column grid, so the controls hold still when an
+ * action (e.g. Reset) appears or disappears next to them.
+ */
+function HeaderBar() {
   const { t } = useTranslation();
-  const me = useMe();
-  const logout = useLogout();
-
+  const { setTitle, setControls, setActions } = usePageChrome();
   return (
-    <div className="flex items-center justify-between gap-2 p-2">
-      <div className="flex min-w-0 items-center gap-2.5">
-        <Avatar className="size-9">
-          <AvatarFallback className="bg-brand/15 font-bold text-brand">
-            {(me.data?.username ?? 'A').charAt(0).toUpperCase()}
-          </AvatarFallback>
-        </Avatar>
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold">{me.data?.username ?? '—'}</p>
-          <p className="truncate text-xs text-muted-foreground">{t('app.singleUser')}</p>
-        </div>
+    <header className="sticky top-0 z-20 flex min-h-16 shrink-0 flex-wrap items-center gap-x-3 gap-y-2 bg-background px-4 py-3 sm:px-8 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        <SidebarTrigger className="-ml-1 size-8 md:hidden" />
+        <nav aria-label={t('shell.breadcrumb')} className="flex min-w-0 items-center gap-2 text-sm">
+          <span className="hidden text-ink-2 sm:inline">{t('app.crumbRoot')}</span>
+          <span aria-hidden className="hidden text-ink-3 sm:inline">
+            /
+          </span>
+          <span ref={setTitle} className="flex min-w-0" />
+        </nav>
       </div>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label={t('app.logout')}
-            disabled={logout.isPending}
-            onClick={() => logout.mutate()}
-          >
-            <IconLogout className="size-[18px]" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>{t('app.logout')}</TooltipContent>
-      </Tooltip>
-    </div>
+      <div
+        ref={setControls}
+        className="order-last flex basis-full items-center overflow-x-auto empty:hidden lg:order-none lg:col-start-2 lg:basis-auto"
+      />
+      <div
+        ref={setActions}
+        className="flex shrink-0 items-center gap-1.5 empty:hidden lg:col-start-3 lg:justify-self-end"
+      />
+    </header>
   );
 }
 
 export function AppLayout() {
+  const [paletteOpen, setPaletteOpen] = useState(false);
+
+  useEffect(() => {
+    // Cmd/Ctrl+F opens the palette instead of the browser's find bar (the panel's search is the
+    // palette); Cmd/Ctrl+K stays as the usual command-palette shortcut. event.code keeps it working
+    // on non-Latin layouts (Ctrl+А on a Russian keyboard is still KeyF).
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey) return;
+      if (e.code === 'KeyF' || e.code === 'KeyK') {
+        e.preventDefault();
+        setPaletteOpen((o) => !o);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
   return (
     <SidebarProvider>
-      <Sidebar collapsible="offcanvas">
-        <SidebarHeader>
-          <div className="flex items-center px-2 pt-2 pb-0.5">
-            <BrandWordmark className="text-[17px]" />
-          </div>
-        </SidebarHeader>
-        <SidebarContent>
-          <NavGroups />
-        </SidebarContent>
-        <SidebarFooter>
-          <UserBlock />
-        </SidebarFooter>
-      </Sidebar>
+      <PageChromeProvider>
+        {/* The white sidebar sits on the stone canvas by tone alone, so no dividing line. */}
+        <Sidebar collapsible="offcanvas" className="group-data-[side=left]:border-r-0">
+          <SidebarHeader className="gap-4 px-5 pt-5 pb-3">
+            <div className="flex items-center justify-between gap-2">
+              <BrandWordmark />
+              <BuildInfo />
+            </div>
+            <SearchField onOpen={() => setPaletteOpen(true)} />
+          </SidebarHeader>
+          <SidebarContent className="gap-1 px-3">
+            <NavGroups />
+            <SyncStatusGroup />
+          </SidebarContent>
+          <SidebarFooter className="gap-3 px-4 pt-3 pb-4">
+            <PaidMeter />
+            <RwpPromo />
+            <div className="flex items-center gap-1 border-t border-hairline pt-4">
+              <GithubStars />
+              <div className="flex-1" />
+              <DocsLink />
+              <ThemeToggle />
+              <LanguageSwitcher />
+            </div>
+            <UserBlock />
+          </SidebarFooter>
+        </Sidebar>
 
-      <SidebarInset>
-        <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-1.5 border-b bg-background/85 px-3 backdrop-blur sm:px-4">
-          <SidebarTrigger className="-ml-1" />
-          <div className="flex-1" />
-          <RwpPromo />
-          <div className="hidden sm:block">
-            <GithubStars />
+        {/* min-w-0: a wide table must scroll inside its card, not stretch the whole column. */}
+        <SidebarInset className="min-w-0">
+          <HeaderBar />
+          <div className="flex-1 px-4 pt-2 pb-8 sm:px-8">
+            <Outlet />
           </div>
-          <DocsLink />
-          <ThemeToggle />
-          <LanguageSwitcher />
-          <div className="hidden sm:block">
-            <BuildInfo />
-          </div>
-        </header>
-        <main className="flex-1 p-4 sm:p-6">
-          <Outlet />
-        </main>
-      </SidebarInset>
+        </SidebarInset>
+        <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
+      </PageChromeProvider>
     </SidebarProvider>
   );
 }

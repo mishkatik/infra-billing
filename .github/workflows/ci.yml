@@ -14,6 +14,8 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Both job names below are required status checks for merging into main (repository ruleset).
+# Rename a job and the ruleset has to follow, or release pull requests wait for a check that never comes.
 jobs:
   checks:
     name: Lint, typecheck, build

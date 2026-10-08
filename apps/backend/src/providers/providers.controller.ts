@@ -14,24 +14,26 @@ import {
 } from '@nestjs/common';
 import { API, API_SUB, CONTROLLERS_INFO, ID_PARAM } from '@infra/shared';
 import { Response } from 'express';
-import { SessionOnly } from '../auth/session-only.decorator';
 import { NetcupDeviceFlowService } from '../connectors/netcup/netcup.device-flow';
 import { FaviconsService } from '../favicons/favicons.service';
 import { ProvidersService } from './providers.service';
 import {
   CreateProviderDto,
+  MergeProviderDto,
   NetcupDevicePollDto,
   NetcupDevicePollResultDto,
   NetcupDeviceStartDto,
-  ProviderCredentialsRevealDto,
   ProviderDto,
   ProviderWithServicesDto,
   UpdateProviderDto,
   YandexDiscoverDto,
   YandexDiscoverResultDto,
 } from './dto/provider.dto';
+import { CreateProviderAccountDto, ProviderAccountDto } from './dto/provider-account.dto';
 import {
   ApiBearerAuth,
+  ApiBadRequestResponse,
+  ApiConflictResponse,
   ApiCreatedResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
@@ -91,16 +93,6 @@ export class ProvidersController {
     return this.providers.discoverYandex(dto);
   }
 
-  // Returns decrypted secrets, so it stays off-limits to API tokens: those are unscoped and live in
-  // scripts, and a leaked one must not be able to drain every hoster password and TOTP seed.
-  @SessionOnly()
-  @Get(API_SUB.PROVIDER_CREDENTIALS_REVEAL)
-  @ApiOperation({ summary: 'Reveal stored provider credentials (explicit reveal, session only)' })
-  @ApiOkResponse({ type: ProviderCredentialsRevealDto })
-  revealCredentials(@Param(ID_PARAM, ParseUUIDPipe) uuid: string) {
-    return this.providers.revealCredentials(uuid);
-  }
-
   @Get(API_SUB.FAVICON)
   @ApiOperation({ summary: 'Provider favicon (proxied, cached)' })
   @ApiProduces('image/*')
@@ -136,6 +128,25 @@ export class ProvidersController {
   @ApiOkResponse({ type: ProviderDto })
   update(@Param(ID_PARAM, ParseUUIDPipe) uuid: string, @Body() dto: UpdateProviderDto) {
     return this.providers.update(uuid, dto);
+  }
+
+  @Post(API_SUB.PROVIDER_ACCOUNTS)
+  @HttpCode(201)
+  @ApiOperation({ summary: 'Add an account to a provider' })
+  @ApiCreatedResponse({ type: ProviderAccountDto })
+  @ApiConflictResponse({ description: 'The provider already has an account with that label' })
+  addAccount(@Param(ID_PARAM, ParseUUIDPipe) uuid: string, @Body() dto: CreateProviderAccountDto) {
+    return this.providers.addAccount(uuid, dto);
+  }
+
+  // `:uuid` is the source: its accounts move to the target and the source provider is deleted.
+  @Post(API_SUB.PROVIDER_MERGE)
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Merge this provider into another one of the same kind' })
+  @ApiOkResponse({ type: ProviderDto, description: 'The target provider after the merge' })
+  @ApiBadRequestResponse({ description: 'Same provider, or the kinds differ' })
+  merge(@Param(ID_PARAM, ParseUUIDPipe) uuid: string, @Body() dto: MergeProviderDto) {
+    return this.providers.merge(uuid, dto);
   }
 
   @Delete(API_SUB.BY_ID)

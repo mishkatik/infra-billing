@@ -35,7 +35,7 @@ export default function App() {
   return (
     <ThemeProvider>
       <TooltipProvider delayDuration={300}>
-        <Toaster position="top-right" richColors />
+        <Toaster position="top-right" />
         <QueryClientProvider client={queryClient}>
           <BrowserRouter>
             <Routes>
