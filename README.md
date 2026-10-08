@@ -101,6 +101,17 @@ Caddy по умолчанию не ограничивает ожидание о�
 
 ### Обновление
 
+Миграции базы применяются при старте нового образа и назад не откатываются, поэтому перед обновлением
+сделайте дамп и запомните текущую версию (она рядом с названием «Infra Billing» в боковом меню):
+
+```bash
+cd /opt/infra-billing && mkdir -p backups
+docker compose exec -T infra-billing-db sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' > backups/infra_billing-$(date +%Y%m%d-%H%M).dump
+```
+
+Токены провайдеров в дампе зашифрованы ключом `ENCRYPTION_KEY` из `.env` — без него их не
+восстановить, поэтому храните `.env` вместе с дампами.
+
 Обновить и перезапустить:
 
 ```bash
@@ -112,6 +123,26 @@ cd /opt/infra-billing && docker compose pull && docker compose down && docker co
 ```bash
 docker image prune
 ```
+
+#### Откат на прошлую версию
+
+Повторный `docker compose pull` не поможет: `:latest` уже указывает на новую версию, а прошлая может
+не запуститься на базе после новых миграций. Верните базу из дампа и закрепите прошлую версию образа:
+
+```bash
+cd /opt/infra-billing
+
+# 1. Остановить панель и пересоздать базу из дампа (подставьте имя своего файла из backups/)
+docker compose stop infra-billing
+docker compose exec -T infra-billing-db sh -c 'dropdb -U "$POSTGRES_USER" "$POSTGRES_DB" && createdb -U "$POSTGRES_USER" "$POSTGRES_DB"'
+docker compose exec -T infra-billing-db sh -c 'pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --no-owner' < backups/infra_billing-ГГГГММДД-ЧЧММ.dump
+
+# 2. Закрепить прошлую версию (например, 0.47.0) и поднять панель
+sed -i 's#image: ghcr.io/mishkatik/infra-billing:.*#image: ghcr.io/mishkatik/infra-billing:0.47.0#' docker-compose.yml
+docker compose up -d
+```
+
+Чтобы снова получать обновления, верните в `docker-compose.yml` тег `:latest`.
 
 #### PostgreSQL 17 → 18 (с 0.44.0, не обязательно, но рекомендуется)
 
