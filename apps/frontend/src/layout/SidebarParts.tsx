@@ -1,4 +1,4 @@
-import { IconLogout } from '@tabler/icons-react';
+import { IconLogout, IconUser } from '@tabler/icons-react';
 import { useTranslation } from 'react-i18next';
 import { Link, NavLink as RouterNavLink, useLocation } from 'react-router-dom';
 import { useSummary } from '@/api/analytics';
@@ -177,9 +177,9 @@ export function UserBlock() {
     <div className="flex items-center gap-3 rounded-lg bg-background p-2.5">
       <span
         aria-hidden
-        className="flex size-8 shrink-0 items-center justify-center rounded-md bg-card text-[11px] font-medium text-ink-2"
+        className="flex size-8 shrink-0 items-center justify-center rounded-full bg-slate/15 text-slate"
       >
-        {name.slice(0, 2).toUpperCase()}
+        <IconUser stroke={1.5} className="size-4" />
       </span>
       <div className="min-w-0 flex-1 leading-tight">
         <p className="truncate text-sm font-medium">{name}</p>
