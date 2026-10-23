@@ -15,6 +15,10 @@ interface SettingsRow {
   telegramChatId: string | null;
   telegramTopicId: string | null;
   telegramProxyUrl: string | null;
+  quietHoursEnabled: boolean;
+  quietHoursStart: string;
+  quietHoursEnd: string;
+  quietHoursTimezone: string | null;
   forecastTariffBackfill: boolean;
   forecastTariffBackfillRespectCreatedAt: boolean;
   forecastTariffBackfillBackdateFromPayments: boolean;
@@ -49,6 +53,10 @@ export class SettingsService {
     if (dto.telegramTopicId !== undefined) data.telegramTopicId = dto.telegramTopicId || null;
     if (dto.telegramProxyUrl !== undefined) data.telegramProxyUrl = dto.telegramProxyUrl || null;
     if (dto.telegramBotToken) data.telegramBotTokenEnc = this.crypto.encrypt(dto.telegramBotToken);
+    if (dto.quietHoursEnabled !== undefined) data.quietHoursEnabled = dto.quietHoursEnabled;
+    if (dto.quietHoursStart !== undefined) data.quietHoursStart = dto.quietHoursStart;
+    if (dto.quietHoursEnd !== undefined) data.quietHoursEnd = dto.quietHoursEnd;
+    if (dto.quietHoursTimezone !== undefined) data.quietHoursTimezone = dto.quietHoursTimezone;
     if (dto.forecastTariffBackfill !== undefined)
       data.forecastTariffBackfill = dto.forecastTariffBackfill;
     if (dto.forecastTariffBackfillRespectCreatedAt !== undefined)
@@ -77,6 +85,10 @@ export class SettingsService {
       telegramTopicId: row.telegramTopicId,
       telegramProxyUrl: row.telegramProxyUrl,
       telegramConfigured: row.telegramBotTokenEnc != null, // never expose the token itself
+      quietHoursEnabled: row.quietHoursEnabled,
+      quietHoursStart: row.quietHoursStart,
+      quietHoursEnd: row.quietHoursEnd,
+      quietHoursTimezone: row.quietHoursTimezone,
       forecastTariffBackfill: row.forecastTariffBackfill,
       forecastTariffBackfillRespectCreatedAt: row.forecastTariffBackfillRespectCreatedAt,
       forecastTariffBackfillBackdateFromPayments: row.forecastTariffBackfillBackdateFromPayments,

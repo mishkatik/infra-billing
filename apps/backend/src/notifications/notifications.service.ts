@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
+import { Cron, CronExpression, SchedulerRegistry } from '@nestjs/schedule';
 import dayjs from 'dayjs';
 import { NotificationLogRepository } from '@repositories/notification-log/notification-log.repository';
 import { SettingsRepository } from '@repositories/settings/settings.repository';
@@ -14,10 +14,12 @@ import {
   unknownCoverageMessage,
   upcomingBillingMessage,
 } from './messages';
+import { quietHoursRemainingMs } from './quiet-hours';
 import { TelegramService } from './telegram.service';
 
 const THROTTLE_HOURS = 24;
 const DEFAULT_UPCOMING_BILLING_DAYS = 3; // fallback only, until the Settings row exists
+const QUIET_HOURS_TIMEOUT_NAME = 'notifications-quiet-hours';
 
 @Injectable()
 export class NotificationsService {
@@ -29,6 +31,7 @@ export class NotificationsService {
     private readonly notificationLog: NotificationLogRepository,
     private readonly analytics: AnalyticsService,
     private readonly telegram: TelegramService,
+    private readonly scheduler: SchedulerRegistry,
   ) {}
 
   /** Evaluate alert conditions and send (throttled) Telegram messages. Returns count sent. */
@@ -36,6 +39,11 @@ export class NotificationsService {
     if (!(await this.telegram.isEnabled())) return 0;
 
     const settings = await this.settings.find();
+    const quietMs = settings ? quietHoursRemainingMs(settings) : 0;
+    if (quietMs > 0) {
+      this.deferUntilQuietEnds(quietMs);
+      return 0;
+    }
     const upcomingDays = settings?.upcomingBillingDays ?? DEFAULT_UPCOMING_BILLING_DAYS;
     const summary = await this.analytics.summary();
     let sent = 0;
@@ -112,6 +120,23 @@ export class NotificationsService {
     } catch (e) {
       this.logger.error('Notification check failed', e instanceof Error ? e.stack : String(e));
     }
+  }
+
+  /**
+   * Re-run the checks right when the quiet window closes instead of on the next hourly tick.
+   * If the window was moved meanwhile, that run lands inside it again and re-arms itself.
+   */
+  private deferUntilQuietEnds(ms: number): void {
+    if (this.scheduler.doesExist('timeout', QUIET_HOURS_TIMEOUT_NAME)) {
+      this.scheduler.deleteTimeout(QUIET_HOURS_TIMEOUT_NAME);
+    }
+    // A second past the boundary, so the local clock already reads the end minute.
+    const timeout = setTimeout(() => {
+      this.scheduler.deleteTimeout(QUIET_HOURS_TIMEOUT_NAME);
+      void this.scheduled();
+    }, ms + 1000);
+    this.scheduler.addTimeout(QUIET_HOURS_TIMEOUT_NAME, timeout);
+    this.logger.debug(`Quiet hours: notifications held for ${Math.ceil(ms / 60_000)} min`);
   }
 
   /** Send only if the same dedup key hasn't been sent within THROTTLE_HOURS. */

@@ -9,6 +9,7 @@ import { projects } from './locales/projects';
 import { providers } from './locales/providers';
 import { services } from './locales/services';
 import { settings } from './locales/settings';
+import { timezones } from './locales/timezones';
 import { tokens } from './locales/tokens';
 
 export const SUPPORTED_LANGS = ['en', 'ru'] as const;
@@ -26,6 +27,7 @@ const resources = {
       settings: settings.en,
       auth: auth.en,
       tokens: tokens.en,
+      timezones: timezones.en,
     },
   },
   ru: {
@@ -39,6 +41,7 @@ const resources = {
       settings: settings.ru,
       auth: auth.ru,
       tokens: tokens.ru,
+      timezones: timezones.ru,
     },
   },
 };
