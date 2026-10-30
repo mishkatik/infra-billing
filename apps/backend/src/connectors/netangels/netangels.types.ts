@@ -30,3 +30,17 @@ export const netangelsCalculationSchema = z.object({
 });
 export type NetangelsVm = z.infer<typeof netangelsVmSchema>;
 export type NetangelsCalculation = z.infer<typeof netangelsCalculationSchema>['entities'][number];
+
+export const netangelsPaymentMonthsSchema = z.object({
+  entities: z.array(z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/)).max(240),
+});
+export const netangelsPaymentsSchema = z.object({
+  payments: z.array(
+    z.object({
+      id: z.number().int().positive(),
+      amount: money,
+      event_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    }),
+  ),
+});
+export type NetangelsPayment = z.infer<typeof netangelsPaymentsSchema>['payments'][number];
