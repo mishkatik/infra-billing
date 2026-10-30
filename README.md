@@ -17,7 +17,7 @@
 
 - **Провайдеры с API:** Timeweb Cloud, Hetzner Cloud, Hostkey (InvAPI), netcup, HostBill,
   ISPsystem BILLmanager, Selectel, 4VPS.SU, Netlen, Beget Cloud, Porkbun, Spaceship, Vultr,
-  Linode, Aeza, VDSina, Cloudflare, StormWall, Yandex Cloud, Double Servers, OpenRouter. Плюс
+  Linode, Aeza, VDSina, Cloudflare, StormWall, NetAngels, Yandex Cloud, Double Servers, OpenRouter. Плюс
   **Manual** — провайдеры без API ведутся руками.
 - **Автосинк** (по расписанию + кнопкой): баланс + валюта аккаунта, список серверов/услуг, даты
   следующих списаний; история баланса по дням (снапшоты).
@@ -34,6 +34,8 @@
   (WebAuthn) **и/или Telegram** (OpenID Connect) — методы переключаются в настройках; сессия — JWT в httpOnly-cookie; токены провайдеров
   шифруются AES-256-GCM. В списке и карточке провайдера секретов нет — только признак «задан»;
   показать их в открытом виде можно лишь по «глазику» в форме, из сессии владельца.
+
+Подключение NetAngels и особенности учёта: [docs/netangels.md](docs/netangels.md).
 
 ## RWP Shop
 

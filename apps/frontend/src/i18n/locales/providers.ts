@@ -99,6 +99,8 @@ export const providers = {
       apiTokenDescCloudflare:
         'Cloudflare → My Profile → API Tokens → create a token with Registrar: Domains:Read and Billing:Read',
       cloudflareAccountIdDesc: 'Cloudflare account ID (dashboard URL or GET /accounts)',
+      apiTokenDescNetangels:
+        'NetAngels panel → API: create an API key. Syncs balance and cloud VDS with provider estimates for 30 days (720 hours). Prepaid packet discounts and payment history are not imported.',
       apiTokenDescStormwall: 'StormWall personal cabinet → API key, sent as the x-api-key header',
       managementKey: 'Management API key',
       apiTokenDescOpenrouter:
@@ -167,6 +169,7 @@ export const providers = {
       hostkeyTokenFormat: 'Hostkey key must look like d35f42c3a881b52d-ccbc5a508624d503',
       vdsinaToken: 'Enter the VDSina API token',
       cloudflareCreds: 'Enter the Cloudflare account ID and API token',
+      netangelsToken: 'Enter the NetAngels API key',
       stormwallToken: 'Enter the StormWall API key',
       openrouterToken: 'Enter the OpenRouter Management API key',
       yandexKey: 'Paste the Yandex Cloud service account authorized key (JSON)',
@@ -338,6 +341,8 @@ export const providers = {
       apiTokenDescCloudflare:
         'Cloudflare → My Profile → API Tokens → создать токен с правами Registrar: Domains:Read и Billing:Read',
       cloudflareAccountIdDesc: 'Account ID аккаунта Cloudflare (из URL дашборда или GET /accounts)',
+      apiTokenDescNetangels:
+        'Панель NetAngels → API: создайте API-ключ. Синхронизируются баланс и облачные VDS с расчётной ценой за 30 дней (720 часов). Скидки предоплаченных пакетов и платежи не импортируются.',
       apiTokenDescStormwall:
         'Личный кабинет StormWall → API-ключ (передаётся в заголовке x-api-key)',
       managementKey: 'Management API-ключ',
@@ -407,6 +412,7 @@ export const providers = {
       hostkeyTokenFormat: 'Ключ Hostkey должен быть вида d35f42c3a881b52d-ccbc5a508624d503',
       vdsinaToken: 'Укажите API-токен VDSina',
       cloudflareCreds: 'Укажите account ID и API-токен Cloudflare',
+      netangelsToken: 'Укажите API-ключ NetAngels',
       stormwallToken: 'Укажите API-ключ StormWall',
       openrouterToken: 'Укажите Management API-ключ OpenRouter',
       yandexKey: 'Вставьте авторизованный ключ сервисного аккаунта Yandex Cloud (JSON)',

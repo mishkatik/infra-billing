@@ -18,6 +18,7 @@ import { HostbillConnector } from './hostbill/hostbill.connector';
 import type { HostbillCredentials } from './hostbill/hostbill.types';
 import { LinodeConnector } from './linode/linode.connector';
 import { NetcupConnector } from './netcup/netcup.connector';
+import { NetangelsConnector } from './netangels/netangels.connector';
 import { NetlenConnector } from './netlen/netlen.connector';
 import { OpenRouterConnector } from './openrouter/openrouter.connector';
 import { parseOpenRouterCredentials } from './openrouter/openrouter.types';
@@ -92,6 +93,8 @@ export class ConnectorFactory {
       case 'cloudflare':
         // Cloudflare secret is JSON: { accountId, apiToken } (account-scoped registrar + billing).
         return new CloudflareConnector(JSON.parse(token) as CloudflareCredentials);
+      case 'netangels':
+        return new NetangelsConnector(token);
       case 'stormwall':
         // StormWall secret is the raw API key (single string, sent as the x-api-key header).
         return new StormwallConnector(token);

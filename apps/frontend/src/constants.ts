@@ -21,6 +21,7 @@ const PROVIDER_KINDS: ProviderKind[] = [
   'vdsina',
   'cloudflare',
   'stormwall',
+  'netangels',
   'yandex',
   'doubleservers',
   'openrouter',

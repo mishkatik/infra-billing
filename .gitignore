@@ -34,7 +34,5 @@ apps/backend/src/generated/
 # local database dumps
 backups/
 
-# tests
-apps/backend/test/
 .claude/
 CLAUDE.md
