@@ -57,6 +57,7 @@ export const DEFAULT_LOGIN_URLS: Record<string, string> = {
   yandex: 'https://console.yandex.cloud',
   doubleservers: 'https://doubleservers.com/dashboard',
   openrouter: 'https://openrouter.ai',
+  hostup: 'https://cloud.hostup.se',
 };
 
 export const EMPTY_IDENTITY: IdentityFormValues = {
@@ -183,6 +184,7 @@ export function validateAccountCredentials(
   if (requireCreds && kind === 'stormwall' && !v.token) return t('providers.err.stormwallToken');
   if (requireCreds && kind === 'yandex' && !v.token) return t('providers.err.yandexKey');
   if (requireCreds && kind === 'openrouter' && !v.token) return t('providers.err.openrouterToken');
+  if (requireCreds && kind === 'hostup' && !v.token) return t('providers.err.hostupToken');
   return null;
 }
 

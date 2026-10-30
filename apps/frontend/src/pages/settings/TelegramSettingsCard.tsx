@@ -6,6 +6,7 @@ import { apiErrorMessage } from '@/api/client';
 import { useSettings, useTestTelegram, useUpdateSettings } from '@/api/settings';
 import { InkGlyph } from '@/components/ink/InkGlyph';
 import { PasswordInput } from '@/components/PasswordInput';
+import { browserTimeZone, TimezoneCombobox } from '@/components/TimezoneCombobox';
 import { Button } from '@/components/ui/button';
 import { Card, CardAction, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -20,6 +21,10 @@ interface TelegramForm {
   telegramTopicId: string;
   telegramProxyUrl: string;
   upcomingBillingDays: number;
+  quietHoursEnabled: boolean;
+  quietHoursStart: string;
+  quietHoursEnd: string;
+  quietHoursTimezone: string;
 }
 
 export function TelegramSettingsCard() {
@@ -28,17 +33,22 @@ export function TelegramSettingsCard() {
   const updateSettings = useUpdateSettings();
   const testTelegram = useTestTelegram();
 
-  const { control, register, handleSubmit, reset, setValue } = useForm<TelegramForm>({
-    defaultValues: {
-      notificationsEnabled: false,
-      telegramBotToken: '',
-      telegramChatId: '',
-      telegramTopicId: '',
-      telegramProxyUrl: '',
-      upcomingBillingDays: 3,
-    },
-    mode: 'onSubmit',
-  });
+  const { control, register, handleSubmit, reset, setValue, watch, formState } =
+    useForm<TelegramForm>({
+      defaultValues: {
+        notificationsEnabled: false,
+        telegramBotToken: '',
+        telegramChatId: '',
+        telegramTopicId: '',
+        telegramProxyUrl: '',
+        upcomingBillingDays: 3,
+        quietHoursEnabled: false,
+        quietHoursStart: '22:00',
+        quietHoursEnd: '09:00',
+        quietHoursTimezone: browserTimeZone(),
+      },
+      mode: 'onSubmit',
+    });
 
   // Re-seed the form when settings load. Token is write-only: never prefilled, the rest are.
   useEffect(() => {
@@ -50,6 +60,11 @@ export function TelegramSettingsCard() {
       telegramTopicId: settings.telegramTopicId ?? '',
       telegramProxyUrl: settings.telegramProxyUrl ?? '',
       upcomingBillingDays: settings.upcomingBillingDays,
+      quietHoursEnabled: settings.quietHoursEnabled,
+      quietHoursStart: settings.quietHoursStart,
+      quietHoursEnd: settings.quietHoursEnd,
+      // Nothing picked yet: offer the browser's zone, it gets saved with the form.
+      quietHoursTimezone: settings.quietHoursTimezone ?? browserTimeZone(),
     });
   }, [settings, reset]);
 
@@ -62,6 +77,10 @@ export function TelegramSettingsCard() {
         telegramTopicId: v.telegramTopicId,
         telegramProxyUrl: v.telegramProxyUrl,
         upcomingBillingDays: v.upcomingBillingDays,
+        quietHoursEnabled: v.quietHoursEnabled,
+        quietHoursStart: v.quietHoursStart,
+        quietHoursEnd: v.quietHoursEnd,
+        quietHoursTimezone: v.quietHoursTimezone,
       });
       setValue('telegramBotToken', '');
       notifySuccess(t('settings.telegram.saved'));
@@ -69,6 +88,14 @@ export function TelegramSettingsCard() {
       notifyError(apiErrorMessage(e));
     }
   });
+
+  const [notificationsOn, quietEnabled, quietStart, quietEnd, quietZone] = watch([
+    'notificationsEnabled',
+    'quietHoursEnabled',
+    'quietHoursStart',
+    'quietHoursEnd',
+    'quietHoursTimezone',
+  ]);
 
   const doTestTelegram = async () => {
     try {
@@ -108,8 +135,14 @@ export function TelegramSettingsCard() {
               )}
             />
             <div className="space-y-1">
-              <Label htmlFor="tg-enabled">{t('settings.telegram.enabled')}</Label>
-              <p className="text-[13px] text-ink-2">{t('settings.telegram.enabledDescription')}</p>
+              <Label htmlFor="tg-enabled">
+                {notificationsOn ? t('settings.telegram.enabled') : t('settings.telegram.disabled')}
+              </Label>
+              <p className="text-[13px] text-ink-2">
+                {notificationsOn
+                  ? t('settings.telegram.enabledDescription')
+                  : t('settings.telegram.disabledDescription')}
+              </p>
             </div>
           </div>
 
@@ -165,6 +198,74 @@ export function TelegramSettingsCard() {
               max={60}
               {...register('upcomingBillingDays', { valueAsNumber: true })}
             />
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-start gap-3">
+              <Controller
+                control={control}
+                name="quietHoursEnabled"
+                render={({ field }) => (
+                  <Switch
+                    id="tg-quiet-hours"
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                    className="mt-0.5"
+                  />
+                )}
+              />
+              <div className="space-y-1">
+                <Label htmlFor="tg-quiet-hours">{t('settings.telegram.quietHours')}</Label>
+                <p className="text-[13px] text-ink-2">
+                  {t('settings.telegram.quietHoursDescription', {
+                    start: quietStart,
+                    end: quietEnd,
+                    zone: t(`timezones.${quietZone}`, { defaultValue: quietZone }),
+                  })}
+                </p>
+              </div>
+            </div>
+
+            {quietEnabled && (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="tg-quiet-start">{t('settings.telegram.quietHoursStart')}</Label>
+                    <Input
+                      id="tg-quiet-start"
+                      type="time"
+                      aria-invalid={!!formState.errors.quietHoursStart}
+                      {...register('quietHoursStart', { required: true })}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="tg-quiet-end">{t('settings.telegram.quietHoursEnd')}</Label>
+                    <Input
+                      id="tg-quiet-end"
+                      type="time"
+                      aria-invalid={!!formState.errors.quietHoursEnd}
+                      {...register('quietHoursEnd', { required: true })}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="tg-quiet-timezone">
+                    {t('settings.telegram.quietHoursTimezone')}
+                  </Label>
+                  <Controller
+                    control={control}
+                    name="quietHoursTimezone"
+                    render={({ field }) => (
+                      <TimezoneCombobox
+                        id="tg-quiet-timezone"
+                        value={field.value}
+                        onChange={field.onChange}
+                      />
+                    )}
+                  />
+                </div>
+              </>
+            )}
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-2">

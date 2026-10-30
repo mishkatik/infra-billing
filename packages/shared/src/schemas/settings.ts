@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { rateSourceSchema } from '../enums';
-import { currencySchema, isoDateSchema } from './common';
+import { currencySchema, isoDateSchema, timeOfDaySchema, timeZoneSchema } from './common';
 
 export const settingsSchema = z.object({
   baseCurrency: currencySchema.describe('Base currency for analytics'),
@@ -19,6 +19,11 @@ export const settingsSchema = z.object({
   telegramTopicId: z.string().describe('Telegram topic ID').nullable(),
   telegramProxyUrl: z.string().describe('SOCKS proxy URL for Telegram').nullable(),
   telegramConfigured: z.boolean().describe('Bot token is set'),
+  quietHoursEnabled: z.boolean().describe('Hold automatic notifications during quiet hours'),
+  quietHoursStart: timeOfDaySchema.describe('Quiet hours start (HH:MM)'),
+  quietHoursEnd: timeOfDaySchema.describe('Quiet hours end (HH:MM)'),
+  // Null until picked; the backend then evaluates the window in UTC.
+  quietHoursTimezone: timeZoneSchema.describe('Quiet hours IANA time zone').nullable(),
   forecastTariffBackfill: z
     .boolean()
     .describe('Fill forecast history with full portfolio monthly tariffs'),
@@ -59,6 +64,14 @@ export const updateSettingsSchema = z.object({
     .regex(/^$|^socks(4a?|5h?)?:\/\/\S+$/)
     .describe('SOCKS proxy URL for Telegram notifications')
     .optional(),
+  quietHoursEnabled: z
+    .boolean()
+    .describe('Hold automatic notifications during quiet hours')
+    .optional(),
+  // Equal start and end make an empty window: nothing is held.
+  quietHoursStart: timeOfDaySchema.describe('Quiet hours start (HH:MM)').optional(),
+  quietHoursEnd: timeOfDaySchema.describe('Quiet hours end (HH:MM)').optional(),
+  quietHoursTimezone: timeZoneSchema.describe('Quiet hours IANA time zone').optional(),
   forecastTariffBackfill: z
     .boolean()
     .describe('Fill forecast history with full portfolio monthly tariffs')

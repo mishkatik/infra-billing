@@ -221,6 +221,7 @@ export const common = {
         stormwall: 'StormWall',
         doubleservers: 'Double Servers',
         openrouter: 'OpenRouter',
+        hostup: 'HostUp',
         manual: 'Manual',
       },
       rateSource: {
@@ -447,6 +448,7 @@ export const common = {
         stormwall: 'StormWall',
         doubleservers: 'Double Servers',
         openrouter: 'OpenRouter',
+        hostup: 'HostUp',
         manual: 'Ручной',
       },
       rateSource: {

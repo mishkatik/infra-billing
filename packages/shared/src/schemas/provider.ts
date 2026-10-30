@@ -80,8 +80,8 @@ export const providerCredentialsRevealSchema = z.object({
 });
 export type ProviderCredentialsReveal = z.infer<typeof providerCredentialsRevealSchema>;
 
-// Bearer/API-token providers (timeweb, hetzner, vdsina) use `token`. HostBill/BILLmanager use
-// `baseUrl` + `username` (email) + `password`. BILLmanager with OTP 2FA additionally
+// Bearer/API-token providers (timeweb, hetzner, vdsina, hostup) use `token`. HostBill/BILLmanager
+// use `baseUrl` + `username` (email) + `password`. BILLmanager with OTP 2FA additionally
 // takes `totpSecret` (the base32 seed) so the backend can generate one-time codes.
 // Beget uses `username` (account login) + `password` (Cloud API), plus optional `totpSecret`
 // (OTP 2FA) and `apiPassword` (the separate panel API password, enables the balance lookup).

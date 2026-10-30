@@ -21,6 +21,7 @@ export const SUPPORTED_CURRENCIES = [
   'TRY',
   'KZT',
   'UAH',
+  'SEK',
   'USDT',
 ] as const;
 
@@ -38,6 +39,19 @@ export const moneySchema = z.string().regex(/^-?\d+(\.\d{1,2})?$/, 'decimal stri
 
 /** ISO 8601 datetime string (UTC). The frontend renders it in local time. */
 export const isoDateSchema = z.string().datetime({ offset: true });
+
+/** Time of day as HH:MM (24h), the value of an <input type="time">. */
+export const timeOfDaySchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'HH:MM');
+
+/** IANA time zone the runtime knows (Intl throws a RangeError on anything else). */
+export const timeZoneSchema = z.string().refine((tz) => {
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: tz });
+    return true;
+  } catch {
+    return false;
+  }
+}, 'IANA time zone');
 
 /** Tabler Icons React export name, e.g. IconServer. */
 export const iconNameSchema = z

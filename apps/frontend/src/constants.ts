@@ -24,12 +24,61 @@ const PROVIDER_KINDS: ProviderKind[] = [
   'yandex',
   'doubleservers',
   'openrouter',
+  'hostup',
   'manual',
 ];
 
 // Currency codes are language-neutral, so they stay static. Sourced from the shared list so the
 // pickers and the CBR rate fetch stay in sync.
 export const CURRENCY_OPTIONS = SUPPORTED_CURRENCIES.map((c) => ({ value: c, label: c }));
+
+// Time zones offered for quiet hours: every Russian zone plus the usual neighbours and world
+// cities. Names are in the `timezones` locale; the picker sorts them by the current offset.
+export const QUIET_HOURS_TIMEZONES = [
+  'Pacific/Honolulu',
+  'America/Anchorage',
+  'America/Los_Angeles',
+  'America/Denver',
+  'America/Chicago',
+  'America/New_York',
+  'America/Halifax',
+  'America/Sao_Paulo',
+  'Atlantic/South_Georgia',
+  'Atlantic/Azores',
+  'UTC',
+  'Europe/London',
+  'Europe/Paris',
+  'Europe/Berlin',
+  'Europe/Kaliningrad',
+  'Europe/Kyiv',
+  'Europe/Helsinki',
+  'Europe/Istanbul',
+  'Europe/Minsk',
+  'Europe/Moscow',
+  'Europe/Samara',
+  'Asia/Tbilisi',
+  'Asia/Yerevan',
+  'Asia/Baku',
+  'Asia/Dubai',
+  'Asia/Tashkent',
+  'Asia/Yekaterinburg',
+  'Asia/Almaty',
+  'Asia/Kolkata',
+  'Asia/Omsk',
+  'Asia/Novosibirsk',
+  'Asia/Krasnoyarsk',
+  'Asia/Bangkok',
+  'Asia/Irkutsk',
+  'Asia/Shanghai',
+  'Asia/Singapore',
+  'Asia/Yakutsk',
+  'Asia/Tokyo',
+  'Asia/Vladivostok',
+  'Australia/Sydney',
+  'Asia/Magadan',
+  'Asia/Kamchatka',
+  'Pacific/Auckland',
+];
 
 // Connector kinds are lowercase codes (timeweb, billmgr, manual, …) shown as-is in every
 // locale — netcup-brand style, no prose labels. Locale-independent, so both the label fn and

@@ -588,6 +588,25 @@ export function ProviderCredentialFields({
     );
   }
 
+  if (kind === 'hostup') {
+    return (
+      <Field
+        id="cred-token"
+        label={t('providers.field.apiToken')}
+        description={t('providers.field.apiTokenDescHostup')}
+        link="https://cloud.hostup.se/api-management"
+      >
+        <SecretFormField
+          form={form}
+          name="token"
+          id="cred-token"
+          hasStored={storedSecrets?.hasToken}
+          reveal={reveal}
+        />
+      </Field>
+    );
+  }
+
   if (kind === 'openrouter') {
     return (
       <>

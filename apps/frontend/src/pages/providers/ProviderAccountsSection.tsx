@@ -8,7 +8,6 @@ import {
   IconRefresh,
   IconTrash,
 } from '@tabler/icons-react';
-import dayjs from 'dayjs';
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { apiErrorMessage } from '@/api/client';
@@ -24,7 +23,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { formatDate, formatMoney } from '@/utils/format';
+import { formatDate, formatMoney, fromNowPast } from '@/utils/format';
 import { notifyError, notifySuccess } from '@/utils/notify';
 import { SYNC_STATE_GLYPH, accountDisplayName, accountSyncState } from '@/utils/providerState';
 import { syncLogLines } from '@/utils/syncLog';
@@ -158,7 +157,7 @@ function AccountCard({ provider, account: a, focused, onSync, onEdit }: AccountC
           <span>
             {t('providers.th.lastSync')}{' '}
             <span className="text-foreground" title={formatDate(a.lastSyncAt)}>
-              {dayjs(a.lastSyncAt).fromNow()}
+              {fromNowPast(a.lastSyncAt)}
             </span>
           </span>
         )}

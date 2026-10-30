@@ -100,6 +100,8 @@ export const providers = {
         'Cloudflare → My Profile → API Tokens → create a token with Registrar: Domains:Read and Billing:Read',
       cloudflareAccountIdDesc: 'Cloudflare account ID (dashboard URL or GET /accounts)',
       apiTokenDescStormwall: 'StormWall personal cabinet → API key, sent as the x-api-key header',
+      apiTokenDescHostup:
+        'HostUp → API management → create a key with read:all (or read:billing, read:services, read:vm and read:domains)',
       managementKey: 'Management API key',
       apiTokenDescOpenrouter:
         'Go to openrouter.ai. Open "Home" → "Management Keys" → "New Key", enter any name, then "Create". Copy the key and paste it below.',
@@ -169,6 +171,7 @@ export const providers = {
       cloudflareCreds: 'Enter the Cloudflare account ID and API token',
       stormwallToken: 'Enter the StormWall API key',
       openrouterToken: 'Enter the OpenRouter Management API key',
+      hostupToken: 'Enter the HostUp API key',
       yandexKey: 'Paste the Yandex Cloud service account authorized key (JSON)',
     },
     netcup: {
@@ -340,6 +343,8 @@ export const providers = {
       cloudflareAccountIdDesc: 'Account ID аккаунта Cloudflare (из URL дашборда или GET /accounts)',
       apiTokenDescStormwall:
         'Личный кабинет StormWall → API-ключ (передаётся в заголовке x-api-key)',
+      apiTokenDescHostup:
+        'HostUp → API management → создать ключ со scope read:all (или read:billing, read:services, read:vm и read:domains)',
       managementKey: 'Management API-ключ',
       apiTokenDescOpenrouter:
         'Зайдите на openrouter.ai. Откройте "Home" → "Management Keys" → "New Key", введите любое имя, затем "Create". Скопируйте ключ и вставьте его ниже.',
@@ -409,6 +414,7 @@ export const providers = {
       cloudflareCreds: 'Укажите account ID и API-токен Cloudflare',
       stormwallToken: 'Укажите API-ключ StormWall',
       openrouterToken: 'Укажите Management API-ключ OpenRouter',
+      hostupToken: 'Укажите API-ключ HostUp',
       yandexKey: 'Вставьте авторизованный ключ сервисного аккаунта Yandex Cloud (JSON)',
     },
     netcup: {

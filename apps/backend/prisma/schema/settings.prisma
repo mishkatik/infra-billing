@@ -12,6 +12,13 @@ model Settings {
   telegramTopicId      String? @map("telegram_topic_id")
   telegramProxyUrl     String? @map("telegram_proxy_url")
 
+  // Quiet hours: automatic alerts are held inside [start, end) in the given IANA zone and go out
+  // when the window closes. HH:MM strings; a null zone means "not picked yet" and counts as UTC.
+  quietHoursEnabled  Boolean @default(false) @map("quiet_hours_enabled")
+  quietHoursStart    String  @default("22:00") @map("quiet_hours_start")
+  quietHoursEnd      String  @default("09:00") @map("quiet_hours_end")
+  quietHoursTimezone String? @map("quiet_hours_timezone")
+
   // Forecast chart: fill past/current months with service tariffs where payment history is missing.
   forecastTariffBackfill                   Boolean @default(false) @map("forecast_tariff_backfill")
   forecastTariffBackfillRespectCreatedAt   Boolean @default(false) @map("forecast_tariff_backfill_respect_created_at")
