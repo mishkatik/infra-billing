@@ -7,6 +7,11 @@ same storage as other token-based providers.
 
 ## What is synced
 
+- Posted account payment history in RUB (all months returned by
+  `GET /api/v1/finances/payments/months/`, then
+  `GET /api/v1/finances/payments/YYYY-MM-01/`). Stable `payment:<id>` keys
+  make repeat syncs idempotent. The analytics “Spent” column follows the
+  application-wide account-topup definition, not projected resource charges.
 - Account balance in RUB (`GET /api/v1/account/info/`).
 - Cloud VDS inventory, paginated with `limit` and `offset`
   (`GET /api/v1/cloud/vms/`). The stable external ID is the numeric VM ID.
@@ -32,9 +37,8 @@ hourly amount: the DB stores money with two decimal places, while hourly tariffs
 can have four. Full hourly price is retained in metadata.
 
 `full_month_price` is used even for a VM covered by a prepaid packet, whose
-immediate `month_price` can be zero. Packet discounts, expiry and payment history
-are not imported. This connector represents the recurring full tariff, not the
-actual cash ledger. Next billing date is left unset rather than invented.
+immediate `month_price` can be zero. Packet discounts and expiry are not imported. This connector represents the recurring full tariff, not the
+actual resource-charge ledger. Account payments are imported separately. Next billing date is left unset rather than invented.
 
 Stopped VMs remain in inventory because resources can still be charged. Deleted
 VMs are excluded. A malformed/truncated response, duplicate pagination or missing

@@ -46,14 +46,14 @@ function SearchField({ onOpen }: { onOpen: () => void }) {
 /**
  * The 64px header bar: breadcrumb on the left, the page's controls in the middle and its actions
  * on the right. Pages fill the three slots through PageHeader; on narrow screens the controls drop
- * to a second row. On wide screens it is a three-column grid, so the controls hold still when an
- * action (e.g. Reset) appears or disappears next to them.
+ * to a second row. On very wide screens controls share the first row; flex sizing and wrapping keep
+ * filters and actions from overlapping when Reset appears or labels grow.
  */
 function HeaderBar() {
   const { t } = useTranslation();
   const { setTitle, setControls, setActions } = usePageChrome();
   return (
-    <header className="sticky top-0 z-20 flex min-h-16 shrink-0 flex-wrap items-center gap-x-3 gap-y-2 bg-background px-4 py-3 sm:px-8 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
+    <header className="sticky top-0 z-20 flex min-h-16 shrink-0 flex-wrap items-center gap-x-3 gap-y-2 bg-background px-4 py-3 sm:px-8">
       <div className="flex min-w-0 flex-1 items-center gap-2">
         <SidebarTrigger className="-ml-1 size-8 md:hidden" />
         <nav aria-label={t('shell.breadcrumb')} className="flex min-w-0 items-center gap-2 text-sm">
@@ -66,11 +66,11 @@ function HeaderBar() {
       </div>
       <div
         ref={setControls}
-        className="order-last flex basis-full items-center overflow-x-auto empty:hidden lg:order-none lg:col-start-2 lg:basis-auto"
+        className="order-last flex min-w-0 basis-full items-center overflow-x-auto empty:hidden 2xl:order-none 2xl:basis-auto 2xl:flex-1"
       />
       <div
         ref={setActions}
-        className="flex shrink-0 items-center gap-1.5 empty:hidden lg:col-start-3 lg:justify-self-end"
+        className="ml-auto flex max-w-full shrink-0 flex-wrap items-center justify-end gap-1.5 empty:hidden"
       />
     </header>
   );

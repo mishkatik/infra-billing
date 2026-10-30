@@ -174,3 +174,52 @@ test('aborted requests do not proceed to provider reads', async () => {
   await assert.rejects(c.fetchAccount(controller.signal));
   assert.equal(authCalls(), 0);
 });
+
+test('imports all payment months with stable IDs and never copies payment tokens', async () => {
+  const { c } = stub((config) => {
+    if (config.url.endsWith('/months/')) return { entities: ['2026-10', '2026-09'] };
+    const october = config.url.includes('2026-10-01');
+    assert.ok(october || config.url.includes('2026-09-01'));
+    return {
+      payments: [
+        {
+          id: october ? 42 : 41,
+          amount: october ? 210 : -10,
+          event_date: october ? '2026-10-27' : '2026-09-01',
+          token: 'never-store',
+          login: 'private',
+        },
+      ],
+    };
+  });
+  const first = await c.fetchPayments(signal());
+  const second = await c.fetchPayments(signal());
+  assert.deepEqual(
+    first.map((x) => x.externalId),
+    ['payment:42', 'payment:41'],
+  );
+  assert.deepEqual(first, second);
+  assert.equal(first[1].amount.toFixed(2), '-10.00');
+  assert.equal(first[0].date.toISOString(), '2026-10-27T00:00:00.000Z');
+  assert.equal(first[0].type, 'topup');
+  assert.ok(!JSON.stringify(first).includes('never-store'));
+  assert.ok(!JSON.stringify(first).includes('private'));
+});
+
+test('payment sync rejects malformed month lists, invalid dates and duplicate IDs', async () => {
+  const bad = stub(() => ({ entities: ['2026-13'] }));
+  await assert.rejects(bad.c.fetchPayments(signal()), /invalid payment months/);
+  for (const payments of [
+    [{ id: 1, amount: 1, event_date: '2026-02-31' }],
+    [{ id: 1, amount: 1, event_date: '2026-03-01' }],
+    [
+      { id: 1, amount: 1, event_date: '2026-02-01' },
+      { id: 1, amount: 1, event_date: '2026-02-01' },
+    ],
+  ]) {
+    const { c } = stub((config) =>
+      config.url.endsWith('/months/') ? { entities: ['2026-02'] } : { payments },
+    );
+    await assert.rejects(c.fetchPayments(signal()), /NetAngels:/);
+  }
+});

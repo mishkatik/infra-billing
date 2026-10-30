@@ -38,6 +38,7 @@ export const PROVIDER_KINDS_WITH_PAYMENT_IMPORT = [
   'billmgr',
   'selectel',
   'netlen',
+  'netangels',
   'linode',
   'aeza',
   'vultr',

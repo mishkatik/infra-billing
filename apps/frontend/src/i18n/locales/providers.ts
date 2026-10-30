@@ -100,7 +100,7 @@ export const providers = {
         'Cloudflare → My Profile → API Tokens → create a token with Registrar: Domains:Read and Billing:Read',
       cloudflareAccountIdDesc: 'Cloudflare account ID (dashboard URL or GET /accounts)',
       apiTokenDescNetangels:
-        'NetAngels panel → API: create an API key. Syncs balance and cloud VDS with provider estimates for 30 days (720 hours). Prepaid packet discounts and payment history are not imported.',
+        'NetAngels panel → API: create an API key. Syncs balance and cloud VDS with provider estimates for 30 days (720 hours). Imports account payment history. Prepaid packet discounts are not applied.',
       apiTokenDescStormwall: 'StormWall personal cabinet → API key, sent as the x-api-key header',
       managementKey: 'Management API key',
       apiTokenDescOpenrouter:
@@ -342,7 +342,7 @@ export const providers = {
         'Cloudflare → My Profile → API Tokens → создать токен с правами Registrar: Domains:Read и Billing:Read',
       cloudflareAccountIdDesc: 'Account ID аккаунта Cloudflare (из URL дашборда или GET /accounts)',
       apiTokenDescNetangels:
-        'Панель NetAngels → API: создайте API-ключ. Синхронизируются баланс и облачные VDS с расчётной ценой за 30 дней (720 часов). Скидки предоплаченных пакетов и платежи не импортируются.',
+        'Панель NetAngels → API: создайте API-ключ. Синхронизируются баланс и облачные VDS с расчётной ценой за 30 дней (720 часов). История пополнений импортируется; скидки предоплаченных пакетов не учитываются.',
       apiTokenDescStormwall:
         'Личный кабинет StormWall → API-ключ (передаётся в заголовке x-api-key)',
       managementKey: 'Management API-ключ',

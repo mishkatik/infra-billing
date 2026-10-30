@@ -1,6 +1,6 @@
 import Decimal from 'decimal.js';
-import { ServiceData } from '../connector.interface';
-import { NetangelsCalculation, NetangelsVm } from './netangels.types';
+import { PaymentData, ServiceData } from '../connector.interface';
+import { NetangelsCalculation, NetangelsPayment, NetangelsVm } from './netangels.types';
 
 /** Use the provider's full monthly tariff, not the zero cash charge while a prepaid packet is active. */
 export function mapNetangelsVm(vm: NetangelsVm, price: NetangelsCalculation): ServiceData {
@@ -32,5 +32,21 @@ export function mapNetangelsVm(vm: NetangelsVm, price: NetangelsCalculation): Se
         prepaidPacket: price.packet != null,
       },
     },
+  };
+}
+
+/** The finance ledger contains posted account payments, not projected VM charges. */
+export function mapNetangelsPayment(payment: NetangelsPayment): PaymentData {
+  const date = new Date(`${payment.event_date}T00:00:00Z`);
+  if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== payment.event_date) {
+    throw new Error('NetAngels: invalid payment date');
+  }
+  return {
+    externalId: `payment:${payment.id}`,
+    type: 'topup',
+    amount: new Decimal(payment.amount),
+    currency: 'RUB',
+    date,
+    description: 'NetAngels account payment',
   };
 }

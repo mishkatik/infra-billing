@@ -1,12 +1,14 @@
 import axios, { type AxiosInstance } from 'axios';
 import Decimal from 'decimal.js';
 import { REQUEST_TIMEOUT_MS } from '../common/http';
-import { Account, Connector, ServiceData } from '../connector.interface';
-import { mapNetangelsVm } from './netangels.mapper';
+import { Account, Connector, PaymentData, ServiceData } from '../connector.interface';
+import { mapNetangelsPayment, mapNetangelsVm } from './netangels.mapper';
 import {
   netangelsAccountSchema,
   netangelsCalculationSchema,
   netangelsPageSchema,
+  netangelsPaymentMonthsSchema,
+  netangelsPaymentsSchema,
   type NetangelsVm,
 } from './netangels.types';
 
@@ -103,6 +105,31 @@ export class NetangelsConnector implements Connector {
     const parsed = netangelsAccountSchema.safeParse(await this.get('/account/info/', signal));
     if (!parsed.success) throw new Error('NetAngels: invalid account response');
     return { balance: new Decimal(parsed.data.balance), currency: 'RUB' };
+  }
+
+  async fetchPayments(signal: AbortSignal): Promise<PaymentData[]> {
+    const months = netangelsPaymentMonthsSchema.safeParse(
+      await this.get('/finances/payments/months/', signal),
+    );
+    if (!months.success) throw new Error('NetAngels: invalid payment months response');
+    const out: PaymentData[] = [];
+    const seen = new Set<string>();
+    for (const month of new Set(months.data.entities)) {
+      // The panel uses a full date (day 01), not YYYY-MM, for the monthly ledger endpoint.
+      const parsed = netangelsPaymentsSchema.safeParse(
+        await this.get(`/finances/payments/${month}-01/`, signal),
+      );
+      if (!parsed.success) throw new Error('NetAngels: invalid payments response');
+      for (const row of parsed.data.payments) {
+        const payment = mapNetangelsPayment(row);
+        if (!row.event_date.startsWith(`${month}-`))
+          throw new Error('NetAngels: payment month mismatch');
+        if (seen.has(payment.externalId)) throw new Error('NetAngels: duplicate payment in ledger');
+        seen.add(payment.externalId);
+        out.push(payment);
+      }
+    }
+    return out;
   }
 
   async fetchServices(signal: AbortSignal): Promise<ServiceData[]> {

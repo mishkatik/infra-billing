@@ -64,7 +64,7 @@ export function Segmented<T extends string>({
             className={cn(
               // No colour transition: two tabs cross-fading at once reads as a blink, so the
               // selection flips instantly.
-              'relative inline-flex items-center gap-1.5 rounded-md px-2.5 text-[13px] whitespace-nowrap outline-none focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring',
+              'relative inline-flex shrink-0 items-center gap-1.5 rounded-md px-2.5 text-[13px] whitespace-nowrap outline-none focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring',
               active ? 'bg-accent font-medium text-foreground' : 'text-ink-2 hover:text-foreground',
             )}
           >
