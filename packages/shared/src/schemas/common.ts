@@ -21,6 +21,7 @@ export const SUPPORTED_CURRENCIES = [
   'TRY',
   'KZT',
   'UAH',
+  'SEK',
   'USDT',
 ] as const;
 

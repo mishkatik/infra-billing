@@ -24,6 +24,7 @@ const PROVIDER_KINDS: ProviderKind[] = [
   'yandex',
   'doubleservers',
   'openrouter',
+  'hostup',
   'manual',
 ];
 

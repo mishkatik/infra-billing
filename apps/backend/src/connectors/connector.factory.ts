@@ -16,6 +16,7 @@ import { HetznerConnector } from './hetzner/hetzner.connector';
 import { HostkeyConnector } from './hostkey/hostkey.connector';
 import { HostbillConnector } from './hostbill/hostbill.connector';
 import type { HostbillCredentials } from './hostbill/hostbill.types';
+import { HostupConnector } from './hostup/hostup.connector';
 import { LinodeConnector } from './linode/linode.connector';
 import { NetcupConnector } from './netcup/netcup.connector';
 import { NetlenConnector } from './netlen/netlen.connector';
@@ -104,6 +105,9 @@ export class ConnectorFactory {
         return new DoubleServersConnector(JSON.parse(token) as DoubleServersCredentials);
       case 'openrouter':
         return new OpenRouterConnector(parseOpenRouterCredentials(token));
+      case 'hostup':
+        // HostUp secret is the raw API key (single string, sent as the Authorization Bearer header).
+        return new HostupConnector(token);
       default:
         throw new Error(`Connector for kind="${kind}" is not supported`);
     }

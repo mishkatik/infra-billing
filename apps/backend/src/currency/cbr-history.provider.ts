@@ -16,6 +16,7 @@ const CBR_CODES: Record<string, string> = {
   TRY: 'R01700J',
   KZT: 'R01335',
   UAH: 'R01720',
+  SEK: 'R01770',
 };
 
 // Flat list of same-shaped records — a parser dependency would not buy anything.
