@@ -25,7 +25,7 @@ export function mapNetangelsVm(vm: NetangelsVm, price: NetangelsCalculation): Se
       backupEnabled: vm.disk?.is_backup_enabled,
       ips: vm.ips?.map(({ ip, version }) => ({ ip, version })),
       _tariff: {
-        priceMonthly: cost.toNumber(),
+        priceMonthly: cost.toFixed(2),
         priceHourly: price.full_hour_price,
         source: 'cloud/vms/calculation',
         hoursPerMonth: 720,
