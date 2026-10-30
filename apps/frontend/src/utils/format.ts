@@ -50,6 +50,15 @@ export function formatDateShort(iso: string | null | undefined): string {
   return iso ? dayjs(iso).format('DD.MM.YYYY') : '—';
 }
 
+/**
+ * Relative time of something that already happened ("a few seconds ago"). The stamp comes from
+ * the server clock; a browser clock running a little behind would turn it into "in a few seconds".
+ */
+export function fromNowPast(iso: string): string {
+  const at = dayjs(iso);
+  return (at.isAfter(dayjs()) ? dayjs() : at).fromNow();
+}
+
 /** Truncate text to maxLength chars, appending "…" when cut. */
 export function truncate(text: string, maxLength: number): string {
   return text.length > maxLength ? `${text.slice(0, maxLength)}…` : text;

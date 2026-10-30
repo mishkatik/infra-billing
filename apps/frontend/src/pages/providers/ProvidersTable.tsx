@@ -31,7 +31,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import type { SortState } from '@/hooks/useTableSort';
 import { cn } from '@/lib/utils';
 import { providerFavicon } from '@/utils/favicon';
-import { formatDate, formatMoney, truncate } from '@/utils/format';
+import { formatDate, formatMoney, fromNowPast, truncate } from '@/utils/format';
 import {
   type ProviderSyncState,
   SYNC_STATE_GLYPH,
@@ -121,7 +121,7 @@ function LastSync({ state, lastSyncAt, lastSyncError }: LastSyncProps) {
   }
   return (
     <span className="text-[13px] text-ink-2" title={formatDate(lastSyncAt)}>
-      {dayjs(lastSyncAt).fromNow()}
+      {fromNowPast(lastSyncAt)}
     </span>
   );
 }

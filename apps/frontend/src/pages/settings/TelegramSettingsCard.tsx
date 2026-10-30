@@ -89,7 +89,8 @@ export function TelegramSettingsCard() {
     }
   });
 
-  const [quietEnabled, quietStart, quietEnd, quietZone] = watch([
+  const [notificationsOn, quietEnabled, quietStart, quietEnd, quietZone] = watch([
+    'notificationsEnabled',
     'quietHoursEnabled',
     'quietHoursStart',
     'quietHoursEnd',
@@ -134,8 +135,14 @@ export function TelegramSettingsCard() {
               )}
             />
             <div className="space-y-1">
-              <Label htmlFor="tg-enabled">{t('settings.telegram.enabled')}</Label>
-              <p className="text-[13px] text-ink-2">{t('settings.telegram.enabledDescription')}</p>
+              <Label htmlFor="tg-enabled">
+                {notificationsOn ? t('settings.telegram.enabled') : t('settings.telegram.disabled')}
+              </Label>
+              <p className="text-[13px] text-ink-2">
+                {notificationsOn
+                  ? t('settings.telegram.enabledDescription')
+                  : t('settings.telegram.disabledDescription')}
+              </p>
             </div>
           </div>
 
