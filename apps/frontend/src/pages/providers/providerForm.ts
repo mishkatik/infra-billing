@@ -47,6 +47,7 @@ export const DEFAULT_LOGIN_URLS: Record<string, string> = {
   netlen: 'https://www.netlen.com.tr/panel',
   beget: 'https://cp.beget.com',
   stormwall: 'https://users.stormwall.pro',
+  netangels: 'https://panel.netangels.ru',
   vultr: 'https://console.vultr.com',
   linode: 'https://cloud.linode.com',
   aeza: 'https://my.aeza.net',
@@ -181,6 +182,7 @@ export function validateAccountCredentials(
   if (requireCreds && kind === 'vdsina' && !v.token) return t('providers.err.vdsinaToken');
   if (requireCreds && kind === 'cloudflare' && !(v.accountId && v.token))
     return t('providers.err.cloudflareCreds');
+  if (requireCreds && kind === 'netangels' && !v.token) return t('providers.err.netangelsToken');
   if (requireCreds && kind === 'stormwall' && !v.token) return t('providers.err.stormwallToken');
   if (requireCreds && kind === 'yandex' && !v.token) return t('providers.err.yandexKey');
   if (requireCreds && kind === 'openrouter' && !v.token) return t('providers.err.openrouterToken');

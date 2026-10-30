@@ -17,8 +17,8 @@
 
 - **Провайдеры с API:** Timeweb Cloud, Hetzner Cloud, Hostkey (InvAPI), netcup, HostBill,
   ISPsystem BILLmanager, Selectel, 4VPS.SU, Netlen, Beget Cloud, Porkbun, Spaceship, Vultr,
-  Linode, Aeza, VDSina, Cloudflare, StormWall, Yandex Cloud, Double Servers, OpenRouter, HostUp.
-  Плюс **Manual** — провайдеры без API ведутся руками.
+  Linode, Aeza, VDSina, Cloudflare, StormWall, NetAngels, Yandex Cloud, Double Servers, OpenRouter,
+  HostUp. Плюс **Manual** — провайдеры без API ведутся руками.
 - **Автосинк** (по расписанию + кнопкой): баланс + валюта аккаунта, список серверов/услуг, даты
   следующих списаний; история баланса по дням (снапшоты).
 - **Импорт платежей** там, где API отдаёт реестр: пополнения и списания (BILLmanager, Netlen,

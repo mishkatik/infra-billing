@@ -569,6 +569,25 @@ export function ProviderCredentialFields({
     );
   }
 
+  if (kind === 'netangels') {
+    return (
+      <Field
+        id="cred-token"
+        label={t('providers.field.apiToken')}
+        description={t('providers.field.apiTokenDescNetangels')}
+        link="https://panel.netangels.ru/"
+      >
+        <SecretFormField
+          form={form}
+          name="token"
+          id="cred-token"
+          hasStored={storedSecrets?.hasToken}
+          reveal={reveal}
+        />
+      </Field>
+    );
+  }
+
   if (kind === 'stormwall') {
     return (
       <Field

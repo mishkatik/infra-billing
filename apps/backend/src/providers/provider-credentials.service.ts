@@ -86,6 +86,7 @@ export class ProviderCredentialsService {
       kind === 'netlen' ||
       kind === 'vultr' ||
       kind === 'linode' ||
+      kind === 'netangels' ||
       kind === 'stormwall' ||
       kind === 'hostup'
     ) {
@@ -138,6 +139,7 @@ export class ProviderCredentialsService {
       kind === 'netlen' ||
       kind === 'vultr' ||
       kind === 'linode' ||
+      kind === 'netangels' ||
       kind === 'stormwall' ||
       kind === 'hostup'
     ) {
