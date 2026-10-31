@@ -26,6 +26,8 @@ export const API = {
   SETTINGS: 'settings',
   NOTIFICATIONS: 'notifications',
   TOKENS: 'tokens',
+  // Model Context Protocol endpoint (JSON-RPC over POST, no frontend use).
+  MCP: 'mcp',
 } as const;
 
 /** Method sub-paths within a controller (NestJS-style; `:uuid` for route params). */

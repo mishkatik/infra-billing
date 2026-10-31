@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 process.title = 'infra-billing';
 
-import { setupSwagger } from '@common/setup-swagger';
+import { buildOpenApiDocument, setupSwagger } from '@common/setup-swagger';
 import { AppConfigService } from '@config/app-config.service';
 import { API_PREFIX } from '@infra/shared';
 import { NestFactory } from '@nestjs/core';
@@ -13,6 +13,7 @@ import { patchNestJsSwagger } from 'nestjs-zod';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { AppModule } from './app.module';
+import { McpCatalog } from './mcp/mcp.catalog';
 
 // Local dev: load the repo-root .env into process.env. Already-set vars (e.g. from
 // the Docker container) take precedence, so this is a no-op in production.
@@ -37,7 +38,9 @@ async function bootstrap(): Promise<void> {
 
   app.setGlobalPrefix(API_PREFIX);
 
-  setupSwagger(app, config, logger);
+  const document = buildOpenApiDocument(app, config);
+  setupSwagger(app, document, config, logger);
+  app.get(McpCatalog).load(document);
 
   // Dev only: the Vite dev server runs on a different origin.
   if (!config.isProd) {
