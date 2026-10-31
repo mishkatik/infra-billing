@@ -2,7 +2,13 @@ import { Controller, Get, Param, ParseUUIDPipe, Query } from '@nestjs/common';
 import { API, API_SUB, CONTROLLERS_INFO, ID_PARAM } from '@infra/shared';
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AnalyticsService } from './analytics.service';
-import { AccountSpendDto, BalanceHistoryQueryDto, BalancePointDto } from './dto/analytics.dto';
+import { ApiZodQuery } from '@common/api-zod-query.decorator';
+import {
+  AccountSpendDto,
+  BalanceHistoryQueryDto,
+  BalancePointDto,
+  balanceHistoryQuerySchema,
+} from './dto/analytics.dto';
 
 @ApiTags(CONTROLLERS_INFO.BALANCE_HISTORY.TAG)
 @ApiBearerAuth()
@@ -12,6 +18,7 @@ export class BalanceHistoryController {
 
   @ApiOperation({ summary: 'Get account balance history' })
   @ApiOkResponse({ type: [BalancePointDto] })
+  @ApiZodQuery(balanceHistoryQuerySchema)
   @Get(API_SUB.ACCOUNT_BALANCE_HISTORY)
   history(@Param(ID_PARAM, ParseUUIDPipe) uuid: string, @Query() query: BalanceHistoryQueryDto) {
     return this.analytics.balanceHistory(uuid, query.from, query.to);

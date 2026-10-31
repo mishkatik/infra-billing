@@ -20,7 +20,14 @@ import {
 } from '@nestjs/swagger';
 import { API, API_SUB, CONTROLLERS_INFO, ID_PARAM } from '@infra/shared';
 import { ServicesService } from './services.service';
-import { CreateServiceDto, ServiceDto, ServiceQueryDto, UpdateServiceDto } from './dto/service.dto';
+import { ApiZodQuery } from '@common/api-zod-query.decorator';
+import {
+  CreateServiceDto,
+  ServiceDto,
+  ServiceQueryDto,
+  serviceQuerySchema,
+  UpdateServiceDto,
+} from './dto/service.dto';
 
 @ApiTags(CONTROLLERS_INFO.SERVICES.TAG)
 @ApiBearerAuth()
@@ -31,6 +38,7 @@ export class ServicesController {
   @Get()
   @ApiOperation({ summary: 'List services' })
   @ApiOkResponse({ type: [ServiceDto] })
+  @ApiZodQuery(serviceQuerySchema)
   list(@Query() query: ServiceQueryDto) {
     return this.services.list(query);
   }

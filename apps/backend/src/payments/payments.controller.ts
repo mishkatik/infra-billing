@@ -18,12 +18,14 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { API, API_SUB, CONTROLLERS_INFO, ID_PARAM } from '@infra/shared';
+import { ApiZodQuery } from '@common/api-zod-query.decorator';
 import { PaymentsService } from './payments.service';
 import {
   CreatePaymentDto,
   PaginatedPaymentsDto,
   PaymentDto,
   PaymentQueryDto,
+  paymentQuerySchema,
 } from './dto/payment.dto';
 
 @ApiBearerAuth()
@@ -35,6 +37,7 @@ export class PaymentsController {
   @Get()
   @ApiOperation({ summary: 'List payments' })
   @ApiOkResponse({ type: PaginatedPaymentsDto })
+  @ApiZodQuery(paymentQuerySchema)
   list(@Query() query: PaymentQueryDto) {
     return this.payments.list(query);
   }
