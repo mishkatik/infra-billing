@@ -21,6 +21,7 @@ export class ApiTokensService {
       tokenName: dto.tokenName,
       tokenHash: hashToken(token),
       tokenPrefix: tokenPrefix(token),
+      scope: dto.scope,
     });
     return { ...mapApiToken(row), token };
   }

@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { createHash, timingSafeEqual } from 'node:crypto';
 import jwt from 'jsonwebtoken';
 import { CookieOptions } from 'express';
-import { API, API_PREFIX } from '@infra/shared';
+import { API, API_PREFIX, ApiTokenScope } from '@infra/shared';
 import { AppConfigService } from '@config/app-config.service';
 import { ApiTokensRepository } from '@repositories/api-tokens/api-tokens.repository';
 import { AuthConfigService } from './auth-config.service';
@@ -64,8 +64,10 @@ export class AuthService {
     }
   }
 
-  /** Validate an API token (Authorization: Bearer), returning its name or null. */
-  async verifyApiToken(token: string | undefined): Promise<string | null> {
+  /** Validate an API token (Authorization: Bearer), returning its name and scope or null. */
+  async verifyApiToken(
+    token: string | undefined,
+  ): Promise<{ name: string; scope: ApiTokenScope } | null> {
     if (!token) return null;
     // Only the hash is stored; look the presented token up by its SHA-256.
     const row = await this.apiTokens.findByHash(hashToken(token));
@@ -75,7 +77,7 @@ export class AuthService {
     if (!row.lastUsedAt || now - row.lastUsedAt.getTime() > 60_000) {
       await this.apiTokens.touchLastUsed(row.uuid, new Date(now));
     }
-    return row.tokenName;
+    return { name: row.tokenName, scope: row.scope as ApiTokenScope };
   }
 
   cookieOptions(): CookieOptions {

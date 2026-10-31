@@ -6,6 +6,8 @@ model ApiToken {
   // never again. tokenPrefix is the masked display (`ib_` + first 8 chars).
   tokenHash   String @unique @map("token_hash")
   tokenPrefix String @map("token_prefix")
+  // "read" tokens are limited to GET requests; "full" can do anything a token may.
+  scope       String @default("full") @map("scope")
 
   lastUsedAt DateTime? @map("last_used_at")
 

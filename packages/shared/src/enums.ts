@@ -103,3 +103,7 @@ export type RateSource = z.infer<typeof rateSourceSchema>;
 /** What produced a stored rate row. Wider than `rateSourceSchema` — USDT has its own sources. */
 export const rateOriginSchema = z.enum(['cbr', 'manual', 'rapira', 'cmc']);
 export type RateOrigin = z.infer<typeof rateOriginSchema>;
+
+/** API token access: `read` is limited to GET requests, `full` can do anything a token may. */
+export const apiTokenScopeSchema = z.enum(['read', 'full']);
+export type ApiTokenScope = z.infer<typeof apiTokenScopeSchema>;

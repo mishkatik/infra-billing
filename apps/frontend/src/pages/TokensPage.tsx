@@ -1,14 +1,16 @@
 import { useRef, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { IconCheck, IconCopy, IconLoader2, IconPlus, IconTrash } from '@tabler/icons-react';
-import type { ApiToken, CreatedApiToken } from '@infra/shared';
+import type { ApiToken, ApiTokenScope, CreatedApiToken } from '@infra/shared';
 import { useCreateToken, useDeleteToken, useTokens } from '@/api/tokens';
 import { apiErrorMessage } from '@/api/client';
 import { CardHeadRow } from '@/components/ink/CardHeadRow';
 import { InkGlyph } from '@/components/ink/InkGlyph';
+import { Segmented } from '@/components/ink/Segmented';
 import { PageHeader } from '@/components/PageHeader';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -40,19 +42,19 @@ export function TokensPage() {
   if (created) lastToken.current = created.token;
   const [copied, setCopied] = useState(false);
 
-  const form = useForm<{ tokenName: string }>({
-    defaultValues: { tokenName: '' },
+  const form = useForm<{ tokenName: string; scope: ApiTokenScope }>({
+    defaultValues: { tokenName: '', scope: 'read' },
     mode: 'onSubmit',
   });
 
   const openCreate = () => {
-    form.reset({ tokenName: '' });
+    form.reset({ tokenName: '', scope: 'read' });
     open();
   };
 
   const submit = form.handleSubmit(async (v) => {
     try {
-      const res = await create.mutateAsync({ tokenName: v.tokenName.trim() });
+      const res = await create.mutateAsync({ tokenName: v.tokenName.trim(), scope: v.scope });
       close();
       setCreated(res); // open the one-time reveal. The raw token isn't recoverable afterwards
     } catch (e) {
@@ -98,11 +100,12 @@ export function TokensPage() {
       <Card className="gap-0 overflow-hidden py-0">
         <CardHeadRow title={t('tokens.title')} count={tokens?.length ?? 0} />
         <div className="overflow-x-auto">
-          <Table className="min-w-[640px]">
+          <Table className="min-w-[720px]">
             <TableHeader>
               <TableRow>
                 <TableHead className="pl-6">{t('tokens.colName')}</TableHead>
                 <TableHead>{t('tokens.colToken')}</TableHead>
+                <TableHead>{t('tokens.colScope')}</TableHead>
                 <TableHead>{t('tokens.colCreated')}</TableHead>
                 <TableHead>{t('tokens.colLastUsed')}</TableHead>
                 <TableHead className="w-10 pr-6" />
@@ -116,6 +119,9 @@ export function TokensPage() {
                     <code className="rounded-sm bg-background px-1.5 py-0.5 font-mono text-xs">
                       {`${tok.tokenPrefix}…`}
                     </code>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">{t(`tokens.scope.${tok.scope}`)}</Badge>
                   </TableCell>
                   <TableCell>{formatDateShort(tok.createdAt)}</TableCell>
                   <TableCell>
@@ -142,7 +148,7 @@ export function TokensPage() {
               ))}
               {!isLoading && tokens?.length === 0 && (
                 <TableRow className="hover:bg-transparent">
-                  <TableCell colSpan={5} className="py-8 text-center text-ink-2">
+                  <TableCell colSpan={6} className="py-8 text-center text-ink-2">
                     {t('tokens.empty')}
                   </TableCell>
                 </TableRow>
@@ -173,6 +179,25 @@ export function TokensPage() {
               />
               {nameError && <p className="text-xs text-destructive">{nameError.message}</p>}
             </div>
+            <Controller
+              control={form.control}
+              name="scope"
+              render={({ field }) => (
+                <div className="space-y-2">
+                  <Label>{t('tokens.fieldScope')}</Label>
+                  <Segmented<ApiTokenScope>
+                    value={field.value}
+                    onChange={field.onChange}
+                    ariaLabel={t('tokens.fieldScope')}
+                    options={[
+                      { value: 'read', label: t('tokens.scope.read') },
+                      { value: 'full', label: t('tokens.scope.full') },
+                    ]}
+                  />
+                  <p className="text-xs text-ink-2">{t(`tokens.scopeHint.${field.value}`)}</p>
+                </div>
+              )}
+            />
             <Button type="submit" className="w-full" disabled={create.isPending}>
               {create.isPending && <IconLoader2 className="size-4 animate-spin" />}
               {t('tokens.create')}

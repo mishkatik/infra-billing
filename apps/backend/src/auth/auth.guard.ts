@@ -7,15 +7,20 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
+import type { ApiTokenScope } from '@infra/shared';
 import { AuthService, SESSION_COOKIE } from './auth.service';
+import { ALLOW_READ_ONLY_TOKEN_KEY } from './allow-read-only-token.decorator';
 import { IS_PUBLIC_KEY } from './public.decorator';
 import { IS_SESSION_ONLY_KEY } from './session-only.decorator';
 
-type AuthedRequest = Request & {
+export type AuthedRequest = Request & {
   cookies?: Record<string, string>;
   user?: string;
   authType?: 'session' | 'token';
+  tokenScope?: ApiTokenScope;
 };
+
+const READ_METHODS = new Set(['GET', 'HEAD']);
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -33,10 +38,11 @@ export class AuthGuard implements CanActivate {
     // 1) API token via `Authorization: Bearer <token>`.
     const bearer = this.bearerToken(req);
     if (bearer) {
-      const name = await this.auth.verifyApiToken(bearer);
-      if (name) {
-        req.user = name;
+      const token = await this.auth.verifyApiToken(bearer);
+      if (token) {
+        req.user = token.name;
         req.authType = 'token';
+        req.tokenScope = token.scope;
       }
     }
     // 2) Fall back to the admin session cookie.
@@ -53,6 +59,12 @@ export class AuthGuard implements CanActivate {
     const sessionOnly = this.reflector.getAllAndOverride<boolean>(IS_SESSION_ONLY_KEY, targets);
     if (sessionOnly && req.authType === 'token') {
       throw new ForbiddenException('Admin session required');
+    }
+
+    // 4) Read-only tokens may only read.
+    if (req.tokenScope === 'read' && !READ_METHODS.has(req.method)) {
+      const allowed = this.reflector.getAllAndOverride<boolean>(ALLOW_READ_ONLY_TOKEN_KEY, targets);
+      if (!allowed) throw new ForbiddenException('Read-only API token');
     }
     return true;
   }
