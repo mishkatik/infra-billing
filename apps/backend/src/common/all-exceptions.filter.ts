@@ -7,6 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { ZodValidationException } from 'nestjs-zod';
 
 /** Uniform error envelope: { error: { code, message } }. */
 @Catch()
@@ -29,6 +30,11 @@ export class AllExceptionsFilter implements ExceptionFilter {
       } else {
         const m = (body as { message?: unknown }).message;
         message = Array.isArray(m) ? m.join('; ') : typeof m === 'string' ? m : exception.message;
+      }
+      // Name the offending fields, so an API client can fix the request without guessing.
+      if (exception instanceof ZodValidationException) {
+        const issues = exception.getZodError().issues;
+        message += `: ${issues.map((i) => `${i.path.join('.') || '(root)'}: ${i.message}`).join('; ')}`;
       }
     }
 

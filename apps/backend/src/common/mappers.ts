@@ -10,6 +10,7 @@ import {
 } from '@generated/prisma/client';
 import {
   ApiToken as ApiTokenDto,
+  ApiTokenScope,
   MoneyAmount,
   Payment as PaymentDto,
   PaymentType,
@@ -145,6 +146,7 @@ export function mapApiToken(t: ApiToken): ApiTokenDto {
     tokenName: t.tokenName,
     // Only the masked prefix is exposed. The raw token is never stored or returned after creation.
     tokenPrefix: t.tokenPrefix,
+    scope: t.scope as ApiTokenScope,
     lastUsedAt: dateToIso(t.lastUsedAt),
     createdAt: dateToIso(t.createdAt)!,
   };

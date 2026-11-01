@@ -13,13 +13,14 @@ export class CreateServiceDto extends createZodDto(createServiceSchema) {}
 export class UpdateServiceDto extends createZodDto(updateServiceSchema) {}
 
 export const serviceQuerySchema = z.object({
-  providerUuid: uuidSchema.optional(),
-  accountUuid: uuidSchema.optional(),
-  projectUuid: uuidSchema.optional(),
-  type: serviceTypeSchema.optional(),
+  providerUuid: uuidSchema.optional().describe('Only services of this provider'),
+  accountUuid: uuidSchema.optional().describe('Only services billed on this account'),
+  projectUuid: uuidSchema.optional().describe('Only services in this project'),
+  type: serviceTypeSchema.optional().describe('Only services of this type'),
   isActive: z
     .enum(['true', 'false'])
     .transform((v) => v === 'true')
-    .optional(),
+    .optional()
+    .describe('true: counted in current expenses, false: inactive only'),
 });
 export class ServiceQueryDto extends createZodDto(serviceQuerySchema) {}
