@@ -2,6 +2,10 @@ import Decimal from 'decimal.js';
 import { PaymentData, ServiceData } from '../connector.interface';
 import { UsageReportPeriodicData, YandexInstance } from './yandex.types';
 
+// Yandex Cloud bills in Moscow time (UTC+3, no DST): report periods start at 00:00 MSK, i.e.
+// 21:00 UTC of the previous calendar day.
+export const MSK_OFFSET_MS = 3 * 60 * 60 * 1000;
+
 // Yandex Cloud zones map to a country by their region prefix. Compute is usage-billed, so cost is
 // filled in later by the connector from the per-resource Billing Usage report, not here.
 function countryForZone(zoneId?: string): string | undefined {
@@ -52,11 +56,15 @@ export function aggregateUsageByDay(
   for (const p of periodic) {
     const seconds = Number(p.timestamp?.seconds ?? NaN);
     if (!Number.isFinite(seconds)) continue;
-    const day = new Date(seconds * 1000).toISOString().slice(0, 10); // YYYY-MM-DD (UTC)
+    // The period starts at 00:00 MSK, so its own calendar day is the Moscow date.
+    const day = new Date(seconds * 1000 + MSK_OFFSET_MS).toISOString().slice(0, 10);
+    // Keys were first issued from the UTC date of the period start (a day early) and are already
+    // stored; keeping them lets re-syncs correct the date in place instead of duplicating charges.
+    const key = new Date(seconds * 1000).toISOString().slice(0, 10);
     const amount = new Decimal(p.expense?.value || '0');
     if (amount.lte(0)) continue;
     out.push({
-      externalId: `yc:day:${day}`, // one charge per day; idempotent across re-syncs
+      externalId: `yc:day:${key}`, // one charge per day; idempotent across re-syncs
       type: 'charge',
       amount,
       currency,

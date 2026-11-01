@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import { REQUEST_TIMEOUT_MS } from '../common/http';
 import { Account, Connector, PaymentData, ServiceData } from '../connector.interface';
 import { fetchResourceExpense, fetchUsageReport } from './yandex.consumption';
-import { aggregateUsageByDay, mapYandexInstance } from './yandex.mapper';
+import { aggregateUsageByDay, MSK_OFFSET_MS, mapYandexInstance } from './yandex.mapper';
 import {
   BillingAccountsResponse,
   IamTokenResponse,
@@ -96,12 +96,12 @@ export class YandexConnector implements Connector {
    */
   private async attachMonthlyCost(services: ServiceData[], signal: AbortSignal): Promise<void> {
     if (services.length === 0) return;
-    const nextBilling = firstOfNextMonthUtc();
+    const nextBilling = firstOfNextMonthMsk();
     for (const s of services) s.nextBilling = nextBilling;
     const account = await this.resolveBillingAccount(signal);
     if (!account) return;
     const token = await this.iamToken(signal);
-    const { start, end } = previousFullMonthUtc();
+    const { start, end } = previousFullMonthMsk();
     const currency = (account.currency || 'RUB').toUpperCase();
     for (const s of services) {
       if (signal.aborted) return;
@@ -268,14 +268,23 @@ export class YandexConnector implements Connector {
   }
 }
 
-/** [start, end) of the previous calendar month in UTC, for the per-server consumption report. */
-function previousFullMonthUtc(now = new Date()): { start: Date; end: Date } {
-  const y = now.getUTCFullYear();
-  const m = now.getUTCMonth();
-  return { start: new Date(Date.UTC(y, m - 1, 1)), end: new Date(Date.UTC(y, m, 1)) };
+/** 00:00 MSK on the 1st of the month `delta` months away from the current Moscow month. */
+function monthStartMsk(delta: number, now = new Date()): Date {
+  const msk = new Date(now.getTime() + MSK_OFFSET_MS);
+  const start = Date.UTC(msk.getUTCFullYear(), msk.getUTCMonth() + delta, 1);
+  return new Date(start - MSK_OFFSET_MS);
 }
 
-/** Start of next month in UTC: when Yandex closes the current billing period. */
-function firstOfNextMonthUtc(now = new Date()): Date {
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+/**
+ * The previous Moscow calendar month, for the per-server consumption report. The report treats
+ * `end` as inclusive of its whole Moscow day, so the range stops one second before the current
+ * month starts; ending exactly at 00:00 MSK would pull in the 1st of this month.
+ */
+function previousFullMonthMsk(): { start: Date; end: Date } {
+  return { start: monthStartMsk(-1), end: new Date(monthStartMsk(0).getTime() - 1000) };
+}
+
+/** Start of next month in Moscow time: when Yandex closes the current billing period. */
+function firstOfNextMonthMsk(): Date {
+  return monthStartMsk(1);
 }
