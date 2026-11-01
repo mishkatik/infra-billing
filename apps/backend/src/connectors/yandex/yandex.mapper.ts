@@ -1,6 +1,6 @@
 import Decimal from 'decimal.js';
 import { PaymentData, ServiceData } from '../connector.interface';
-import { UsageReportPeriodicData, YandexInstance } from './yandex.types';
+import { UsageReportPeriodicData, YandexCdnResource, YandexInstance } from './yandex.types';
 
 // Yandex Cloud bills in Moscow time (UTC+3, no DST): report periods start at 00:00 MSK, i.e.
 // 21:00 UTC of the previous calendar day.
@@ -38,6 +38,24 @@ export function mapYandexInstance(i: YandexInstance): ServiceData {
       cores: i.resources?.cores,
       coreFraction: i.resources?.coreFraction,
       memoryGib: memoryGib(i.resources?.memory),
+    },
+  };
+}
+
+// CDN is served from Yandex's edge network, so there is no single country to attach.
+export function mapYandexCdnResource(r: YandexCdnResource): ServiceData {
+  return {
+    externalId: r.id,
+    name: r.cname || `cdn-${r.id}`,
+    type: 'cdn',
+    period: 'monthly',
+    meta: {
+      folderId: r.folderId,
+      active: r.active,
+      providerType: r.providerType,
+      originGroupName: r.originGroupName,
+      originProtocol: r.originProtocol,
+      secondaryHostnames: r.secondaryHostnames,
     },
   };
 }

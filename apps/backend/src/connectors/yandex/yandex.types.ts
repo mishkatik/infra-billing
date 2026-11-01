@@ -44,6 +44,18 @@ export interface YandexInstance {
   [key: string]: unknown;
 }
 
+export interface YandexCdnResource {
+  id: string;
+  folderId: string;
+  cname?: string; // the CDN endpoint hostname, e.g. "cdn.example.com"
+  active?: boolean; // false = content is not served to clients
+  originGroupName?: string;
+  originProtocol?: string; // HTTP / HTTPS / MATCH
+  providerType?: string; // e.g. "ourcdn"
+  secondaryHostnames?: string[];
+  [key: string]: unknown;
+}
+
 // Billing Usage API (gRPC) shapes. Decimals arrive as { value: "123.45" } strings; the report is
 // requested with DAY aggregation so `periodic` holds one point per calendar day.
 export interface StringDecimal {

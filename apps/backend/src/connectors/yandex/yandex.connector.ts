@@ -4,11 +4,17 @@ import jwt from 'jsonwebtoken';
 import { REQUEST_TIMEOUT_MS } from '../common/http';
 import { Account, Connector, PaymentData, ServiceData } from '../connector.interface';
 import { fetchResourceExpense, fetchUsageReport } from './yandex.consumption';
-import { aggregateUsageByDay, MSK_OFFSET_MS, mapYandexInstance } from './yandex.mapper';
+import {
+  aggregateUsageByDay,
+  MSK_OFFSET_MS,
+  mapYandexCdnResource,
+  mapYandexInstance,
+} from './yandex.mapper';
 import {
   BillingAccountsResponse,
   IamTokenResponse,
   YandexBillingAccount,
+  YandexCdnResource,
   YandexCredentials,
   YandexInstance,
 } from './yandex.types';
@@ -18,6 +24,7 @@ const IAM_SA_URL = 'https://iam.api.cloud.yandex.net/iam/v1/serviceAccounts';
 const BILLING_URL = 'https://billing.api.cloud.yandex.net/billing/v1';
 const RESOURCE_MANAGER_URL = 'https://resource-manager.api.cloud.yandex.net/resource-manager/v1';
 const COMPUTE_URL = 'https://compute.api.cloud.yandex.net/compute/v1';
+const CDN_URL = 'https://cdn.api.cloud.yandex.net/cdn/v1';
 
 const PAGE_SIZE = 1000; // Yandex Cloud list APIs cap page_size at 1000
 const MAX_PAGES = 50; // safety cap against a misbehaving pagination contract
@@ -30,12 +37,13 @@ const CONSUMPTION_MONTHS = 3;
  * Yandex Cloud connector. Auth: a service-account authorized key (JSON) is signed into a JWT
  * (PS256) and exchanged for a short-lived IAM token, sent as `Authorization: Bearer`. Balance +
  * currency come from the Billing API (`/billingAccounts`, first active); servers from the Compute
- * API (`/instances`), scanning the service account's own folder (resolved from its
- * `service_account_id` via IAM), which is the folder the key already grants access to. Compute is
- * usage-billed with no per-instance price in the Compute API, so each server's "monthly cost" is
- * last full month's actual consumption pulled per resource from the Billing Usage API. No
- * maintained npm SDK → thin axios client, like the other connectors. Consumption history comes from
- * the Billing Usage API, which is gRPC-only — see ./yandex.consumption.ts.
+ * API (`/instances`) and CDN resources from the CDN API (`/resources`), scanning the service
+ * account's own folder (resolved from its `service_account_id` via IAM), which is the folder the
+ * key already grants access to. Both are usage-billed with no price in their APIs, so each
+ * resource's "monthly cost" is last full month's actual consumption pulled per resource from the
+ * Billing Usage API. No maintained npm SDK → thin axios client, like the other connectors.
+ * Consumption history comes from the Billing Usage API, which is gRPC-only — see
+ * ./yandex.consumption.ts.
  */
 export class YandexConnector implements Connector {
   private readonly http: AxiosInstance;
@@ -70,29 +78,26 @@ export class YandexConnector implements Connector {
 
   async fetchServices(signal: AbortSignal): Promise<ServiceData[]> {
     const folderIds = await this.resolveFolderIds(signal);
-    const perFolder = await Promise.allSettled(
-      folderIds.map((folderId) =>
-        this.paginate<YandexInstance>(
-          `${COMPUTE_URL}/instances`,
-          'instances',
-          { folderId },
-          signal,
-        ),
+    const [instances, cdn] = await Promise.all([
+      this.listPerFolder<YandexInstance>(
+        folderIds,
+        `${COMPUTE_URL}/instances`,
+        'instances',
+        signal,
       ),
-    );
-    const services = perFolder
-      .flatMap((r) => (r.status === 'fulfilled' ? r.value : []))
-      .map(mapYandexInstance);
+      this.listPerFolder<YandexCdnResource>(folderIds, `${CDN_URL}/resources`, 'resources', signal),
+    ]);
+    const services = [...instances.map(mapYandexInstance), ...cdn.map(mapYandexCdnResource)];
     await this.attachMonthlyCost(services, signal);
     return services;
   }
 
   /**
-   * Fill in each server's monthly cost and next-billing date. Compute is usage-billed, so the
-   * "monthly cost" is last full month's actual billable consumption of that instance, pulled from
-   * the Billing Usage API per resource; the next-billing date is the start of the next month (when
-   * Yandex closes the current billing period), the same for every server. Best-effort: a missing
-   * billing role or a report error leaves cost unset without failing the sync.
+   * Fill in each resource's (server, CDN) monthly cost and next-billing date. Both are
+   * usage-billed, so the "monthly cost" is last full month's actual billable consumption of that
+   * resource, pulled from the Billing Usage API per resource; the next-billing date is the start of
+   * the next month (when Yandex closes the current billing period), the same for every resource.
+   * Best-effort: a missing billing role or a report error leaves cost unset without failing the sync.
    */
   private async attachMonthlyCost(services: ServiceData[], signal: AbortSignal): Promise<void> {
     if (services.length === 0) return;
@@ -120,7 +125,7 @@ export class YandexConnector implements Connector {
           s.period = 'monthly';
         }
       } catch {
-        // Best-effort: leave this server's cost unset and keep the sync going.
+        // Best-effort: leave this resource's cost unset and keep the sync going.
       }
     }
   }
@@ -244,6 +249,19 @@ export class YandexConnector implements Connector {
     return data.iamToken;
   }
 
+  /** Collect a per-folder list endpoint across folders; a folder that fails contributes nothing. */
+  private async listPerFolder<T>(
+    folderIds: string[],
+    url: string,
+    key: string,
+    signal: AbortSignal,
+  ): Promise<T[]> {
+    const perFolder = await Promise.allSettled(
+      folderIds.map((folderId) => this.paginate<T>(url, key, { folderId }, signal)),
+    );
+    return perFolder.flatMap((r) => (r.status === 'fulfilled' ? r.value : []));
+  }
+
   /** Walk a Yandex Cloud list endpoint's pageToken/nextPageToken pagination, accumulating `key`. */
   private async paginate<T>(
     url: string,
@@ -276,7 +294,7 @@ function monthStartMsk(delta: number, now = new Date()): Date {
 }
 
 /**
- * The previous Moscow calendar month, for the per-server consumption report. The report treats
+ * The previous Moscow calendar month, for the per-resource consumption report. The report treats
  * `end` as inclusive of its whole Moscow day, so the range stops one second before the current
  * month starts; ending exactly at 00:00 MSK would pull in the 1st of this month.
  */
