@@ -114,15 +114,15 @@ export const providers = {
       yandexKeyStep1:
         'Go to center.yandex.cloud and open "All services" → "Monitoring & Resources" → "Identity and Access Management" → "Service accounts".',
       yandexKeyStep2:
-        'Click "Create service account", enter any name, then "Roles in the folder" → "Add role" → "viewer", and finish with "Create".',
+        'Click "Create service account", enter any name, then "Roles in the folder" → "Add role" → "viewer", and finish with "Create". This scans only that folder; to scan every folder of the cloud, also give the service account "viewer" on the cloud itself (the cloud page → "Access bindings").',
       yandexKeyStep3:
         'Open the service account you just created from the table, choose "Create new key" → "Create authorized key" → "Create" → "Download file with keys", and paste the downloaded key below.',
       yandexKeyStep4:
         'Back on center.yandex.cloud, open "Billing" → "Access management" → "Assign roles". In "Who to grant access to" pick this service account, in "Roles" choose "billing.accounts.viewer", and finish with "Save" (this also enables balance and consumption history).',
       yandexScope: 'Detected scope',
       yandexScopeDesc:
-        'Resolved automatically from the key: the folders scanned for servers and the billing account used for balance and consumption.',
-      yandexScopeFolders: 'Folder',
+        'Resolved automatically from the key: the folders scanned for servers, CDN and buckets, and the billing account used for balance and consumption.',
+      yandexScopeFolders: 'Folders',
       yandexScopeBilling: 'Billing account',
       yandexScopeNone: 'Nothing found - check the service account roles.',
       yandexScopeRefresh: 'Refresh',
@@ -360,15 +360,15 @@ export const providers = {
       yandexKeyStep1:
         'Зайдите на center.yandex.cloud и выберите "All services" → "Monitoring & Resources" → "Identity and Access Management" → "Service accounts".',
       yandexKeyStep2:
-        'Нажмите "Create service account", введите любое имя, затем "Roles in the folder" → "Add role" → "viewer" и завершите через "Create".',
+        'Нажмите "Create service account", введите любое имя, затем "Roles in the folder" → "Add role" → "viewer" и завершите через "Create". Так сканируется только этот каталог; чтобы сканировать все каталоги облака, выдайте сервисному аккаунту "viewer" ещё и на само облако (страница облака → "Access bindings").',
       yandexKeyStep3:
         'Откройте созданный сервисный аккаунт в таблице, выберите "Create new key" → "Create authorized key" → "Create" → "Download file with keys" и вставьте полученный ключ ниже.',
       yandexKeyStep4:
         'Вернитесь на center.yandex.cloud, выберите "Billing" → "Access management" → "Assign roles". В поле "Who to grant access to" выберите этот сервисный аккаунт, в поле "Roles" выберите "billing.accounts.viewer", и завершите через "Save" (это же включает баланс и историю расходов).',
       yandexScope: 'Определённая область',
       yandexScopeDesc:
-        'Определяется автоматически по ключу: каталоги, из которых берутся серверы, и платёжный аккаунт для баланса и расходов.',
-      yandexScopeFolders: 'Каталог',
+        'Определяется автоматически по ключу: каталоги, из которых берутся серверы, CDN и бакеты, и платёжный аккаунт для баланса и расходов.',
+      yandexScopeFolders: 'Каталоги',
       yandexScopeBilling: 'Платёжный аккаунт',
       yandexScopeNone: 'Ничего не найдено - проверьте роли сервисного аккаунта.',
       yandexScopeRefresh: 'Обновить',

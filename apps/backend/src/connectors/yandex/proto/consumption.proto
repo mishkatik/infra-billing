@@ -72,6 +72,22 @@ message BillingAccountUsageReportEntityData {
   repeated UsageReportPeriodicData periodic = 5;
 }
 
+// Identifies the resource a per-resource report entity belongs to (instance / CDN resource id,
+// bucket name for Object Storage).
+message Resource {
+  string id = 1;
+  string name = 2;
+  string service_instance_type = 3;
+}
+
+message ResourceUsageReportEntityData {
+  StringDecimal cost = 1;
+  CreditDetails credit_details = 2;
+  StringDecimal expense = 3;
+  Resource resource = 4;
+  repeated UsageReportPeriodicData periodic = 5;
+}
+
 message BillingAccountUsageReportResponse {
   Currency currency = 1;
   StringDecimal cost = 2;
@@ -80,6 +96,15 @@ message BillingAccountUsageReportResponse {
   repeated BillingAccountUsageReportEntityData entities_data = 5;
 }
 
+message ResourceUsageReportResponse {
+  Currency currency = 1;
+  StringDecimal cost = 2;
+  CreditDetails credit_details = 3;
+  StringDecimal expense = 4;
+  repeated ResourceUsageReportEntityData entities_data = 5;
+}
+
 service ConsumptionCoreService {
   rpc GetBillingAccountUsageReport(UsageReportRequest) returns (BillingAccountUsageReportResponse);
+  rpc GetResourceUsageReport(UsageReportRequest) returns (ResourceUsageReportResponse);
 }

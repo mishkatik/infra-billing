@@ -1,10 +1,18 @@
 import Decimal from 'decimal.js';
 import { PaymentData, ServiceData } from '../connector.interface';
-import { UsageReportPeriodicData, YandexCdnResource, YandexInstance } from './yandex.types';
+import {
+  ResourceUsageReportEntityData,
+  UsageReportPeriodicData,
+  YandexBucket,
+  YandexCdnResource,
+  YandexInstance,
+} from './yandex.types';
 
 // Yandex Cloud bills in Moscow time (UTC+3, no DST): report periods start at 00:00 MSK, i.e.
 // 21:00 UTC of the previous calendar day.
 export const MSK_OFFSET_MS = 3 * 60 * 60 * 1000;
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 // Yandex Cloud zones map to a country by their region prefix. Compute is usage-billed, so cost is
 // filled in later by the connector from the per-resource Billing Usage report, not here.
@@ -15,10 +23,10 @@ function countryForZone(zoneId?: string): string | undefined {
   return undefined;
 }
 
-// `memory` comes back as a byte count string; expose GiB for readability, leaving raw bytes too.
-function memoryGib(memory?: string): number | undefined {
-  if (!memory) return undefined;
-  const bytes = Number(memory);
+// Sizes come back as byte count strings; expose GiB for readability.
+function bytesToGib(size?: string): number | undefined {
+  if (!size) return undefined;
+  const bytes = Number(size);
   if (!Number.isFinite(bytes) || bytes <= 0) return undefined;
   return Math.round((bytes / 1024 ** 3) * 100) / 100;
 }
@@ -37,7 +45,7 @@ export function mapYandexInstance(i: YandexInstance): ServiceData {
       status: i.status,
       cores: i.resources?.cores,
       coreFraction: i.resources?.coreFraction,
-      memoryGib: memoryGib(i.resources?.memory),
+      memoryGib: bytesToGib(i.resources?.memory),
     },
   };
 }
@@ -58,6 +66,60 @@ export function mapYandexCdnResource(r: YandexCdnResource): ServiceData {
       secondaryHostnames: r.secondaryHostnames,
     },
   };
+}
+
+// The management Storage API serves the ru-central1 region only (Kazakhstan lives on separate hosts
+// this connector never calls), so every bucket it lists is in Russia.
+export function mapYandexBucket(b: YandexBucket): ServiceData {
+  return {
+    externalId: b.name, // billing reports a bucket's usage under its name
+    name: b.name,
+    type: 'storage',
+    countryCode: 'RU',
+    period: 'monthly',
+    meta: {
+      folderId: b.folderId,
+      storageClass: b.defaultStorageClass,
+      versioning: b.versioning,
+      maxSizeGib: bytesToGib(b.maxSize),
+      publicRead: b.anonymousAccessFlags?.read,
+    },
+  };
+}
+
+/**
+ * Each resource's monthly cost from the per-resource report (MONTH points over the previous and the
+ * current month). Last full month's `expense` wins; a resource with nothing billed then (new, or
+ * covered by a grant) gets the current month so far stretched to the whole month. Elapsed time is
+ * floored at a day so the first hours of a month don't get multiplied by ~700.
+ */
+export function monthlyCostByResource(
+  entities: ResourceUsageReportEntityData[],
+  monthStart: Date,
+  monthEnd: Date,
+  now: Date,
+): Map<string, Decimal> {
+  const sums = new Map<string, { previous: Decimal; current: Decimal }>();
+  for (const e of entities) {
+    const id = e.resource?.id;
+    if (!id) continue;
+    const sum = sums.get(id) ?? { previous: new Decimal(0), current: new Decimal(0) };
+    for (const p of e.periodic ?? []) {
+      const seconds = Number(p.timestamp?.seconds ?? NaN);
+      if (!Number.isFinite(seconds)) continue;
+      const amount = new Decimal(p.expense?.value || '0');
+      if (seconds * 1000 < monthStart.getTime()) sum.previous = sum.previous.plus(amount);
+      else sum.current = sum.current.plus(amount);
+    }
+    sums.set(id, sum);
+  }
+  const monthMs = monthEnd.getTime() - monthStart.getTime();
+  const elapsedMs = Math.max(now.getTime() - monthStart.getTime(), DAY_MS);
+  const out = new Map<string, Decimal>();
+  for (const [id, { previous, current }] of sums) {
+    out.set(id, previous.gt(0) ? previous : current.mul(monthMs).div(elapsedMs));
+  }
+  return out;
 }
 
 /**
