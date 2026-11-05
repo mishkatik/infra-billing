@@ -2,7 +2,7 @@ import axios, { type AxiosInstance } from 'axios';
 import Decimal from 'decimal.js';
 import { REQUEST_TIMEOUT_MS } from '../common/http';
 import { Account, Connector, ServiceData } from '../connector.interface';
-import { mapPorkbunDomain, porkbunTld } from './porkbun.mapper';
+import { isLivePorkbunDomain, mapPorkbunDomain, porkbunTld } from './porkbun.mapper';
 import {
   BalanceResponse,
   ListAllResponse,
@@ -18,8 +18,9 @@ const PAGE_SIZE = 1000; // /domain/listAll returns up to 1000 per call
 /**
  * Porkbun (domain registrar) connector. Auth: API key + secret via the X-API-Key / X-Secret-API-Key
  * headers. Balance from /account/balance (cents → USD); domains from /domain/listAll; the yearly
- * renewal price per TLD from the public /pricing/get. No payment-history endpoint exists. No npm
- * SDK is published → thin axios client. Every response is wrapped in { status: "SUCCESS" | "ERROR" }.
+ * renewal price per TLD from the public /pricing/get; expired domains Porkbun moved off ACTIVE
+ * (e.g. AUCTION) are skipped. No payment-history endpoint exists. No npm SDK is published → thin
+ * axios client. Every response is wrapped in { status: "SUCCESS" | "ERROR" }.
  */
 export class PorkbunConnector implements Connector {
   private readonly http: AxiosInstance;
@@ -56,8 +57,10 @@ export class PorkbunConnector implements Connector {
       domains.push(...batch);
       if (batch.length < PAGE_SIZE) break;
     }
-    const renewal = await this.fetchRenewalPrices(domains, signal);
-    return domains.map((d) => mapPorkbunDomain(d, renewal));
+    // Domains already gone from the account are left out, so the sync deactivates them.
+    const live = domains.filter((d) => isLivePorkbunDomain(d));
+    const renewal = await this.fetchRenewalPrices(live, signal);
+    return live.map((d) => mapPorkbunDomain(d, renewal));
   }
 
   /**

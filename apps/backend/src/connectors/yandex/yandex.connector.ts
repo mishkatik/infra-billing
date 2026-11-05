@@ -3,12 +3,21 @@ import Decimal from 'decimal.js';
 import jwt from 'jsonwebtoken';
 import { REQUEST_TIMEOUT_MS } from '../common/http';
 import { Account, Connector, PaymentData, ServiceData } from '../connector.interface';
-import { fetchResourceExpense, fetchUsageReport } from './yandex.consumption';
-import { aggregateUsageByDay, mapYandexInstance } from './yandex.mapper';
+import { fetchResourceUsageReport, fetchUsageReport } from './yandex.consumption';
+import {
+  aggregateUsageByDay,
+  MSK_OFFSET_MS,
+  mapYandexBucket,
+  mapYandexCdnResource,
+  mapYandexInstance,
+  monthlyCostByResource,
+} from './yandex.mapper';
 import {
   BillingAccountsResponse,
   IamTokenResponse,
   YandexBillingAccount,
+  YandexBucket,
+  YandexCdnResource,
   YandexCredentials,
   YandexInstance,
 } from './yandex.types';
@@ -18,6 +27,8 @@ const IAM_SA_URL = 'https://iam.api.cloud.yandex.net/iam/v1/serviceAccounts';
 const BILLING_URL = 'https://billing.api.cloud.yandex.net/billing/v1';
 const RESOURCE_MANAGER_URL = 'https://resource-manager.api.cloud.yandex.net/resource-manager/v1';
 const COMPUTE_URL = 'https://compute.api.cloud.yandex.net/compute/v1';
+const CDN_URL = 'https://cdn.api.cloud.yandex.net/cdn/v1';
+const STORAGE_URL = 'https://storage.api.cloud.yandex.net/storage/v1';
 
 const PAGE_SIZE = 1000; // Yandex Cloud list APIs cap page_size at 1000
 const MAX_PAGES = 50; // safety cap against a misbehaving pagination contract
@@ -30,12 +41,13 @@ const CONSUMPTION_MONTHS = 3;
  * Yandex Cloud connector. Auth: a service-account authorized key (JSON) is signed into a JWT
  * (PS256) and exchanged for a short-lived IAM token, sent as `Authorization: Bearer`. Balance +
  * currency come from the Billing API (`/billingAccounts`, first active); servers from the Compute
- * API (`/instances`), scanning the service account's own folder (resolved from its
- * `service_account_id` via IAM), which is the folder the key already grants access to. Compute is
- * usage-billed with no per-instance price in the Compute API, so each server's "monthly cost" is
- * last full month's actual consumption pulled per resource from the Billing Usage API. No
- * maintained npm SDK → thin axios client, like the other connectors. Consumption history comes from
- * the Billing Usage API, which is gRPC-only — see ./yandex.consumption.ts.
+ * API (`/instances`), CDN resources from the CDN API (`/resources`) and Object Storage buckets from
+ * the Storage API (`/buckets`), scanning every folder of the service account's cloud the key can
+ * see (at least its own folder). All are usage-billed with no price in their APIs, so each
+ * resource's "monthly cost" comes from its actual consumption in the Billing Usage API's
+ * per-resource report. No maintained npm SDK → thin axios client, like the other connectors.
+ * Consumption history comes from the Billing Usage API, which is gRPC-only — see
+ * ./yandex.consumption.ts.
  */
 export class YandexConnector implements Connector {
   private readonly http: AxiosInstance;
@@ -70,58 +82,56 @@ export class YandexConnector implements Connector {
 
   async fetchServices(signal: AbortSignal): Promise<ServiceData[]> {
     const folderIds = await this.resolveFolderIds(signal);
-    const perFolder = await Promise.allSettled(
-      folderIds.map((folderId) =>
-        this.paginate<YandexInstance>(
-          `${COMPUTE_URL}/instances`,
-          'instances',
-          { folderId },
-          signal,
-        ),
+    const [instances, cdn, buckets] = await Promise.all([
+      this.listPerFolder<YandexInstance>(
+        folderIds,
+        `${COMPUTE_URL}/instances`,
+        'instances',
+        signal,
       ),
-    );
-    const services = perFolder
-      .flatMap((r) => (r.status === 'fulfilled' ? r.value : []))
-      .map(mapYandexInstance);
+      this.listPerFolder<YandexCdnResource>(folderIds, `${CDN_URL}/resources`, 'resources', signal),
+      this.listPerFolder<YandexBucket>(folderIds, `${STORAGE_URL}/buckets`, 'buckets', signal),
+    ]);
+    const services = [
+      ...instances.map(mapYandexInstance),
+      ...cdn.map(mapYandexCdnResource),
+      ...buckets.map(mapYandexBucket),
+    ];
     await this.attachMonthlyCost(services, signal);
     return services;
   }
 
   /**
-   * Fill in each server's monthly cost and next-billing date. Compute is usage-billed, so the
-   * "monthly cost" is last full month's actual billable consumption of that instance, pulled from
-   * the Billing Usage API per resource; the next-billing date is the start of the next month (when
-   * Yandex closes the current billing period), the same for every server. Best-effort: a missing
-   * billing role or a report error leaves cost unset without failing the sync.
+   * Fill in each resource's (server, CDN, bucket) monthly cost and next-billing date. All are
+   * usage-billed, so the "monthly cost" is the resource's billable consumption from one
+   * per-resource report over the previous and current month (see `monthlyCostByResource`); the
+   * next-billing date is the start of the next month (when Yandex closes the current billing
+   * period), the same for every resource. Best-effort: a missing billing role or a report error
+   * leaves costs unset without failing the sync.
    */
   private async attachMonthlyCost(services: ServiceData[], signal: AbortSignal): Promise<void> {
     if (services.length === 0) return;
-    const nextBilling = firstOfNextMonthUtc();
+    const nextBilling = firstOfNextMonthMsk();
     for (const s of services) s.nextBilling = nextBilling;
     const account = await this.resolveBillingAccount(signal);
     if (!account) return;
     const token = await this.iamToken(signal);
-    const { start, end } = previousFullMonthUtc();
-    const currency = (account.currency || 'RUB').toUpperCase();
+    const now = new Date();
+    const monthStart = monthStartMsk(0, now);
+    const report = await fetchResourceUsageReport(
+      account.id,
+      token,
+      monthStartMsk(-1, now),
+      now,
+      signal,
+    ).catch(() => null);
+    if (!report) return; // best-effort: keep the previous costs and let the sync go on
+    const costs = monthlyCostByResource(report.entities, monthStart, monthStartMsk(1, now), now);
+    const currency = (report.currency || account.currency || 'RUB').toUpperCase();
     for (const s of services) {
-      if (signal.aborted) return;
-      try {
-        const expense = await fetchResourceExpense(
-          account.id,
-          token,
-          start,
-          end,
-          s.externalId,
-          signal,
-        );
-        if (expense != null) {
-          s.cost = new Decimal(expense);
-          s.currency = currency;
-          s.period = 'monthly';
-        }
-      } catch {
-        // Best-effort: leave this server's cost unset and keep the sync going.
-      }
+      s.cost = costs.get(s.externalId) ?? new Decimal(0); // nothing billed → zero
+      s.currency = currency;
+      s.period = 'monthly';
     }
   }
 
@@ -144,7 +154,7 @@ export class YandexConnector implements Connector {
   }
 
   /**
-   * The scope the connector will actually use: the folders scanned for servers and the billing
+   * The scope the connector will actually use: the folders scanned for resources and the billing
    * account used for balance / consumption. Powers the provider form's read-only badges. Auth
    * errors on the key surface to the caller; a missing billing role degrades to a null account.
    */
@@ -163,18 +173,34 @@ export class YandexConnector implements Connector {
   }
 
   /**
-   * The folder to scan for servers: the service account's own folder, resolved from its
-   * `service_account_id` via IAM. There is no account-wide instance list (Compute lists per
-   * folder), and enumerating clouds needs cloud-level rights a scoped key doesn't have, so we use
-   * the home folder — the one the key already grants access to.
+   * The folders to scan for resources: the service account's own folder (resolved from its
+   * `service_account_id` via IAM) plus every other folder of that cloud the key can see. There is
+   * no account-wide resource list (each API lists per folder). The cloud's folder list only shows
+   * folders the key has a role in, so a key with `viewer` on the folder alone still scans just its
+   * home folder, and a failing list falls back to it as well.
    */
   private async resolveFolders(signal: AbortSignal): Promise<{ id: string; name: string }[]> {
     const home = await this.homeFolder(signal);
-    return home ? [home] : [];
+    if (!home) return [];
+    const folders = new Map([[home.id, { id: home.id, name: home.name }]]);
+    if (home.cloudId) {
+      const listed = await this.paginate<{ id: string; name?: string }>(
+        `${RESOURCE_MANAGER_URL}/folders`,
+        'folders',
+        { cloudId: home.cloudId },
+        signal,
+      ).catch(() => []);
+      for (const f of listed) {
+        if (!folders.has(f.id)) folders.set(f.id, { id: f.id, name: f.name || f.id });
+      }
+    }
+    return [...folders.values()];
   }
 
-  /** The service account's own folder (id + name), read from IAM by its `service_account_id`. */
-  private async homeFolder(signal: AbortSignal): Promise<{ id: string; name: string } | null> {
+  /** The service account's own folder (id, name, cloud), read from IAM by its `service_account_id`. */
+  private async homeFolder(
+    signal: AbortSignal,
+  ): Promise<{ id: string; name: string; cloudId?: string } | null> {
     const headers = await this.authHeaders(signal);
     const sa = await this.http.get<{ folderId?: string }>(
       `${IAM_SA_URL}/${this.creds.serviceAccountId}`,
@@ -182,11 +208,12 @@ export class YandexConnector implements Connector {
     );
     const folderId = sa.status === 200 ? sa.data.folderId : undefined;
     if (!folderId) return null;
-    const folder = await this.http.get<{ name?: string }>(
+    const folder = await this.http.get<{ name?: string; cloudId?: string }>(
       `${RESOURCE_MANAGER_URL}/folders/${folderId}`,
       { headers, signal, validateStatus: (s) => s === 200 || s === 403 || s === 404 },
     );
-    return { id: folderId, name: (folder.status === 200 && folder.data.name) || folderId };
+    const data = folder.status === 200 ? folder.data : {};
+    return { id: folderId, name: data.name || folderId, cloudId: data.cloudId };
   }
 
   /**
@@ -205,7 +232,7 @@ export class YandexConnector implements Connector {
     return accounts.find((a) => a.active) ?? accounts[0] ?? null;
   }
 
-  /** Folder ids to scan for servers (the same set surfaced as badges by `discover`). */
+  /** Folder ids to scan for resources (the same set surfaced as badges by `discover`). */
   private async resolveFolderIds(signal: AbortSignal): Promise<string[]> {
     return (await this.resolveFolders(signal)).map((f) => f.id);
   }
@@ -244,6 +271,19 @@ export class YandexConnector implements Connector {
     return data.iamToken;
   }
 
+  /** Collect a per-folder list endpoint across folders; a folder that fails contributes nothing. */
+  private async listPerFolder<T>(
+    folderIds: string[],
+    url: string,
+    key: string,
+    signal: AbortSignal,
+  ): Promise<T[]> {
+    const perFolder = await Promise.allSettled(
+      folderIds.map((folderId) => this.paginate<T>(url, key, { folderId }, signal)),
+    );
+    return perFolder.flatMap((r) => (r.status === 'fulfilled' ? r.value : []));
+  }
+
   /** Walk a Yandex Cloud list endpoint's pageToken/nextPageToken pagination, accumulating `key`. */
   private async paginate<T>(
     url: string,
@@ -268,14 +308,14 @@ export class YandexConnector implements Connector {
   }
 }
 
-/** [start, end) of the previous calendar month in UTC, for the per-server consumption report. */
-function previousFullMonthUtc(now = new Date()): { start: Date; end: Date } {
-  const y = now.getUTCFullYear();
-  const m = now.getUTCMonth();
-  return { start: new Date(Date.UTC(y, m - 1, 1)), end: new Date(Date.UTC(y, m, 1)) };
+/** 00:00 MSK on the 1st of the month `delta` months away from the current Moscow month. */
+function monthStartMsk(delta: number, now = new Date()): Date {
+  const msk = new Date(now.getTime() + MSK_OFFSET_MS);
+  const start = Date.UTC(msk.getUTCFullYear(), msk.getUTCMonth() + delta, 1);
+  return new Date(start - MSK_OFFSET_MS);
 }
 
-/** Start of next month in UTC: when Yandex closes the current billing period. */
-function firstOfNextMonthUtc(now = new Date()): Date {
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+/** Start of next month in Moscow time: when Yandex closes the current billing period. */
+function firstOfNextMonthMsk(): Date {
+  return monthStartMsk(1);
 }

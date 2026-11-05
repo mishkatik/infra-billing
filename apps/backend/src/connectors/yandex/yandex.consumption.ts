@@ -1,7 +1,12 @@
 import path from 'node:path';
 import * as grpc from '@grpc/grpc-js';
 import * as protoLoader from '@grpc/proto-loader';
-import { UsageReportPeriodicData, UsageReportResponse } from './yandex.types';
+import {
+  ResourceUsageReportEntityData,
+  ResourceUsageReportResponse,
+  UsageReportPeriodicData,
+  UsageReportResponse,
+} from './yandex.types';
 
 // The Billing Usage API is gRPC-only (no REST counterpart), so this module wraps a thin gRPC
 // client around a trimmed proto (see ./proto/consumption.proto). It is kept apart from the axios
@@ -15,7 +20,6 @@ interface UsageReportRequestMessage {
   billingAccountId: string;
   startDate: { seconds: number; nanos: number };
   endDate: { seconds: number; nanos: number };
-  resourceIds?: string[];
   aggregationPeriod: string;
 }
 
@@ -25,6 +29,12 @@ interface ConsumptionClient extends grpc.Client {
     metadata: grpc.Metadata,
     options: grpc.CallOptions,
     callback: (err: grpc.ServiceError | null, resp: UsageReportResponse) => void,
+  ): grpc.ClientUnaryCall;
+  GetResourceUsageReport(
+    req: UsageReportRequestMessage,
+    metadata: grpc.Metadata,
+    options: grpc.CallOptions,
+    callback: (err: grpc.ServiceError | null, resp: ResourceUsageReportResponse) => void,
   ): grpc.ClientUnaryCall;
 }
 
@@ -112,31 +122,29 @@ export async function fetchUsageReport(
 }
 
 /**
- * Total billable consumption of a single resource over [start, end], via the same gRPC report
- * filtered by `resource_ids`. The report has no per-resource grouping, so we scope each call to one
- * resource and read the account entity's period `expense`. Used to attach a per-server monthly cost.
+ * Monthly consumption of every resource on the billing account over [start, end], in one call. The
+ * per-resource report breaks costs down by resource id, so all services are priced at once instead
+ * of spending the once-a-minute report limit on each of them.
  */
-export async function fetchResourceExpense(
+export async function fetchResourceUsageReport(
   billingAccountId: string,
   iamToken: string,
   start: Date,
   end: Date,
-  resourceId: string,
   signal: AbortSignal,
-): Promise<string | null> {
+): Promise<{ currency?: string; entities: ResourceUsageReportEntityData[] }> {
   const Ctor = consumptionClientCtor();
   const client = new Ctor(BILLING_GRPC_ENDPOINT, grpc.credentials.createSsl());
   const metadata = new grpc.Metadata();
   metadata.set('authorization', `Bearer ${iamToken}`);
 
   try {
-    const resp = await new Promise<UsageReportResponse>((resolve, reject) => {
-      const call = client.GetBillingAccountUsageReport(
+    const resp = await new Promise<ResourceUsageReportResponse>((resolve, reject) => {
+      const call = client.GetResourceUsageReport(
         {
           billingAccountId,
           startDate: { seconds: Math.floor(start.getTime() / 1000), nanos: 0 },
           endDate: { seconds: Math.floor(end.getTime() / 1000), nanos: 0 },
-          resourceIds: [resourceId],
           aggregationPeriod: 'MONTH',
         },
         metadata,
@@ -145,7 +153,7 @@ export async function fetchResourceExpense(
       );
       signal.addEventListener('abort', () => call.cancel(), { once: true });
     });
-    return resp.entitiesData?.[0]?.expense?.value ?? null;
+    return { currency: resp.currency, entities: resp.entitiesData ?? [] };
   } finally {
     client.close();
   }

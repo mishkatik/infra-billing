@@ -44,6 +44,30 @@ export interface YandexInstance {
   [key: string]: unknown;
 }
 
+export interface YandexCdnResource {
+  id: string;
+  folderId: string;
+  cname?: string; // the CDN endpoint hostname, e.g. "cdn.example.com"
+  active?: boolean; // false = content is not served to clients
+  originGroupName?: string;
+  originProtocol?: string; // HTTP / HTTPS / MATCH
+  providerType?: string; // e.g. "ourcdn"
+  secondaryHostnames?: string[];
+  [key: string]: unknown;
+}
+
+// Object Storage bucket from the management API (storage.api.cloud.yandex.net), not the S3 API.
+export interface YandexBucket {
+  name: string; // globally unique; also the bucket's resource id in billing
+  folderId: string;
+  defaultStorageClass?: string; // STANDARD / COLD / ICE
+  versioning?: string; // e.g. "VERSIONING_DISABLED"
+  maxSize?: string; // byte count string, "0" = unlimited
+  anonymousAccessFlags?: { read?: boolean; list?: boolean; configRead?: boolean };
+  createdAt?: string;
+  [key: string]: unknown;
+}
+
 // Billing Usage API (gRPC) shapes. Decimals arrive as { value: "123.45" } strings; the report is
 // requested with DAY aggregation so `periodic` holds one point per calendar day.
 export interface StringDecimal {
@@ -64,4 +88,15 @@ export interface UsageReportEntityData {
 export interface UsageReportResponse {
   currency?: string; // enum name, e.g. "RUB"
   entitiesData?: UsageReportEntityData[];
+}
+
+// Per-resource report: one entity per resource id and service instance type, so an id can repeat.
+export interface ResourceUsageReportEntityData {
+  resource?: { id?: string }; // instance / CDN resource id, bucket name for Object Storage
+  periodic?: UsageReportPeriodicData[];
+}
+
+export interface ResourceUsageReportResponse {
+  currency?: string;
+  entitiesData?: ResourceUsageReportEntityData[];
 }
