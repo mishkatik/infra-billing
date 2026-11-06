@@ -104,6 +104,15 @@ export const providers = {
       apiTokenDescStormwall: 'StormWall personal cabinet → API key, sent as the x-api-key header',
       apiTokenDescHostup:
         'HostUp → API management → create a key with read:all (or read:billing, read:services, read:vm and read:domains)',
+      hostvdsLogin: 'OpenStack login',
+      hostvdsLoginDesc:
+        'Panel → account → "API" tab → "OpenStack Dashboard": the login (hostvds-…) and the password below it, not the website sign-in. Syncs servers of every region with the monthly price of their plan.',
+      apiBaseUrlDescHostvds:
+        'Brand: https://hostvds.com (default) or https://cloudcore.ru — both run the same panel',
+      hostvdsEmail: 'Website sign-in email',
+      hostvdsEmailDesc:
+        'Optional: the email and password you sign in to the website with. Adds the balance and the payment history (top-ups, daily charges per server). Accounts that sign in with Google/Telegram have no password — leave empty.',
+      hostvdsWebPassword: 'Website password',
       managementKey: 'Management API key',
       apiTokenDescOpenrouter:
         'Go to openrouter.ai. Open "Home" → "Management Keys" → "New Key", enter any name, then "Create". Copy the key and paste it below.',
@@ -175,6 +184,8 @@ export const providers = {
       stormwallToken: 'Enter the StormWall API key',
       openrouterToken: 'Enter the OpenRouter Management API key',
       hostupToken: 'Enter the HostUp API key',
+      hostvdsCreds: 'Enter the OpenStack login and password from the API tab',
+      hostvdsWebCreds: 'Enter both the website email and password, or neither',
       yandexKey: 'Paste the Yandex Cloud service account authorized key (JSON)',
     },
     netcup: {
@@ -350,6 +361,15 @@ export const providers = {
         'Личный кабинет StormWall → API-ключ (передаётся в заголовке x-api-key)',
       apiTokenDescHostup:
         'HostUp → API management → создать ключ со scope read:all (или read:billing, read:services, read:vm и read:domains)',
+      hostvdsLogin: 'Логин OpenStack',
+      hostvdsLoginDesc:
+        'Панель → аккаунт → вкладка «API» → «OpenStack Dashboard»: логин (hostvds-…) и пароль под ним, а не вход на сайт. Синхронизируются серверы всех регионов с месячной ценой их тарифа.',
+      apiBaseUrlDescHostvds:
+        'Бренд: https://hostvds.com (по умолчанию) или https://cloudcore.ru — у обоих одна панель',
+      hostvdsEmail: 'Email для входа на сайт',
+      hostvdsEmailDesc:
+        'Необязательно: email и пароль, с которыми вы входите на сайт. Добавляют баланс и историю платежей (пополнения, списания по серверам за день). У аккаунтов со входом через Google/Telegram пароля нет — оставьте пустым.',
+      hostvdsWebPassword: 'Пароль от сайта',
       managementKey: 'Management API-ключ',
       apiTokenDescOpenrouter:
         'Зайдите на openrouter.ai. Откройте "Home" → "Management Keys" → "New Key", введите любое имя, затем "Create". Скопируйте ключ и вставьте его ниже.',
@@ -421,6 +441,8 @@ export const providers = {
       stormwallToken: 'Укажите API-ключ StormWall',
       openrouterToken: 'Укажите Management API-ключ OpenRouter',
       hostupToken: 'Укажите API-ключ HostUp',
+      hostvdsCreds: 'Укажите логин и пароль OpenStack со вкладки API',
+      hostvdsWebCreds: 'Укажите и email, и пароль от сайта — или ничего',
       yandexKey: 'Вставьте авторизованный ключ сервисного аккаунта Yandex Cloud (JSON)',
     },
     netcup: {

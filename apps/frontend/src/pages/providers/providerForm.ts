@@ -26,12 +26,19 @@ export interface AccountFormValues {
   panelId: string;
   apiPassword: string;
   secretKey: string;
+  email: string;
+  webPassword: string;
 }
 
 /** Which stored secrets an account already has (drives the masked inputs and reveal buttons). */
 export type StoredSecretFlags = Pick<
   ProviderAccount,
-  'hasToken' | 'hasPassword' | 'hasTotpSecret' | 'hasApiPassword' | 'hasSecretKey'
+  | 'hasToken'
+  | 'hasPassword'
+  | 'hasTotpSecret'
+  | 'hasApiPassword'
+  | 'hasSecretKey'
+  | 'hasWebPassword'
 >;
 
 // Well-known cabinet URLs per connector kind, pre-filled into loginUrl on create so the owner
@@ -59,6 +66,7 @@ export const DEFAULT_LOGIN_URLS: Record<string, string> = {
   doubleservers: 'https://doubleservers.com/dashboard',
   openrouter: 'https://openrouter.ai',
   hostup: 'https://cloud.hostup.se',
+  hostvds: 'https://hostvds.com/control',
 };
 
 export const EMPTY_IDENTITY: IdentityFormValues = {
@@ -83,6 +91,8 @@ export const EMPTY_ACCOUNT: AccountFormValues = {
   panelId: '',
   apiPassword: '',
   secretKey: '',
+  email: '',
+  webPassword: '',
 };
 
 export function identityFormFrom(p: Provider): IdentityFormValues {
@@ -107,6 +117,7 @@ export function accountFormFrom(a: ProviderAccount): AccountFormValues {
     accountId: a.accountId ?? '',
     projectName: a.projectName ?? '',
     panelId: a.panelId ?? '',
+    email: a.email ?? '',
   };
 }
 
@@ -187,6 +198,11 @@ export function validateAccountCredentials(
   if (requireCreds && kind === 'yandex' && !v.token) return t('providers.err.yandexKey');
   if (requireCreds && kind === 'openrouter' && !v.token) return t('providers.err.openrouterToken');
   if (requireCreds && kind === 'hostup' && !v.token) return t('providers.err.hostupToken');
+  if (requireCreds && kind === 'hostvds' && !(v.username && v.password))
+    return t('providers.err.hostvdsCreds');
+  // Website sign-in is optional, but half of it is useless; on edit a blank password keeps the stored one.
+  if (requireCreds && kind === 'hostvds' && Boolean(v.email) !== Boolean(v.webPassword))
+    return t('providers.err.hostvdsWebCreds');
   return null;
 }
 
@@ -206,6 +222,8 @@ export function buildCredentials(kind: string, v: AccountFormValues) {
     panelId: v.panelId || undefined,
     apiPassword: v.apiPassword || undefined,
     secretKey: v.secretKey || undefined,
+    email: v.email || undefined,
+    webPassword: v.webPassword || undefined,
   };
   if (kind === 'openrouter') {
     return {

@@ -16,6 +16,8 @@ import { HetznerConnector } from './hetzner/hetzner.connector';
 import { HostkeyConnector } from './hostkey/hostkey.connector';
 import { HostbillConnector } from './hostbill/hostbill.connector';
 import type { HostbillCredentials } from './hostbill/hostbill.types';
+import { HostvdsConnector } from './hostvds/hostvds.connector';
+import type { HostvdsCredentials } from './hostvds/hostvds.types';
 import { HostupConnector } from './hostup/hostup.connector';
 import { LinodeConnector } from './linode/linode.connector';
 import { NetcupConnector } from './netcup/netcup.connector';
@@ -111,6 +113,10 @@ export class ConnectorFactory {
       case 'hostup':
         // HostUp secret is the raw API key (single string, sent as the Authorization Bearer header).
         return new HostupConnector(token);
+      case 'hostvds':
+        // HostVDS / CloudCore secret is JSON: { username, password, baseUrl? } — the OpenStack
+        // user from the panel's API tab; baseUrl picks the brand.
+        return new HostvdsConnector(JSON.parse(token) as HostvdsCredentials);
       default:
         throw new Error(`Connector for kind="${kind}" is not supported`);
     }

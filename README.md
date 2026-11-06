@@ -18,11 +18,11 @@
 - **Провайдеры с API:** Timeweb Cloud, Hetzner Cloud, Hostkey (InvAPI), netcup, HostBill,
   ISPsystem BILLmanager, Selectel, 4VPS.SU, Netlen, Beget Cloud, Porkbun, Spaceship, Vultr,
   Linode, Aeza, VDSina, Cloudflare, StormWall, NetAngels, Yandex Cloud, Double Servers, OpenRouter,
-  HostUp. Плюс **Manual** — провайдеры без API ведутся руками.
+  HostUp, HostVDS / CloudCore. Плюс **Manual** — провайдеры без API ведутся руками.
 - **Автосинк** (по расписанию + кнопкой): баланс + валюта аккаунта, список серверов/услуг, даты
   следующих списаний; история баланса по дням (снапшоты).
 - **Импорт платежей** там, где API отдаёт реестр: пополнения и списания (BILLmanager, Netlen,
-  Vultr, Aeza, VDSina, Double Servers), пополнения и счета (Linode), оплаченные счета (HostBill),
+  Vultr, Aeza, VDSina, Double Servers, HostVDS), пополнения и счета (Linode), оплаченные счета (HostBill),
   платежи (HostUp), потребление (Selectel, Yandex Cloud, OpenRouter), история биллинга
   (Cloudflare, best-effort). Ручные платежи — в журнале.
 - **Аналитика:** месячные/годовые расходы, разрезы по провайдеру / стране / типу / валюте, прогноз
@@ -375,6 +375,13 @@ curl -H "Authorization: Bearer ib_…" https://infra-billing/api/providers
   Локации VPS в API нет — страну проставьте руками. Импортируются проведённые платежи живыми
   деньгами (карта, Swish, Bankgiro, SEPA…) как пополнения; оплата счёта из кредита и возвраты
   не импортируются. Pay-as-you-go Cloud VPS синкаются без цены.
+- **HostVDS / CloudCore** — логин и пароль OpenStack из панели (аккаунт → вкладка «API» → «OpenStack
+  Dashboard», логин вида `hostvds-…`), не вход на сайт. Обе марки — одна панель; для CloudCore
+  укажите base URL `https://cloudcore.ru`. Тянет серверы всех регионов: страна по региону, цена —
+  месячная цена тарифа из публичного каталога плюс платный тариф сети, в валюте региона (EUR/USD,
+  у CloudCore — RUB). Сверх пакета трафик не учитывается. Баланс и платежи — по желанию: email и
+  пароль входа на сайт (+ TOTP-секрет, если включена 2FA); тогда тянутся баланс (USD), пополнения и
+  списания — одно в день на сервер, с привязкой к услуге. Без них баланса нет (как у Hetzner).
 - **Manual** — без API, всё вводится руками.
 
 ## Telegram-уведомления
