@@ -810,6 +810,44 @@ export function ProviderCredentialFields({
     );
   }
 
+  if (kind === 'tubehosting') {
+    return (
+      <>
+        <Field
+          id="cred-username"
+          label={t('providers.field.loginEmail')}
+          description={t('providers.field.tubehostingLoginDesc')}
+          link="https://cp.tube-hosting.com/"
+        >
+          <Input id="cred-username" {...form.register('username')} />
+        </Field>
+        <Field id="cred-password" label={t('providers.field.password')}>
+          <SecretFormField
+            form={form}
+            name="password"
+            id="cred-password"
+            hasStored={storedSecrets?.hasPassword}
+            reveal={reveal}
+          />
+        </Field>
+        <Field
+          id="cred-totp"
+          label={t('providers.field.totpSecret')}
+          description={t('providers.field.tubehostingTotpDesc')}
+        >
+          <SecretFormField
+            form={form}
+            name="totpSecret"
+            id="cred-totp"
+            hasStored={storedSecrets?.hasTotpSecret}
+            reveal={reveal}
+            placeholder={storedSecrets?.hasTotpSecret ? undefined : optionalPh}
+          />
+        </Field>
+      </>
+    );
+  }
+
   if (kind === 'porkbun') {
     return (
       <>

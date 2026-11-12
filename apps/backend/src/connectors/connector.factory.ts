@@ -31,6 +31,8 @@ import { SpaceshipConnector } from './spaceship/spaceship.connector';
 import type { SpaceshipCredentials } from './spaceship/spaceship.types';
 import { StormwallConnector } from './stormwall/stormwall.connector';
 import { TimewebConnector } from './timeweb/timeweb.connector';
+import { TubeHostingConnector } from './tubehosting/tubehosting.connector';
+import type { TubeHostingCredentials } from './tubehosting/tubehosting.types';
 import { VdsinaConnector } from './vdsina/vdsina.connector';
 import type { VdsinaCredentials } from './vdsina/vdsina.types';
 import { VultrConnector } from './vultr/vultr.connector';
@@ -111,6 +113,9 @@ export class ConnectorFactory {
       case 'hostup':
         // HostUp secret is the raw API key (single string, sent as the Authorization Bearer header).
         return new HostupConnector(token);
+      case 'tubehosting':
+        // Tube-Hosting secret is JSON: { username (email), password, totpSecret? } (panel login).
+        return new TubeHostingConnector(JSON.parse(token) as TubeHostingCredentials);
       default:
         throw new Error(`Connector for kind="${kind}" is not supported`);
     }
