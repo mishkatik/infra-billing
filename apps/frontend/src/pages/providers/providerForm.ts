@@ -65,6 +65,7 @@ export const DEFAULT_LOGIN_URLS: Record<string, string> = {
   spaceship: 'https://www.spaceship.com/application/',
   yandex: 'https://console.yandex.cloud',
   doubleservers: 'https://doubleservers.com/dashboard',
+  tubehosting: 'https://cp.tube-hosting.com',
   openrouter: 'https://openrouter.ai',
   hostup: 'https://cloud.hostup.se',
   hostvds: 'https://hostvds.com/control',
@@ -179,6 +180,8 @@ export function validateAccountCredentials(
     return t('providers.err.begetCreds');
   if (requireCreds && kind === 'doubleservers' && !(v.username && v.password))
     return t('providers.err.doubleserversCreds');
+  if (requireCreds && kind === 'tubehosting' && !(v.username && v.password))
+    return t('providers.err.tubehostingCreds');
   if (requireCreds && kind === 'vultr' && !v.token) return t('providers.err.vultrToken');
   if (requireCreds && kind === 'porkbun' && !(v.token && v.secretKey))
     return t('providers.err.porkbunCreds');

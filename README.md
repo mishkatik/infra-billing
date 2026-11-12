@@ -18,13 +18,14 @@
 - **Провайдеры с API:** Timeweb Cloud, Hetzner Cloud, Hostkey (InvAPI), netcup, HostBill,
   ISPsystem BILLmanager, Selectel, 4VPS.SU, Netlen, Beget Cloud, Porkbun, Spaceship, Vultr,
   Linode, Aeza, VDSina, Cloudflare, StormWall, NetAngels, Yandex Cloud, Double Servers, OpenRouter,
-  HostUp, HostVDS / CloudCore, DataPacket. Плюс **Manual** — провайдеры без API ведутся руками.
+  HostUp, HostVDS / CloudCore, DataPacket, Tube-Hosting. Плюс **Manual** — провайдеры без API
+  ведутся руками.
 - **Автосинк** (по расписанию + кнопкой): баланс + валюта аккаунта, список серверов/услуг, даты
   следующих списаний; история баланса по дням (снапшоты).
 - **Импорт платежей** там, где API отдаёт реестр: пополнения и списания (BILLmanager, Netlen,
-  Vultr, Aeza, VDSina, Double Servers, HostVDS), пополнения и счета (Linode), оплаченные счета
-  (HostBill, DataPacket), платежи (HostUp), потребление (Selectel, Yandex Cloud, OpenRouter),
-  история биллинга (Cloudflare, best-effort). Ручные платежи — в журнале.
+  Vultr, Aeza, VDSina, Double Servers, HostVDS, Tube-Hosting), пополнения и счета (Linode),
+  оплаченные счета (HostBill, DataPacket), платежи (HostUp), потребление (Selectel, Yandex Cloud,
+  OpenRouter), история биллинга (Cloudflare, best-effort). Ручные платежи — в журнале.
 - **Аналитика:** месячные/годовые расходы, разрезы по провайдеру / стране / типу / валюте, прогноз
   по будущим списаниям, ближайшие списания с подсветкой критичности.
 - **Мультивалютность:** суммы в своей валюте, конвертация к базовой; курсы ЦБ РФ или ручные.
@@ -389,6 +390,12 @@ curl -H "Authorization: Bearer ib_…" https://infra-billing/api/providers
   списания — из `billingCycle` подписки (месяц/квартал/год; дневной биллинг — постоплата без даты).
   Импортируются оплаченные счета как пополнения (сумма с НДС, дата оплаты); счета, оплаченные с
   баланса DataPacket или кредит-нотой, пропускаются. Баланса аккаунта в API нет.
+- **Tube-Hosting** — email + пароль от `cp.tube-hosting.com` (API-ключей нет — синк логинится в
+  JSON API панели `api.tube-hosting.com`). Опц. TOTP-секрет, если на аккаунте подтверждена 2FA через
+  приложение. Тянет баланс (EUR), группы услуг — по услуге на группу (сервер вместе с
+  IPv4/трафик-бандлом; цена — сумма услуг группы, дата списания — оплаченный до `runtime`, период из
+  `runtimeInterval`, 30 дней → месяц) и журнал: пополнения (PayPal, карта…) и списания за
+  продления, привязанные к своей группе. Локации в API нет — страну проставьте руками.
 - **Manual** — без API, всё вводится руками.
 
 ## Telegram-уведомления

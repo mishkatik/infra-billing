@@ -54,7 +54,7 @@ export class ProviderCredentialsService {
         useCatalogNames: c.useCatalogNames !== false,
       };
     }
-    if (kind === 'beget' || kind === 'doubleservers') {
+    if (kind === 'beget' || kind === 'doubleservers' || kind === 'tubehosting') {
       const c = this.decodeCredentials(enc);
       return { username: c.username ?? null };
     }
@@ -135,7 +135,7 @@ export class ProviderCredentialsService {
         hasApiPassword: Boolean(c.apiPassword),
       };
     }
-    if (kind === 'doubleservers') {
+    if (kind === 'doubleservers' || kind === 'tubehosting') {
       return { hasPassword: Boolean(c.password), hasTotpSecret: Boolean(c.totpSecret) };
     }
     return { hasToken: true };
@@ -228,7 +228,7 @@ export class ProviderCredentialsService {
       if (c.apiPassword) out.apiPassword = c.apiPassword;
       return out;
     }
-    if (kind === 'doubleservers') {
+    if (kind === 'doubleservers' || kind === 'tubehosting') {
       const out: ProviderCredentialsReveal = {};
       if (c.password) out.password = c.password;
       if (c.totpSecret) out.totpSecret = c.totpSecret;
@@ -411,7 +411,7 @@ export class ProviderCredentialsService {
       if (apiPassword) creds.apiPassword = apiPassword;
       return this.crypto.encrypt(JSON.stringify(creds));
     }
-    if (kind === 'doubleservers') {
+    if (kind === 'doubleservers' || kind === 'tubehosting') {
       // JSON { username (email), password, totpSecret? }; merge so a partial edit works.
       const supplied = dto.username || dto.password || dto.totpSecret;
       if (!supplied) return null;
@@ -419,7 +419,8 @@ export class ProviderCredentialsService {
       const username = dto.username ?? base.username;
       const password = dto.password ?? base.password;
       if (!username || !password) {
-        throw new BadRequestException('Provide the Double Servers email and password together');
+        const label = kind === 'tubehosting' ? 'Tube-Hosting' : 'Double Servers';
+        throw new BadRequestException(`Provide the ${label} email and password together`);
       }
       const creds: Record<string, string> = { username, password };
       const totpSecret = dto.totpSecret ?? base.totpSecret;

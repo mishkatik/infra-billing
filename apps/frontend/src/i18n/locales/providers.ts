@@ -154,6 +154,10 @@ export const providers = {
         'Go to "BACKUP LOGIN VIA EMAIL". Enter the email and password, then click "Attach email". Enter the code sent to your email and click "Confirm". Enter the credentials in the fields below.',
       doubleserversSetupStep3:
         'Optional. Go to "Authenticator app" and click "Connect". Enter the key you receive, confirm it in an external authenticator, click "Confirm", then paste the same key into the field below.',
+      tubehostingLoginDesc:
+        'Email and password of the cp.tube-hosting.com account (there are no API keys; the sync logs in to the panel). Syncs the balance, service groups (price, next renewal) and payments: top-ups and renewal charges.',
+      tubehostingTotpDesc:
+        'Optional. Only if authenticator-app 2FA is confirmed on the account: the base32 key shown when the authenticator was added.',
       porkbunApiKey: 'API key',
       porkbunApiKeyDesc: 'Porkbun → Account → API Access → create an API key',
       porkbunSecretKey: 'Secret API key',
@@ -173,6 +177,7 @@ export const providers = {
       netcupToken: 'Authorize via netcup or paste a refresh token',
       begetCreds: 'Enter the Beget login and password',
       doubleserversCreds: 'Enter the Double Servers email and password',
+      tubehostingCreds: 'Enter the Tube-Hosting email and password',
       vultrToken: 'Enter the Vultr API key',
       porkbunCreds: 'Enter the Porkbun API key and secret key',
       spaceshipCreds: 'Enter the Spaceship API key and secret',
@@ -414,6 +419,10 @@ export const providers = {
         'Перейдите к "BACKUP LOGIN VIA EMAIL". Введите email и пароль и нажмите "Attach email". Введите код, отправленный на почту, и нажмите "Confirm". Введите креды в поля ниже.',
       doubleserversSetupStep3:
         'Опционально. Перейдите к "Authenticator app" и нажмите "Connect". Введите полученный ключ и подтвердите его через внешний аутентификатор, нажмите "Confirm", а затем продублируйте тот же самый ключ в поле ниже.',
+      tubehostingLoginDesc:
+        'Email и пароль аккаунта cp.tube-hosting.com (API-ключей нет — синк логинится в панель). Синхронизируются баланс, группы услуг (цена, дата продления) и платежи: пополнения и списания за продления.',
+      tubehostingTotpDesc:
+        'Опционально. Только если на аккаунте подтверждена 2FA через приложение-аутентификатор: base32-ключ, который показывался при его добавлении.',
       porkbunApiKey: 'API-ключ',
       porkbunApiKeyDesc: 'Porkbun → Account → API Access → создать API-ключ',
       porkbunSecretKey: 'Секретный API-ключ',
@@ -433,6 +442,7 @@ export const providers = {
       netcupToken: 'Авторизуйтесь через netcup или вставьте refresh-токен',
       begetCreds: 'Укажите логин и пароль Beget',
       doubleserversCreds: 'Укажите email и пароль Double Servers',
+      tubehostingCreds: 'Укажите email и пароль Tube-Hosting',
       vultrToken: 'Укажите API-ключ Vultr',
       porkbunCreds: 'Укажите API-ключ и секретный ключ Porkbun',
       spaceshipCreds: 'Укажите API-ключ и секрет Spaceship',

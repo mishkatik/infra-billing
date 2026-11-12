@@ -225,6 +225,7 @@ export const common = {
         hostup: 'HostUp',
         hostvds: 'HostVDS / CloudCore',
         datapacket: 'DataPacket',
+        tubehosting: 'Tube-Hosting',
         manual: 'Manual',
       },
       rateSource: {
@@ -455,6 +456,7 @@ export const common = {
         hostup: 'HostUp',
         hostvds: 'HostVDS / CloudCore',
         datapacket: 'DataPacket',
+        tubehosting: 'Tube-Hosting',
         manual: 'Ручной',
       },
       rateSource: {

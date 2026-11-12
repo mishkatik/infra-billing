@@ -28,6 +28,7 @@ const PROVIDER_KINDS: ProviderKind[] = [
   'hostup',
   'hostvds',
   'datapacket',
+  'tubehosting',
   'manual',
 ];
 
