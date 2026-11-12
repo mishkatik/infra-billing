@@ -45,3 +45,37 @@ export const createPaymentSchema = z
     message: 'Provide the account (or a single-account provider)',
   });
 export type CreatePayment = z.infer<typeof createPaymentSchema>;
+
+// How far apart a manual payment and its imported twin may be dated: a hand-entered date is often
+// the day the owner noticed the payment, not the day it settled.
+export const DUPLICATE_PAYMENT_WINDOW_DAYS = 3;
+
+/**
+ * A manually entered payment that an import has since brought in as well: same account, type,
+ * currency and amount, dated within DUPLICATE_PAYMENT_WINDOW_DAYS
+ * (GET /api/provider-accounts/{uuid}/duplicate-payments).
+ */
+export const duplicatePaymentSchema = z.object({
+  manual: paymentSchema.describe('Manually entered payment (the one to remove)'),
+  imported: paymentSchema.describe('Imported payment it duplicates'),
+});
+export type DuplicatePayment = z.infer<typeof duplicatePaymentSchema>;
+
+export const duplicatePaymentsSchema = z.object({
+  items: z.array(duplicatePaymentSchema).describe('Duplicate pairs, newest first'),
+});
+export type DuplicatePayments = z.infer<typeof duplicatePaymentsSchema>;
+
+export const removeDuplicatePaymentsSchema = z.object({
+  paymentUuids: z
+    .array(uuidSchema)
+    .min(1)
+    .max(1000)
+    .describe('Manual payments to remove; ones that are no longer duplicates are skipped'),
+});
+export type RemoveDuplicatePayments = z.infer<typeof removeDuplicatePaymentsSchema>;
+
+export const removeDuplicatePaymentsResultSchema = z.object({
+  deleted: z.number().int().nonnegative().describe('Manual payments removed'),
+});
+export type RemoveDuplicatePaymentsResult = z.infer<typeof removeDuplicatePaymentsResultSchema>;

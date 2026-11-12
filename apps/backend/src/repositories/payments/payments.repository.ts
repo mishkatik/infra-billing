@@ -132,4 +132,19 @@ export class PaymentsRepository {
   async delete(uuid: string): Promise<void> {
     await this.prisma.payment.delete({ where: { uuid } });
   }
+
+  /** The account's manual payments (no externalId), or its imported ones. */
+  listForAccount(accountUuid: string, source: 'manual' | 'imported') {
+    return this.prisma.payment.findMany({
+      where: { accountUuid, externalId: source === 'manual' ? null : { not: null } },
+    });
+  }
+
+  /** Delete the given manual payments of an account; imported rows are never deleted here. */
+  async deleteManual(accountUuid: string, uuids: string[]): Promise<number> {
+    const { count } = await this.prisma.payment.deleteMany({
+      where: { uuid: { in: uuids }, accountUuid, externalId: null },
+    });
+    return count;
+  }
 }

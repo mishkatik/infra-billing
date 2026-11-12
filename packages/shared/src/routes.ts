@@ -64,6 +64,9 @@ export const API_SUB = {
   ACCOUNT_BALANCE_HISTORY: `${ID}/balance-history`,
   ACCOUNT_SPEND: `${ID}/spend`,
   ACCOUNT_CREDENTIALS_REVEAL: `${ID}/credentials/reveal`,
+  // Manual payments that an import has since brought in too: list, then remove the chosen ones.
+  ACCOUNT_DUPLICATE_PAYMENTS: `${ID}/duplicate-payments`,
+  ACCOUNT_DUPLICATE_PAYMENTS_REMOVE: `${ID}/duplicate-payments/remove`,
   // netcup OAuth2 device flow (in-panel token acquisition).
   PROVIDER_NETCUP_DEVICE_START: 'netcup/device/start',
   PROVIDER_NETCUP_DEVICE_POLL: 'netcup/device/poll',
@@ -123,6 +126,10 @@ export const API_PATH = {
     SPEND: (uuid: string) => pathId(API.PROVIDER_ACCOUNTS, API_SUB.ACCOUNT_SPEND, uuid),
     CREDENTIALS_REVEAL: (uuid: string) =>
       pathId(API.PROVIDER_ACCOUNTS, API_SUB.ACCOUNT_CREDENTIALS_REVEAL, uuid),
+    DUPLICATE_PAYMENTS: (uuid: string) =>
+      pathId(API.PROVIDER_ACCOUNTS, API_SUB.ACCOUNT_DUPLICATE_PAYMENTS, uuid),
+    DUPLICATE_PAYMENTS_REMOVE: (uuid: string) =>
+      pathId(API.PROVIDER_ACCOUNTS, API_SUB.ACCOUNT_DUPLICATE_PAYMENTS_REMOVE, uuid),
   },
   PROJECTS: {
     ROOT: path(API.PROJECTS),

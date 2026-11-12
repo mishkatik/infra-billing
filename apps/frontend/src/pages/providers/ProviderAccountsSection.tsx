@@ -1,6 +1,11 @@
-import type { Provider, ProviderAccount } from '@infra/shared';
+import {
+  type Provider,
+  type ProviderAccount,
+  providerKindSupportsPaymentImport,
+} from '@infra/shared';
 import {
   IconBan,
+  IconCopy,
   IconLoader2,
   IconPencil,
   IconPlayerPlay,
@@ -8,7 +13,7 @@ import {
   IconRefresh,
   IconTrash,
 } from '@tabler/icons-react';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { apiErrorMessage } from '@/api/client';
 import {
@@ -29,6 +34,7 @@ import { SYNC_STATE_GLYPH, accountDisplayName, accountSyncState } from '@/utils/
 import { syncLogLines } from '@/utils/syncLog';
 import { AccountSpend } from './AccountSpend';
 import { BalanceHistoryChart } from './BalanceHistoryChart';
+import { DuplicatePaymentsDialog } from './DuplicatePaymentsDialog';
 
 const LOG_RUNS = 8;
 
@@ -96,6 +102,9 @@ function AccountCard({ provider, account: a, focused, onSync, onEdit }: AccountC
   const isLast = provider.accounts.length <= 1;
   const mainLabel = t('common.accountMain');
   const name = accountDisplayName(provider, a, mainLabel);
+  // Manual payments can double imported ones once a connector imports what was typed in by hand.
+  const canHaveDuplicates = providerKindSupportsPaymentImport(provider.kind) && a.paymentsCount > 0;
+  const [duplicatesOpen, setDuplicatesOpen] = useState(false);
 
   useEffect(() => {
     if (focused) ref.current?.scrollIntoView({ block: 'nearest' });
@@ -197,6 +206,12 @@ function AccountCard({ provider, account: a, focused, onSync, onEdit }: AccountC
           ) : (
             <p className="px-3 text-[13px] text-ink-2">{t('providers.account.syncDisabled')}</p>
           ))}
+        {canHaveDuplicates && (
+          <Button type="button" variant="ghost" size="sm" onClick={() => setDuplicatesOpen(true)}>
+            <IconCopy className="size-3.5" stroke={1.5} />
+            {t('providers.duplicates.action')}
+          </Button>
+        )}
         <div className="ml-auto flex items-center gap-1">
           {api && (
             <Button
@@ -243,6 +258,14 @@ function AccountCard({ provider, account: a, focused, onSync, onEdit }: AccountC
           </Tooltip>
         </div>
       </footer>
+      {canHaveDuplicates && (
+        <DuplicatePaymentsDialog
+          opened={duplicatesOpen}
+          accountUuid={a.uuid}
+          name={name}
+          onClose={() => setDuplicatesOpen(false)}
+        />
+      )}
     </article>
   );
 }
