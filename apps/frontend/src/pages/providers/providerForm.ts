@@ -26,12 +26,19 @@ export interface AccountFormValues {
   panelId: string;
   apiPassword: string;
   secretKey: string;
+  email: string;
+  webPassword: string;
 }
 
 /** Which stored secrets an account already has (drives the masked inputs and reveal buttons). */
 export type StoredSecretFlags = Pick<
   ProviderAccount,
-  'hasToken' | 'hasPassword' | 'hasTotpSecret' | 'hasApiPassword' | 'hasSecretKey'
+  | 'hasToken'
+  | 'hasPassword'
+  | 'hasTotpSecret'
+  | 'hasApiPassword'
+  | 'hasSecretKey'
+  | 'hasWebPassword'
 >;
 
 // Well-known cabinet URLs per connector kind, pre-filled into loginUrl on create so the owner
@@ -48,6 +55,7 @@ export const DEFAULT_LOGIN_URLS: Record<string, string> = {
   beget: 'https://cp.beget.com',
   stormwall: 'https://users.stormwall.pro',
   netangels: 'https://panel.netangels.ru',
+  datapacket: 'https://app.datapacket.com',
   vultr: 'https://console.vultr.com',
   linode: 'https://cloud.linode.com',
   aeza: 'https://my.aeza.net',
@@ -57,8 +65,11 @@ export const DEFAULT_LOGIN_URLS: Record<string, string> = {
   spaceship: 'https://www.spaceship.com/application/',
   yandex: 'https://console.yandex.cloud',
   doubleservers: 'https://doubleservers.com/dashboard',
+  tubehosting: 'https://cp.tube-hosting.com',
   openrouter: 'https://openrouter.ai',
   hostup: 'https://cloud.hostup.se',
+  hostvds: 'https://hostvds.com/control',
+  gcore: 'https://portal.gcore.com',
 };
 
 export const EMPTY_IDENTITY: IdentityFormValues = {
@@ -83,6 +94,8 @@ export const EMPTY_ACCOUNT: AccountFormValues = {
   panelId: '',
   apiPassword: '',
   secretKey: '',
+  email: '',
+  webPassword: '',
 };
 
 export function identityFormFrom(p: Provider): IdentityFormValues {
@@ -107,6 +120,7 @@ export function accountFormFrom(a: ProviderAccount): AccountFormValues {
     accountId: a.accountId ?? '',
     projectName: a.projectName ?? '',
     panelId: a.panelId ?? '',
+    email: a.email ?? '',
   };
 }
 
@@ -167,6 +181,8 @@ export function validateAccountCredentials(
     return t('providers.err.begetCreds');
   if (requireCreds && kind === 'doubleservers' && !(v.username && v.password))
     return t('providers.err.doubleserversCreds');
+  if (requireCreds && kind === 'tubehosting' && !(v.username && v.password))
+    return t('providers.err.tubehostingCreds');
   if (requireCreds && kind === 'vultr' && !v.token) return t('providers.err.vultrToken');
   if (requireCreds && kind === 'porkbun' && !(v.token && v.secretKey))
     return t('providers.err.porkbunCreds');
@@ -187,6 +203,13 @@ export function validateAccountCredentials(
   if (requireCreds && kind === 'yandex' && !v.token) return t('providers.err.yandexKey');
   if (requireCreds && kind === 'openrouter' && !v.token) return t('providers.err.openrouterToken');
   if (requireCreds && kind === 'hostup' && !v.token) return t('providers.err.hostupToken');
+  if (requireCreds && kind === 'hostvds' && !(v.username && v.password))
+    return t('providers.err.hostvdsCreds');
+  // Website sign-in is optional, but half of it is useless; on edit a blank password keeps the stored one.
+  if (requireCreds && kind === 'hostvds' && Boolean(v.email) !== Boolean(v.webPassword))
+    return t('providers.err.hostvdsWebCreds');
+  if (requireCreds && kind === 'datapacket' && !v.token) return t('providers.err.datapacketToken');
+  if (requireCreds && kind === 'gcore' && !v.token) return t('providers.err.gcoreToken');
   return null;
 }
 
@@ -206,6 +229,8 @@ export function buildCredentials(kind: string, v: AccountFormValues) {
     panelId: v.panelId || undefined,
     apiPassword: v.apiPassword || undefined,
     secretKey: v.secretKey || undefined,
+    email: v.email || undefined,
+    webPassword: v.webPassword || undefined,
   };
   if (kind === 'openrouter') {
     return {

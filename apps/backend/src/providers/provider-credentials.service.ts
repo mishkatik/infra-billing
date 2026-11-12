@@ -10,6 +10,7 @@ import {
   OpenRouterCredentials,
   parseOpenRouterCredentials,
 } from '@connectors/openrouter/openrouter.types';
+import { HOSTVDS_BRANDS } from '@connectors/hostvds/hostvds.types';
 import { VDSINA_BASE_URLS } from '@connectors/vdsina/vdsina.types';
 import type { YandexCredentials } from '../connectors/yandex/yandex.types';
 import { CryptoService } from '../crypto/crypto.service';
@@ -53,7 +54,7 @@ export class ProviderCredentialsService {
         useCatalogNames: c.useCatalogNames !== false,
       };
     }
-    if (kind === 'beget' || kind === 'doubleservers') {
+    if (kind === 'beget' || kind === 'doubleservers' || kind === 'tubehosting') {
       const c = this.decodeCredentials(enc);
       return { username: c.username ?? null };
     }
@@ -64,6 +65,10 @@ export class ProviderCredentialsService {
     if (kind === 'hostbill' || kind === 'billmgr') {
       const c = this.decodeCredentials(enc);
       return { baseUrl: c.baseUrl ?? null, username: c.username ?? null };
+    }
+    if (kind === 'hostvds') {
+      const c = this.decodeCredentials(enc);
+      return { baseUrl: c.baseUrl ?? null, username: c.username ?? null, email: c.email ?? null };
     }
     return {};
   }
@@ -76,6 +81,7 @@ export class ProviderCredentialsService {
         hasTotpSecret: false,
         hasApiPassword: false,
         hasSecretKey: false,
+        hasWebPassword: false,
       };
     }
     if (
@@ -88,7 +94,9 @@ export class ProviderCredentialsService {
       kind === 'linode' ||
       kind === 'netangels' ||
       kind === 'stormwall' ||
-      kind === 'hostup'
+      kind === 'hostup' ||
+      kind === 'datapacket' ||
+      kind === 'gcore'
     ) {
       return { hasToken: true };
     }
@@ -111,6 +119,13 @@ export class ProviderCredentialsService {
     if (kind === 'selectel') {
       return { hasPassword: Boolean(c.password) };
     }
+    if (kind === 'hostvds') {
+      return {
+        hasPassword: Boolean(c.password),
+        hasWebPassword: Boolean(c.webPassword),
+        hasTotpSecret: Boolean(c.totpSecret),
+      };
+    }
     if (kind === 'billmgr' || kind === 'hostbill') {
       return { hasPassword: Boolean(c.password), hasTotpSecret: Boolean(c.totpSecret) };
     }
@@ -121,7 +136,7 @@ export class ProviderCredentialsService {
         hasApiPassword: Boolean(c.apiPassword),
       };
     }
-    if (kind === 'doubleservers') {
+    if (kind === 'doubleservers' || kind === 'tubehosting') {
       return { hasPassword: Boolean(c.password), hasTotpSecret: Boolean(c.totpSecret) };
     }
     return { hasToken: true };
@@ -141,7 +156,9 @@ export class ProviderCredentialsService {
       kind === 'linode' ||
       kind === 'netangels' ||
       kind === 'stormwall' ||
-      kind === 'hostup'
+      kind === 'hostup' ||
+      kind === 'datapacket' ||
+      kind === 'gcore'
     ) {
       const token = this.decryptRaw(enc);
       return token ? { token } : {};
@@ -193,6 +210,13 @@ export class ProviderCredentialsService {
     if (kind === 'selectel') {
       return c.password ? { password: c.password } : {};
     }
+    if (kind === 'hostvds') {
+      const out: ProviderCredentialsReveal = {};
+      if (c.password) out.password = c.password;
+      if (c.webPassword) out.webPassword = c.webPassword;
+      if (c.totpSecret) out.totpSecret = c.totpSecret;
+      return out;
+    }
     if (kind === 'billmgr' || kind === 'hostbill') {
       const out: ProviderCredentialsReveal = {};
       if (c.password) out.password = c.password;
@@ -206,7 +230,7 @@ export class ProviderCredentialsService {
       if (c.apiPassword) out.apiPassword = c.apiPassword;
       return out;
     }
-    if (kind === 'doubleservers') {
+    if (kind === 'doubleservers' || kind === 'tubehosting') {
       const out: ProviderCredentialsReveal = {};
       if (c.password) out.password = c.password;
       if (c.totpSecret) out.totpSecret = c.totpSecret;
@@ -232,6 +256,8 @@ export class ProviderCredentialsService {
       panelId?: string;
       apiPassword?: string;
       secretKey?: string;
+      email?: string;
+      webPassword?: string;
       useCatalogNames?: boolean;
     },
     existingEnc?: Uint8Array | null,
@@ -314,6 +340,43 @@ export class ProviderCredentialsService {
       if (projectName) creds.projectName = projectName;
       return this.crypto.encrypt(JSON.stringify(creds));
     }
+    if (kind === 'hostvds') {
+      // OpenStack user from the panel's API tab: JSON { username, password, baseUrl?, email?,
+      // webPassword?, totpSecret? }; merge so a partial edit keeps the rest. Two brands share the
+      // panel; the base URL picks one, and the allowlist keeps the passwords from reaching a
+      // foreign host. The optional website sign-in adds the balance and the payment ledger.
+      const supplied =
+        dto.username ||
+        dto.password ||
+        dto.baseUrl ||
+        dto.email ||
+        dto.webPassword ||
+        dto.totpSecret;
+      if (!supplied) return null;
+      const base = this.decodeCredentials(existingEnc);
+      const username = dto.username ?? base.username;
+      const password = dto.password ?? base.password;
+      if (!username || !password) {
+        throw new BadRequestException('Provide the HostVDS OpenStack login and password together');
+      }
+      const creds: Record<string, string> = { username, password };
+      const email = dto.email ?? base.email;
+      const webPassword = dto.webPassword ?? base.webPassword;
+      if (Boolean(email) !== Boolean(webPassword)) {
+        throw new BadRequestException('Provide the HostVDS website email and password together');
+      }
+      if (email && webPassword) Object.assign(creds, { email, webPassword });
+      const totpSecret = dto.totpSecret ?? base.totpSecret;
+      if (totpSecret && email) creds.totpSecret = totpSecret;
+      const baseUrl = (dto.baseUrl ?? base.baseUrl)?.replace(/\/+$/, '');
+      if (baseUrl && !HOSTVDS_BRANDS[baseUrl]) {
+        throw new BadRequestException(
+          `HostVDS base URL must be ${Object.keys(HOSTVDS_BRANDS).join(' or ')}`,
+        );
+      }
+      if (baseUrl) creds.baseUrl = baseUrl;
+      return this.crypto.encrypt(JSON.stringify(creds));
+    }
     if (kind === 'hostbill' || kind === 'billmgr') {
       const supportsTotp = kind === 'billmgr' || kind === 'hostbill';
       const supplied =
@@ -350,7 +413,7 @@ export class ProviderCredentialsService {
       if (apiPassword) creds.apiPassword = apiPassword;
       return this.crypto.encrypt(JSON.stringify(creds));
     }
-    if (kind === 'doubleservers') {
+    if (kind === 'doubleservers' || kind === 'tubehosting') {
       // JSON { username (email), password, totpSecret? }; merge so a partial edit works.
       const supplied = dto.username || dto.password || dto.totpSecret;
       if (!supplied) return null;
@@ -358,7 +421,8 @@ export class ProviderCredentialsService {
       const username = dto.username ?? base.username;
       const password = dto.password ?? base.password;
       if (!username || !password) {
-        throw new BadRequestException('Provide the Double Servers email and password together');
+        const label = kind === 'tubehosting' ? 'Tube-Hosting' : 'Double Servers';
+        throw new BadRequestException(`Provide the ${label} email and password together`);
       }
       const creds: Record<string, string> = { username, password };
       const totpSecret = dto.totpSecret ?? base.totpSecret;

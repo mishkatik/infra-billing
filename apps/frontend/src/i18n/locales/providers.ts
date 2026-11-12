@@ -104,6 +104,19 @@ export const providers = {
       apiTokenDescStormwall: 'StormWall personal cabinet → API key, sent as the x-api-key header',
       apiTokenDescHostup:
         'HostUp → API management → create a key with read:all (or read:billing, read:services, read:vm and read:domains)',
+      hostvdsLogin: 'OpenStack login',
+      hostvdsLoginDesc:
+        'Panel → account → "API" tab → "OpenStack Dashboard": the login (hostvds-…) and the password below it, not the website sign-in. Syncs servers of every region with the monthly price of their plan.',
+      apiBaseUrlDescHostvds:
+        'Brand: https://hostvds.com (default) or https://cloudcore.ru — both run the same panel',
+      hostvdsEmail: 'Website sign-in email',
+      hostvdsEmailDesc:
+        'Optional: the email and password you sign in to the website with. Adds the balance and the payment history (top-ups, daily charges per server). Accounts that sign in with Google/Telegram have no password — leave empty.',
+      hostvdsWebPassword: 'Website password',
+      apiTokenDescDatapacket:
+        'DataPacket client panel → Security → Add API key (read-only is enough). Syncs servers with their subscription price and location, other subscription items (IPs, traffic, DDoS) as one service per subscription, and paid invoices. The API has no account balance.',
+      apiTokenDescGcore:
+        'Gcore portal → Profile → API tokens → create a permanent token. Any role syncs the balance, card payments and daily charges. Cloud servers (with their volumes and IPs) need the Administrators role; with a narrower role (e.g. Users) services are listed per billing feature instead.',
       managementKey: 'Management API key',
       apiTokenDescOpenrouter:
         'Go to openrouter.ai. Open "Home" → "Management Keys" → "New Key", enter any name, then "Create". Copy the key and paste it below.',
@@ -143,6 +156,10 @@ export const providers = {
         'Go to "BACKUP LOGIN VIA EMAIL". Enter the email and password, then click "Attach email". Enter the code sent to your email and click "Confirm". Enter the credentials in the fields below.',
       doubleserversSetupStep3:
         'Optional. Go to "Authenticator app" and click "Connect". Enter the key you receive, confirm it in an external authenticator, click "Confirm", then paste the same key into the field below.',
+      tubehostingLoginDesc:
+        'Email and password of the cp.tube-hosting.com account (there are no API keys; the sync logs in to the panel). Syncs the balance, service groups (price, next renewal) and payments: top-ups and renewal charges.',
+      tubehostingTotpDesc:
+        'Optional. Only if authenticator-app 2FA is confirmed on the account: the base32 key shown when the authenticator was added.',
       porkbunApiKey: 'API key',
       porkbunApiKeyDesc: 'Porkbun → Account → API Access → create an API key',
       porkbunSecretKey: 'Secret API key',
@@ -162,6 +179,7 @@ export const providers = {
       netcupToken: 'Authorize via netcup or paste a refresh token',
       begetCreds: 'Enter the Beget login and password',
       doubleserversCreds: 'Enter the Double Servers email and password',
+      tubehostingCreds: 'Enter the Tube-Hosting email and password',
       vultrToken: 'Enter the Vultr API key',
       porkbunCreds: 'Enter the Porkbun API key and secret key',
       spaceshipCreds: 'Enter the Spaceship API key and secret',
@@ -175,6 +193,10 @@ export const providers = {
       stormwallToken: 'Enter the StormWall API key',
       openrouterToken: 'Enter the OpenRouter Management API key',
       hostupToken: 'Enter the HostUp API key',
+      hostvdsCreds: 'Enter the OpenStack login and password from the API tab',
+      hostvdsWebCreds: 'Enter both the website email and password, or neither',
+      datapacketToken: 'Enter the DataPacket API key',
+      gcoreToken: 'Enter the Gcore API token',
       yandexKey: 'Paste the Yandex Cloud service account authorized key (JSON)',
     },
     netcup: {
@@ -350,6 +372,19 @@ export const providers = {
         'Личный кабинет StormWall → API-ключ (передаётся в заголовке x-api-key)',
       apiTokenDescHostup:
         'HostUp → API management → создать ключ со scope read:all (или read:billing, read:services, read:vm и read:domains)',
+      hostvdsLogin: 'Логин OpenStack',
+      hostvdsLoginDesc:
+        'Панель → аккаунт → вкладка «API» → «OpenStack Dashboard»: логин (hostvds-…) и пароль под ним, а не вход на сайт. Синхронизируются серверы всех регионов с месячной ценой их тарифа.',
+      apiBaseUrlDescHostvds:
+        'Бренд: https://hostvds.com (по умолчанию) или https://cloudcore.ru — у обоих одна панель',
+      hostvdsEmail: 'Email для входа на сайт',
+      hostvdsEmailDesc:
+        'Необязательно: email и пароль, с которыми вы входите на сайт. Добавляют баланс и историю платежей (пополнения, списания по серверам за день). У аккаунтов со входом через Google/Telegram пароля нет — оставьте пустым.',
+      hostvdsWebPassword: 'Пароль от сайта',
+      apiTokenDescDatapacket:
+        'Панель DataPacket → Security → Add API key (достаточно read-only). Синхронизируются серверы с ценой из подписки и локацией, прочие позиции подписки (IP, трафик, DDoS) — одной услугой на подписку, и оплаченные счета. Баланса аккаунта в API нет.',
+      apiTokenDescGcore:
+        'Портал Gcore → Profile → API tokens → создайте постоянный токен. С любой ролью синкаются баланс, оплаты картой и списания по дням. Облачные серверы (вместе с дисками и IP) видны только с ролью Administrators; с более узкой (например, Users) услуги строятся по биллинговым позициям.',
       managementKey: 'Management API-ключ',
       apiTokenDescOpenrouter:
         'Зайдите на openrouter.ai. Откройте "Home" → "Management Keys" → "New Key", введите любое имя, затем "Create". Скопируйте ключ и вставьте его ниже.',
@@ -389,6 +424,10 @@ export const providers = {
         'Перейдите к "BACKUP LOGIN VIA EMAIL". Введите email и пароль и нажмите "Attach email". Введите код, отправленный на почту, и нажмите "Confirm". Введите креды в поля ниже.',
       doubleserversSetupStep3:
         'Опционально. Перейдите к "Authenticator app" и нажмите "Connect". Введите полученный ключ и подтвердите его через внешний аутентификатор, нажмите "Confirm", а затем продублируйте тот же самый ключ в поле ниже.',
+      tubehostingLoginDesc:
+        'Email и пароль аккаунта cp.tube-hosting.com (API-ключей нет — синк логинится в панель). Синхронизируются баланс, группы услуг (цена, дата продления) и платежи: пополнения и списания за продления.',
+      tubehostingTotpDesc:
+        'Опционально. Только если на аккаунте подтверждена 2FA через приложение-аутентификатор: base32-ключ, который показывался при его добавлении.',
       porkbunApiKey: 'API-ключ',
       porkbunApiKeyDesc: 'Porkbun → Account → API Access → создать API-ключ',
       porkbunSecretKey: 'Секретный API-ключ',
@@ -408,6 +447,7 @@ export const providers = {
       netcupToken: 'Авторизуйтесь через netcup или вставьте refresh-токен',
       begetCreds: 'Укажите логин и пароль Beget',
       doubleserversCreds: 'Укажите email и пароль Double Servers',
+      tubehostingCreds: 'Укажите email и пароль Tube-Hosting',
       vultrToken: 'Укажите API-ключ Vultr',
       porkbunCreds: 'Укажите API-ключ и секретный ключ Porkbun',
       spaceshipCreds: 'Укажите API-ключ и секрет Spaceship',
@@ -421,6 +461,10 @@ export const providers = {
       stormwallToken: 'Укажите API-ключ StormWall',
       openrouterToken: 'Укажите Management API-ключ OpenRouter',
       hostupToken: 'Укажите API-ключ HostUp',
+      hostvdsCreds: 'Укажите логин и пароль OpenStack со вкладки API',
+      hostvdsWebCreds: 'Укажите и email, и пароль от сайта — или ничего',
+      datapacketToken: 'Укажите API-ключ DataPacket',
+      gcoreToken: 'Укажите API-токен Gcore',
       yandexKey: 'Вставьте авторизованный ключ сервисного аккаунта Yandex Cloud (JSON)',
     },
     netcup: {

@@ -31,18 +31,20 @@ export const providerAccountSchema = z.object({
   lastSyncError: z.string().describe('Last sync error').nullable(),
   servicesCount: z.number().int().nonnegative().describe('Number of services'),
   paymentsCount: z.number().int().nonnegative().describe('Number of payments'),
-  // Non-secret credential hints (hostbill/billmgr/selectel/4vps/vdsina/aeza) so the edit form can
-  // prefill them.
+  // Non-secret credential hints (hostbill/billmgr/selectel/4vps/vdsina/aeza/hostvds) so the edit
+  // form can prefill them.
   baseUrl: z.string().describe('API base URL').nullable().optional(),
   username: z.string().describe('Account username').nullable().optional(),
   accountId: z.string().describe('Selectel account number').nullable().optional(),
   projectName: z.string().describe('Cloud project name').nullable().optional(),
   panelId: z.string().describe('Billing panel id').nullable().optional(),
+  email: z.string().describe('Website sign-in email').nullable().optional(),
   hasToken: z.boolean().describe('Stored API token / key present').optional(),
   hasPassword: z.boolean().describe('Stored account password present').optional(),
   hasTotpSecret: z.boolean().describe('Stored TOTP secret present').optional(),
   hasApiPassword: z.boolean().describe('Stored API password present').optional(),
   hasSecretKey: z.boolean().describe('Stored secret API key present').optional(),
+  hasWebPassword: z.boolean().describe('Stored website sign-in password present').optional(),
   useCatalogNames: z.boolean().describe('OpenRouter: use catalog display names').optional(),
   createdAt: isoDateSchema.describe('Creation time'),
   updatedAt: isoDateSchema.describe('Last update time'),
@@ -77,6 +79,7 @@ export const providerCredentialsRevealSchema = z.object({
   totpSecret: z.string().optional(),
   apiPassword: z.string().optional(),
   secretKey: z.string().optional(),
+  webPassword: z.string().optional(),
 });
 export type ProviderCredentialsReveal = z.infer<typeof providerCredentialsRevealSchema>;
 
@@ -86,6 +89,9 @@ export type ProviderCredentialsReveal = z.infer<typeof providerCredentialsReveal
 // Beget uses `username` (account login) + `password` (Cloud API), plus optional `totpSecret`
 // (OTP 2FA) and `apiPassword` (the separate panel API password, enables the balance lookup).
 // Double Servers uses `username` (email) + `password`, plus optional `totpSecret` (OTP 2FA).
+// HostVDS uses `username` + `password` (the OpenStack user from the panel's API tab), plus
+// optional `baseUrl` (https://hostvds.com or https://cloudcore.ru) picking the brand, and an
+// optional website sign-in — `email` + `webPassword` (+ `totpSecret`) — for balance and payments.
 // None are ever echoed back.
 const credentialFields = {
   token: z.string().min(1).describe('API token').optional(),
@@ -103,6 +109,9 @@ const credentialFields = {
   apiPassword: z.string().min(1).describe('Beget API password').optional(),
   // Porkbun / Spaceship: the secret API key, paired with `token` (the API key).
   secretKey: z.string().min(1).describe('Secret API key').optional(),
+  // HostVDS: website sign-in (the OpenStack user has no billing access). Enables balance sync.
+  email: z.string().email().describe('HostVDS website sign-in email').optional(),
+  webPassword: z.string().min(1).describe('HostVDS website sign-in password').optional(),
   useCatalogNames: z.boolean().describe('OpenRouter: use catalog display names').optional(),
 };
 

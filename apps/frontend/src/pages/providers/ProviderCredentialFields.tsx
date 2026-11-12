@@ -626,6 +626,44 @@ export function ProviderCredentialFields({
     );
   }
 
+  if (kind === 'datapacket') {
+    return (
+      <Field
+        id="cred-token"
+        label={t('providers.field.apiToken')}
+        description={t('providers.field.apiTokenDescDatapacket')}
+        link="https://app.datapacket.com/"
+      >
+        <SecretFormField
+          form={form}
+          name="token"
+          id="cred-token"
+          hasStored={storedSecrets?.hasToken}
+          reveal={reveal}
+        />
+      </Field>
+    );
+  }
+
+  if (kind === 'gcore') {
+    return (
+      <Field
+        id="cred-token"
+        label={t('providers.field.apiToken')}
+        description={t('providers.field.apiTokenDescGcore')}
+        link="https://gcore.com/docs/account-settings/api-tokens"
+      >
+        <SecretFormField
+          form={form}
+          name="token"
+          id="cred-token"
+          hasStored={storedSecrets?.hasToken}
+          reveal={reveal}
+        />
+      </Field>
+    );
+  }
+
   if (kind === 'openrouter') {
     return (
       <>
@@ -696,6 +734,77 @@ export function ProviderCredentialFields({
             id="cred-base-url"
             placeholder="https://userapi.vdsina.ru"
             {...form.register('baseUrl')}
+          />
+        </Field>
+      </>
+    );
+  }
+
+  if (kind === 'hostvds') {
+    return (
+      <>
+        <Field
+          id="cred-username"
+          label={t('providers.field.hostvdsLogin')}
+          description={t('providers.field.hostvdsLoginDesc')}
+          link="https://hostvds.com/control/account"
+        >
+          <Input id="cred-username" placeholder="hostvds-…" {...form.register('username')} />
+        </Field>
+        <Field id="cred-password" label={t('providers.field.password')}>
+          <SecretFormField
+            form={form}
+            name="password"
+            id="cred-password"
+            hasStored={storedSecrets?.hasPassword}
+            reveal={reveal}
+          />
+        </Field>
+        <Field
+          id="cred-base-url"
+          label={t('providers.field.apiBaseUrl')}
+          description={t('providers.field.apiBaseUrlDescHostvds')}
+        >
+          <Input
+            id="cred-base-url"
+            placeholder="https://hostvds.com"
+            {...form.register('baseUrl')}
+          />
+        </Field>
+        <Field
+          id="cred-email"
+          label={t('providers.field.hostvdsEmail')}
+          description={t('providers.field.hostvdsEmailDesc')}
+        >
+          <Input
+            id="cred-email"
+            type="email"
+            placeholder={optionalPh}
+            {...form.register('email')}
+          />
+        </Field>
+        <Field id="cred-web-password" label={t('providers.field.hostvdsWebPassword')}>
+          <SecretFormField
+            form={form}
+            name="webPassword"
+            id="cred-web-password"
+            hasStored={storedSecrets?.hasWebPassword}
+            reveal={reveal}
+            placeholder={storedSecrets?.hasWebPassword ? undefined : optionalPh}
+          />
+        </Field>
+        <Field
+          id="cred-totp"
+          label={t('providers.field.totpSecret')}
+          description={t('providers.field.totpSecretDesc')}
+        >
+          <SecretFormField
+            form={form}
+            name="totpSecret"
+            id="cred-totp"
+            hasStored={storedSecrets?.hasTotpSecret}
+            reveal={reveal}
+            placeholder={storedSecrets?.hasTotpSecret ? undefined : optionalPh}
           />
         </Field>
       </>
@@ -796,6 +905,44 @@ export function ProviderCredentialFields({
               {renderConsoleStep(t('providers.field.doubleserversSetupStep3'), DOUBLESERVERS_STEP)}
             </div>
           }
+        >
+          <SecretFormField
+            form={form}
+            name="totpSecret"
+            id="cred-totp"
+            hasStored={storedSecrets?.hasTotpSecret}
+            reveal={reveal}
+            placeholder={storedSecrets?.hasTotpSecret ? undefined : optionalPh}
+          />
+        </Field>
+      </>
+    );
+  }
+
+  if (kind === 'tubehosting') {
+    return (
+      <>
+        <Field
+          id="cred-username"
+          label={t('providers.field.loginEmail')}
+          description={t('providers.field.tubehostingLoginDesc')}
+          link="https://cp.tube-hosting.com/"
+        >
+          <Input id="cred-username" {...form.register('username')} />
+        </Field>
+        <Field id="cred-password" label={t('providers.field.password')}>
+          <SecretFormField
+            form={form}
+            name="password"
+            id="cred-password"
+            hasStored={storedSecrets?.hasPassword}
+            reveal={reveal}
+          />
+        </Field>
+        <Field
+          id="cred-totp"
+          label={t('providers.field.totpSecret')}
+          description={t('providers.field.tubehostingTotpDesc')}
         >
           <SecretFormField
             form={form}

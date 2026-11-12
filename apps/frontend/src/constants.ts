@@ -26,6 +26,10 @@ const PROVIDER_KINDS: ProviderKind[] = [
   'doubleservers',
   'openrouter',
   'hostup',
+  'hostvds',
+  'datapacket',
+  'tubehosting',
+  'gcore',
   'manual',
 ];
 

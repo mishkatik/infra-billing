@@ -24,6 +24,7 @@ const QUIET_HOURS_TIMEOUT_NAME = 'notifications-quiet-hours';
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
+  private inFlight: Promise<number> | null = null;
 
   constructor(
     private readonly settings: SettingsRepository,
@@ -34,8 +35,20 @@ export class NotificationsService {
     private readonly scheduler: SchedulerRegistry,
   ) {}
 
-  /** Evaluate alert conditions and send (throttled) Telegram messages. Returns count sent. */
-  async checkAndNotify(): Promise<number> {
+  /**
+   * Evaluate alert conditions and send (throttled) Telegram messages. Returns count sent.
+   * Overlapping calls share one run: the throttle check and the log write sit on either side of
+   * the Telegram call, so two runs at once (the hourly cron and the quiet-hours timeout both fire
+   * when the window ends on a whole hour) would each pass the check and send everything twice.
+   */
+  checkAndNotify(): Promise<number> {
+    this.inFlight ??= this.runChecks().finally(() => {
+      this.inFlight = null;
+    });
+    return this.inFlight;
+  }
+
+  private async runChecks(): Promise<number> {
     if (!(await this.telegram.isEnabled())) return 0;
 
     const settings = await this.settings.find();

@@ -223,6 +223,10 @@ export const common = {
         doubleservers: 'Double Servers',
         openrouter: 'OpenRouter',
         hostup: 'HostUp',
+        hostvds: 'HostVDS / CloudCore',
+        datapacket: 'DataPacket',
+        tubehosting: 'Tube-Hosting',
+        gcore: 'Gcore',
         manual: 'Manual',
       },
       rateSource: {
@@ -451,6 +455,10 @@ export const common = {
         doubleservers: 'Double Servers',
         openrouter: 'OpenRouter',
         hostup: 'HostUp',
+        hostvds: 'HostVDS / CloudCore',
+        datapacket: 'DataPacket',
+        tubehosting: 'Tube-Hosting',
+        gcore: 'Gcore',
         manual: 'Ручной',
       },
       rateSource: {
