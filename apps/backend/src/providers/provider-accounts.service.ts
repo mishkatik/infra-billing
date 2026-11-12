@@ -1,8 +1,15 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@generated/prisma/client';
-import { ProviderAccount as ProviderAccountDto, ProviderCredentialsReveal } from '@infra/shared';
+import {
+  DuplicatePayments,
+  ProviderAccount as ProviderAccountDto,
+  ProviderCredentialsReveal,
+  RemoveDuplicatePaymentsResult,
+} from '@infra/shared';
+import { PaymentsRepository } from '@repositories/payments/payments.repository';
 import { ProviderAccountsRepository } from '@repositories/provider-accounts/provider-accounts.repository';
-import { mapProviderAccount } from '@common/mappers';
+import { matchDuplicatePayments } from '@common/duplicate-payments';
+import { mapPayment, mapProviderAccount } from '@common/mappers';
 import { ProviderCredentialsService } from './provider-credentials.service';
 import { labelTaken } from './provider-rules';
 import { UpdateProviderAccountDto } from './dto/provider-account.dto';
@@ -12,6 +19,7 @@ export class ProviderAccountsService {
   constructor(
     private readonly accounts: ProviderAccountsRepository,
     private readonly credentials: ProviderCredentialsService,
+    private readonly payments: PaymentsRepository,
   ) {}
 
   async update(uuid: string, dto: UpdateProviderAccountDto): Promise<ProviderAccountDto> {
@@ -43,6 +51,39 @@ export class ProviderAccountsService {
     if (!(await this.accounts.deleteUnlessLast(uuid, existing.providerUuid))) {
       throw new ConflictException('Cannot delete the only account; delete the provider instead');
     }
+  }
+
+  /** Manual payments of the account that an import has since brought in too. */
+  async duplicatePayments(uuid: string): Promise<DuplicatePayments> {
+    const pairs = await this.matchDuplicates(uuid);
+    return {
+      items: pairs.map((p) => ({ manual: mapPayment(p.manual), imported: mapPayment(p.imported) })),
+    };
+  }
+
+  /**
+   * Remove the chosen manual duplicates. Matching runs again, so only payments that still pair
+   * with an imported one go, whatever uuids the client sends.
+   */
+  async removeDuplicatePayments(
+    uuid: string,
+    paymentUuids: string[],
+  ): Promise<RemoveDuplicatePaymentsResult> {
+    const chosen = new Set(paymentUuids);
+    const duplicates = (await this.matchDuplicates(uuid))
+      .map((p) => p.manual.uuid)
+      .filter((id) => chosen.has(id));
+    if (duplicates.length === 0) return { deleted: 0 };
+    return { deleted: await this.payments.deleteManual(uuid, duplicates) };
+  }
+
+  private async matchDuplicates(uuid: string) {
+    if (!(await this.accounts.findByUuid(uuid))) throw new NotFoundException('Account not found');
+    const [manual, imported] = await Promise.all([
+      this.payments.listForAccount(uuid, 'manual'),
+      this.payments.listForAccount(uuid, 'imported'),
+    ]);
+    return matchDuplicatePayments(manual, imported);
   }
 
   /** Decrypt stored secrets for an explicit reveal (edit form eye toggle). */

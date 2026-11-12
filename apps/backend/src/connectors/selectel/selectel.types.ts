@@ -58,6 +58,56 @@ export interface SwiftContainer {
   last_modified?: string;
 }
 
+/** Dedicated Servers API list envelope; `status` is "SUCCESS" once the task has a result. */
+export interface DedicatedList<T> {
+  status?: string;
+  item_count?: number;
+  result?: T[];
+}
+
+export interface DedicatedPricePlan {
+  type?: string; // "month" | "day"
+  period?: number; // how many of `type` the plan pays for
+}
+
+/** A rented dedicated resource (`GET /servers/v2/resource`). Prices are in whole units, not kopecks. */
+export interface DedicatedResource {
+  uuid: string;
+  user_desc?: string | null;
+  info?: string | null; // tariff, e.g. "AR44-NVMe"
+  config_name?: string | null;
+  service_type?: string; // "serverchip", "server", "colocation", …
+  state?: string;
+  location_uuid?: string;
+  created?: number; // epoch seconds
+  paid_till?: number | null; // epoch seconds
+  is_not_prolonged?: boolean;
+  billing?: {
+    currency?: string;
+    current_price_plan?: DedicatedPricePlan | null;
+    next_price_plan?: DedicatedPricePlan | null;
+    price?: { plan_price?: number | null; future_price?: number | null } | null;
+  } | null;
+}
+
+export interface DedicatedLocation {
+  uuid: string;
+  name?: string; // "SPB-2", "MSK-7", "TAS-1", …
+}
+
+/** Account balance transaction (`GET /v2/billing/transactions`). */
+export interface BillingTransaction {
+  created?: string; // naive Moscow time, e.g. "2026-10-29T14:43:32.278868"
+  price?: number; // kopecks, negative for outgoing
+  state?: string; // PAID, PRE_PAID, DELETED
+  dir?: string; // incoming | outgoing
+  balance?: string; // main | bonus
+  transaction_group?: string; // payment, withdraw, refund, manual
+  description?: { ru?: string; en?: string } | null;
+  id_meta?: { billing?: string; id?: number[]; service_name?: string | null } | null;
+  server_meta?: { main_resource_uuid?: string | null } | null;
+}
+
 export interface NovaServer {
   id: string;
   name?: string;

@@ -23,8 +23,8 @@ const MAX_PAGES = 50; // safety cap against a misbehaving pagination contract
  * There is NO billing data anywhere in the API (no balance/invoice/payment/price/currency/tariff
  * field in the whole spec) → `fetchAccount` returns `balance: null` (like Hetzner/netcup) and
  * there is no `fetchPayments`. Services have no cost/currency/period either → left for manual
- * entry. The only useful endpoint is `GET /v3/services`; for `type: 'domain'` items we additionally
- * call `GET /v3/domains?serviceId=` to use the actual protected domain name.
+ * entry. The list is `GET /v3/services`; `GET /v3/services/{id}` tells a suspended service apart,
+ * and for `type: 'domain'` items `GET /v3/domains?serviceId=` gives the protected domain names.
  */
 export class StormwallConnector implements Connector {
   private readonly http: AxiosInstance;
@@ -60,8 +60,29 @@ export class StormwallConnector implements Connector {
   }
 
   async fetchServices(signal: AbortSignal): Promise<ServiceData[]> {
-    const services = await this.paginate<StormwallService>('/v3/services', undefined, signal);
-    return Promise.all(services.map((s) => this.mapWithName(s, signal)));
+    const listed = await this.paginate<StormwallService>('/v3/services', undefined, signal);
+    // The list has a row per protected object, so a service with five domains comes five times.
+    const services = [...new Map(listed.map((s) => [s.serviceId, s])).values()];
+    const mapped = await Promise.all(
+      services.map(async (s) =>
+        (await this.isActive(s.serviceId, signal)) ? this.mapWithName(s, signal) : null,
+      ),
+    );
+    // Leaving a suspended service out lets the sync mark it inactive; once paid, it comes back.
+    return mapped.filter((s): s is ServiceData => s !== null);
+  }
+
+  /**
+   * A service suspended for non-payment stays in the list (billing day in the past), but its own
+   * endpoints answer 403 (verified live). Any other failure fails the sync rather than switching
+   * the service off.
+   */
+  private async isActive(serviceId: number, signal: AbortSignal): Promise<boolean> {
+    const { status } = await this.http.get(`/v3/services/${serviceId}`, {
+      signal,
+      validateStatus: (s) => (s >= 200 && s < 300) || s === 403 || s === 404,
+    });
+    return status < 300;
   }
 
   /** For `type: 'domain'` items, enrich the name with the actual protected domain(s); best-effort. */

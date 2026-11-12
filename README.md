@@ -450,3 +450,6 @@ CAPTURE_USER=admin CAPTURE_PASSWORD='…' task docs-screenshot
 ```
 
 Скрипт пишет `docs/screenshot-{dark,light}.webp` (Retina → рамка → WebP).
+
+Pull request открывайте в ветку `dev` (в `main` попадают только релизы), подробности — в
+[CONTRIBUTING.md](CONTRIBUTING.md).

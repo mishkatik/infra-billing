@@ -8,11 +8,13 @@ import {
 import type {
   CreateProvider,
   CreateProviderAccount,
+  DuplicatePayments,
   NetcupDevicePollResult,
   NetcupDeviceStart,
   Provider,
   ProviderAccount,
   ProviderCredentialsReveal,
+  RemoveDuplicatePaymentsResult,
   SyncRun,
   UpdateProvider,
   UpdateProviderAccount,
@@ -151,6 +153,37 @@ export function useDeleteProviderAccount() {
       qc.invalidateQueries({ queryKey: KEY });
       qc.invalidateQueries({ queryKey: ['services'] });
       qc.invalidateQueries({ queryKey: ['payments'] });
+      qc.invalidateQueries({ queryKey: ANALYTICS });
+    },
+  });
+}
+
+/** Manual payments of an account that an import has since brought in too. */
+export function useDuplicatePayments(accountUuid: string) {
+  return useQuery({
+    queryKey: ['duplicate-payments', accountUuid],
+    queryFn: async () =>
+      (await api.get<DuplicatePayments>(API_PATH.PROVIDER_ACCOUNTS.DUPLICATE_PAYMENTS(accountUuid)))
+        .data,
+    // The list must reflect payments just imported or deleted elsewhere.
+    staleTime: 0,
+  });
+}
+
+export function useRemoveDuplicatePayments() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (v: { accountUuid: string; paymentUuids: string[] }) =>
+      (
+        await api.post<RemoveDuplicatePaymentsResult>(
+          API_PATH.PROVIDER_ACCOUNTS.DUPLICATE_PAYMENTS_REMOVE(v.accountUuid),
+          { paymentUuids: v.paymentUuids },
+        )
+      ).data,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: KEY });
+      qc.invalidateQueries({ queryKey: ['payments'] });
+      qc.invalidateQueries({ queryKey: ['duplicate-payments'] });
       qc.invalidateQueries({ queryKey: ANALYTICS });
     },
   });

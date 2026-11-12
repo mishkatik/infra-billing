@@ -1,6 +1,14 @@
 import Decimal from 'decimal.js';
 import { PaymentData, ServiceData } from '../connector.interface';
-import { ConsumptionRow, NeutronRouter, NovaServer, SwiftContainer } from './selectel.types';
+import {
+  BillingTransaction,
+  ConsumptionRow,
+  DedicatedPricePlan,
+  DedicatedResource,
+  NeutronRouter,
+  NovaServer,
+  SwiftContainer,
+} from './selectel.types';
 
 // Selectel region prefix → ISO 3166-1 alpha-2 (gis-* are Moscow pools for government systems).
 const REGION_COUNTRY: Record<string, string> = {
@@ -14,6 +22,19 @@ const REGION_COUNTRY: Record<string, string> = {
 const DAY_MS = 24 * 60 * 60 * 1000;
 // Billing Statistics product keys of S3; only their rows are matched to buckets by name.
 const S3_PROVIDER_KEYS = new Set(['storage', 'private_storage']);
+
+// Dedicated server location name prefix (city code) → ISO 3166-1 alpha-2.
+const LOCATION_COUNTRY: Record<string, string> = {
+  MSK: 'RU',
+  SPB: 'RU',
+  NSK: 'RU',
+  TAS: 'UZ',
+  ALM: 'KZ',
+  NBO: 'KE',
+};
+
+// Dedicated service types that are servers; colocation, ports, network gear etc. become `other`.
+const DEDICATED_SERVER_TYPES = new Set(['serverchip', 'server']);
 
 function countryOf(region: string): string | undefined {
   return REGION_COUNTRY[region.split('-')[0]?.toLowerCase() ?? ''];
@@ -62,6 +83,109 @@ export function mapSelectelRouter(
     period: 'daily',
     meta: { kind: 'router', region, status: r.status, created: r.created_at },
   };
+}
+
+/**
+ * Period and cost of a dedicated price plan. `price` covers the whole plan (`period` months or
+ * days); plan lengths we don't model become a pro-rated monthly or daily cost.
+ */
+export function resolveDedicatedBilling(
+  plan: DedicatedPricePlan | null | undefined,
+  price: number | null | undefined,
+): { period: string; cost: Decimal } | undefined {
+  const n = plan?.period ?? 0;
+  if (price == null || n < 1) return undefined;
+  const amount = new Decimal(String(price));
+  if (plan?.type === 'month') {
+    if (n === 1) return { period: 'monthly', cost: amount };
+    if (n === 3) return { period: 'quarterly', cost: amount };
+    if (n === 12) return { period: 'yearly', cost: amount };
+    return { period: 'monthly', cost: amount.div(n) };
+  }
+  if (plan?.type === 'day') return { period: 'daily', cost: amount.div(n) };
+  return undefined;
+}
+
+/**
+ * Map a rented dedicated resource to our domain Service. The price is the next renewal (next
+ * plan, with discounts) and the next billing date is the end of the paid period.
+ */
+export function mapSelectelDedicated(r: DedicatedResource, location?: string): ServiceData {
+  const billing = r.billing ?? {};
+  const price = billing.price ?? {};
+  const resolved = resolveDedicatedBilling(
+    billing.next_price_plan ?? billing.current_price_plan,
+    price.future_price ?? price.plan_price,
+  );
+  return {
+    externalId: r.uuid,
+    name: r.user_desc || r.info || r.uuid,
+    type: DEDICATED_SERVER_TYPES.has(r.service_type ?? '') ? 'dedicated' : 'other',
+    countryCode: LOCATION_COUNTRY[location?.split('-')[0]?.toUpperCase() ?? ''],
+    // Undefined for a plan we can't read: the sync then keeps the previous cost.
+    cost: resolved?.cost,
+    currency: billing.currency ? billing.currency.toUpperCase() : undefined,
+    period: resolved?.period,
+    nextBilling: r.paid_till ? new Date(r.paid_till * 1000) : undefined,
+    // Curated meta: the resource also lists the whole catalog of add-ons it could order.
+    meta: {
+      kind: 'dedicated',
+      location,
+      tariff: r.info,
+      config: r.config_name,
+      serviceType: r.service_type,
+      state: r.state,
+      autoRenew: !r.is_not_prolonged,
+      created: r.created ? new Date(r.created * 1000).toISOString() : undefined,
+    },
+  };
+}
+
+/**
+ * Top-ups and dedicated server charges from the account transactions. Pending and cancelled
+ * top-ups are skipped (PRE_PAID is already on the balance), as are holds and their refunds, bonus
+ * credits, and the daily cloud charges, which come from consumption with a per-day breakdown.
+ */
+export function mapSelectelTransactions(rows: BillingTransaction[]): PaymentData[] {
+  const out: PaymentData[] = [];
+  for (const t of rows) {
+    if (t.balance !== 'main' || t.price == null || !t.created) continue;
+    const ids = t.id_meta?.id ?? [];
+    if (!t.id_meta?.billing || ids.length === 0) continue;
+    const base = {
+      // A payment keeps its ids when PRE_PAID turns PAID, so the re-sync updates the same row.
+      externalId: `sel:txn:${t.id_meta.billing}:${Math.min(...ids)}`,
+      amount: new Decimal(Math.abs(t.price)).div(100), // kopecks → RUB
+      currency: 'RUB',
+      // Naive Moscow wall-clock time → real instant.
+      date: new Date(Date.parse(`${t.created}Z`) - MSK_OFFSET_MS),
+    };
+    const resource = t.server_meta?.main_resource_uuid;
+    if (
+      t.transaction_group === 'payment' &&
+      t.dir === 'incoming' &&
+      (t.state === 'PAID' || t.state === 'PRE_PAID')
+    ) {
+      out.push({
+        ...base,
+        type: 'topup',
+        description: t.description?.ru || t.description?.en || undefined,
+      });
+    } else if (
+      t.transaction_group === 'withdraw' &&
+      t.dir === 'outgoing' &&
+      t.state === 'PAID' &&
+      resource
+    ) {
+      out.push({
+        ...base,
+        type: 'charge',
+        description: t.id_meta.service_name || undefined,
+        serviceExternalId: resource,
+      });
+    }
+  }
+  return out;
 }
 
 // Hidden containers holding a bucket's upload segments: `_s3multipartuploads` for S3 multipart
