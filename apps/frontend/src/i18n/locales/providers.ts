@@ -104,6 +104,8 @@ export const providers = {
       apiTokenDescStormwall: 'StormWall personal cabinet → API key, sent as the x-api-key header',
       apiTokenDescHostup:
         'HostUp → API management → create a key with read:all (or read:billing, read:services, read:vm and read:domains)',
+      apiTokenDescDatapacket:
+        'DataPacket client panel → Security → Add API key (read-only is enough). Syncs servers with their subscription price and location, other subscription items (IPs, traffic, DDoS) as one service per subscription, and paid invoices. The API has no account balance.',
       managementKey: 'Management API key',
       apiTokenDescOpenrouter:
         'Go to openrouter.ai. Open "Home" → "Management Keys" → "New Key", enter any name, then "Create". Copy the key and paste it below.',
@@ -175,6 +177,7 @@ export const providers = {
       stormwallToken: 'Enter the StormWall API key',
       openrouterToken: 'Enter the OpenRouter Management API key',
       hostupToken: 'Enter the HostUp API key',
+      datapacketToken: 'Enter the DataPacket API key',
       yandexKey: 'Paste the Yandex Cloud service account authorized key (JSON)',
     },
     netcup: {
@@ -350,6 +353,8 @@ export const providers = {
         'Личный кабинет StormWall → API-ключ (передаётся в заголовке x-api-key)',
       apiTokenDescHostup:
         'HostUp → API management → создать ключ со scope read:all (или read:billing, read:services, read:vm и read:domains)',
+      apiTokenDescDatapacket:
+        'Панель DataPacket → Security → Add API key (достаточно read-only). Синхронизируются серверы с ценой из подписки и локацией, прочие позиции подписки (IP, трафик, DDoS) — одной услугой на подписку, и оплаченные счета. Баланса аккаунта в API нет.',
       managementKey: 'Management API-ключ',
       apiTokenDescOpenrouter:
         'Зайдите на openrouter.ai. Откройте "Home" → "Management Keys" → "New Key", введите любое имя, затем "Create". Скопируйте ключ и вставьте его ниже.',
@@ -421,6 +426,7 @@ export const providers = {
       stormwallToken: 'Укажите API-ключ StormWall',
       openrouterToken: 'Укажите Management API-ключ OpenRouter',
       hostupToken: 'Укажите API-ключ HostUp',
+      datapacketToken: 'Укажите API-ключ DataPacket',
       yandexKey: 'Вставьте авторизованный ключ сервисного аккаунта Yandex Cloud (JSON)',
     },
     netcup: {

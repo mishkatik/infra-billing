@@ -48,6 +48,7 @@ export const DEFAULT_LOGIN_URLS: Record<string, string> = {
   beget: 'https://cp.beget.com',
   stormwall: 'https://users.stormwall.pro',
   netangels: 'https://panel.netangels.ru',
+  datapacket: 'https://app.datapacket.com',
   vultr: 'https://console.vultr.com',
   linode: 'https://cloud.linode.com',
   aeza: 'https://my.aeza.net',
@@ -187,6 +188,7 @@ export function validateAccountCredentials(
   if (requireCreds && kind === 'yandex' && !v.token) return t('providers.err.yandexKey');
   if (requireCreds && kind === 'openrouter' && !v.token) return t('providers.err.openrouterToken');
   if (requireCreds && kind === 'hostup' && !v.token) return t('providers.err.hostupToken');
+  if (requireCreds && kind === 'datapacket' && !v.token) return t('providers.err.datapacketToken');
   return null;
 }
 
