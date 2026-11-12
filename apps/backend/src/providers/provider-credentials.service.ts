@@ -94,7 +94,8 @@ export class ProviderCredentialsService {
       kind === 'linode' ||
       kind === 'netangels' ||
       kind === 'stormwall' ||
-      kind === 'hostup'
+      kind === 'hostup' ||
+      kind === 'datapacket'
     ) {
       return { hasToken: true };
     }
@@ -154,7 +155,8 @@ export class ProviderCredentialsService {
       kind === 'linode' ||
       kind === 'netangels' ||
       kind === 'stormwall' ||
-      kind === 'hostup'
+      kind === 'hostup' ||
+      kind === 'datapacket'
     ) {
       const token = this.decryptRaw(enc);
       return token ? { token } : {};

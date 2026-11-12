@@ -55,6 +55,7 @@ export const DEFAULT_LOGIN_URLS: Record<string, string> = {
   beget: 'https://cp.beget.com',
   stormwall: 'https://users.stormwall.pro',
   netangels: 'https://panel.netangels.ru',
+  datapacket: 'https://app.datapacket.com',
   vultr: 'https://console.vultr.com',
   linode: 'https://cloud.linode.com',
   aeza: 'https://my.aeza.net',
@@ -203,6 +204,7 @@ export function validateAccountCredentials(
   // Website sign-in is optional, but half of it is useless; on edit a blank password keeps the stored one.
   if (requireCreds && kind === 'hostvds' && Boolean(v.email) !== Boolean(v.webPassword))
     return t('providers.err.hostvdsWebCreds');
+  if (requireCreds && kind === 'datapacket' && !v.token) return t('providers.err.datapacketToken');
   return null;
 }
 

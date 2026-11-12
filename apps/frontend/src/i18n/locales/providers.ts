@@ -113,6 +113,8 @@ export const providers = {
       hostvdsEmailDesc:
         'Optional: the email and password you sign in to the website with. Adds the balance and the payment history (top-ups, daily charges per server). Accounts that sign in with Google/Telegram have no password — leave empty.',
       hostvdsWebPassword: 'Website password',
+      apiTokenDescDatapacket:
+        'DataPacket client panel → Security → Add API key (read-only is enough). Syncs servers with their subscription price and location, other subscription items (IPs, traffic, DDoS) as one service per subscription, and paid invoices. The API has no account balance.',
       managementKey: 'Management API key',
       apiTokenDescOpenrouter:
         'Go to openrouter.ai. Open "Home" → "Management Keys" → "New Key", enter any name, then "Create". Copy the key and paste it below.',
@@ -186,6 +188,7 @@ export const providers = {
       hostupToken: 'Enter the HostUp API key',
       hostvdsCreds: 'Enter the OpenStack login and password from the API tab',
       hostvdsWebCreds: 'Enter both the website email and password, or neither',
+      datapacketToken: 'Enter the DataPacket API key',
       yandexKey: 'Paste the Yandex Cloud service account authorized key (JSON)',
     },
     netcup: {
@@ -370,6 +373,8 @@ export const providers = {
       hostvdsEmailDesc:
         'Необязательно: email и пароль, с которыми вы входите на сайт. Добавляют баланс и историю платежей (пополнения, списания по серверам за день). У аккаунтов со входом через Google/Telegram пароля нет — оставьте пустым.',
       hostvdsWebPassword: 'Пароль от сайта',
+      apiTokenDescDatapacket:
+        'Панель DataPacket → Security → Add API key (достаточно read-only). Синхронизируются серверы с ценой из подписки и локацией, прочие позиции подписки (IP, трафик, DDoS) — одной услугой на подписку, и оплаченные счета. Баланса аккаунта в API нет.',
       managementKey: 'Management API-ключ',
       apiTokenDescOpenrouter:
         'Зайдите на openrouter.ai. Откройте "Home" → "Management Keys" → "New Key", введите любое имя, затем "Create". Скопируйте ключ и вставьте его ниже.',
@@ -443,6 +448,7 @@ export const providers = {
       hostupToken: 'Укажите API-ключ HostUp',
       hostvdsCreds: 'Укажите логин и пароль OpenStack со вкладки API',
       hostvdsWebCreds: 'Укажите и email, и пароль от сайта — или ничего',
+      datapacketToken: 'Укажите API-ключ DataPacket',
       yandexKey: 'Вставьте авторизованный ключ сервисного аккаунта Yandex Cloud (JSON)',
     },
     netcup: {

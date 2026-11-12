@@ -224,6 +224,7 @@ export const common = {
         openrouter: 'OpenRouter',
         hostup: 'HostUp',
         hostvds: 'HostVDS / CloudCore',
+        datapacket: 'DataPacket',
         manual: 'Manual',
       },
       rateSource: {
@@ -453,6 +454,7 @@ export const common = {
         openrouter: 'OpenRouter',
         hostup: 'HostUp',
         hostvds: 'HostVDS / CloudCore',
+        datapacket: 'DataPacket',
         manual: 'Ручной',
       },
       rateSource: {

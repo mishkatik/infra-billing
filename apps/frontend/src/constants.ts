@@ -27,6 +27,7 @@ const PROVIDER_KINDS: ProviderKind[] = [
   'openrouter',
   'hostup',
   'hostvds',
+  'datapacket',
   'manual',
 ];
 

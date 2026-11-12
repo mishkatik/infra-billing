@@ -18,13 +18,13 @@
 - **Провайдеры с API:** Timeweb Cloud, Hetzner Cloud, Hostkey (InvAPI), netcup, HostBill,
   ISPsystem BILLmanager, Selectel, 4VPS.SU, Netlen, Beget Cloud, Porkbun, Spaceship, Vultr,
   Linode, Aeza, VDSina, Cloudflare, StormWall, NetAngels, Yandex Cloud, Double Servers, OpenRouter,
-  HostUp, HostVDS / CloudCore. Плюс **Manual** — провайдеры без API ведутся руками.
+  HostUp, HostVDS / CloudCore, DataPacket. Плюс **Manual** — провайдеры без API ведутся руками.
 - **Автосинк** (по расписанию + кнопкой): баланс + валюта аккаунта, список серверов/услуг, даты
   следующих списаний; история баланса по дням (снапшоты).
 - **Импорт платежей** там, где API отдаёт реестр: пополнения и списания (BILLmanager, Netlen,
-  Vultr, Aeza, VDSina, Double Servers, HostVDS), пополнения и счета (Linode), оплаченные счета (HostBill),
-  платежи (HostUp), потребление (Selectel, Yandex Cloud, OpenRouter), история биллинга
-  (Cloudflare, best-effort). Ручные платежи — в журнале.
+  Vultr, Aeza, VDSina, Double Servers, HostVDS), пополнения и счета (Linode), оплаченные счета
+  (HostBill, DataPacket), платежи (HostUp), потребление (Selectel, Yandex Cloud, OpenRouter),
+  история биллинга (Cloudflare, best-effort). Ручные платежи — в журнале.
 - **Аналитика:** месячные/годовые расходы, разрезы по провайдеру / стране / типу / валюте, прогноз
   по будущим списаниям, ближайшие списания с подсветкой критичности.
 - **Мультивалютность:** суммы в своей валюте, конвертация к базовой; курсы ЦБ РФ или ручные.
@@ -382,6 +382,13 @@ curl -H "Authorization: Bearer ib_…" https://infra-billing/api/providers
   у CloudCore — RUB). Сверх пакета трафик не учитывается. Баланс и платежи — по желанию: email и
   пароль входа на сайт (+ TOTP-секрет, если включена 2FA); тогда тянутся баланс (USD), пополнения и
   списания — одно в день на сервер, с привязкой к услуге. Без них баланса нет (как у Hetzner).
+- **DataPacket** — API-ключ (клиентская панель → Security → Add API key; достаточно read-only).
+  GraphQL API: тянет подписки — каждый сервер отдельной услугой (`type=dedicated`, цена — его
+  позиция в подписке, страна по локации), а прочие регулярные позиции подписки (IP, трафик, DDoS,
+  сборы) — одной услугой на подписку: в API у них нет id и привязки к серверу. Период и дата
+  списания — из `billingCycle` подписки (месяц/квартал/год; дневной биллинг — постоплата без даты).
+  Импортируются оплаченные счета как пополнения (сумма с НДС, дата оплаты); счета, оплаченные с
+  баланса DataPacket или кредит-нотой, пропускаются. Баланса аккаунта в API нет.
 - **Manual** — без API, всё вводится руками.
 
 ## Telegram-уведомления
