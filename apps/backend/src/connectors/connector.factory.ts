@@ -12,6 +12,7 @@ import type { CloudflareCredentials } from './cloudflare/cloudflare.types';
 import { Connector } from './connector.interface';
 import { DoubleServersConnector } from './doubleservers/doubleservers.connector';
 import type { DoubleServersCredentials } from './doubleservers/doubleservers.types';
+import { GcoreConnector } from './gcore/gcore.connector';
 import { HetznerConnector } from './hetzner/hetzner.connector';
 import { HostkeyConnector } from './hostkey/hostkey.connector';
 import { HostbillConnector } from './hostbill/hostbill.connector';
@@ -111,6 +112,9 @@ export class ConnectorFactory {
       case 'hostup':
         // HostUp secret is the raw API key (single string, sent as the Authorization Bearer header).
         return new HostupConnector(token);
+      case 'gcore':
+        // Gcore secret is the raw permanent API token (sent as `Authorization: APIKey <token>`).
+        return new GcoreConnector(token);
       default:
         throw new Error(`Connector for kind="${kind}" is not supported`);
     }

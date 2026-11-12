@@ -223,6 +223,7 @@ export const common = {
         doubleservers: 'Double Servers',
         openrouter: 'OpenRouter',
         hostup: 'HostUp',
+        gcore: 'Gcore',
         manual: 'Manual',
       },
       rateSource: {
@@ -451,6 +452,7 @@ export const common = {
         doubleservers: 'Double Servers',
         openrouter: 'OpenRouter',
         hostup: 'HostUp',
+        gcore: 'Gcore',
         manual: 'Ручной',
       },
       rateSource: {

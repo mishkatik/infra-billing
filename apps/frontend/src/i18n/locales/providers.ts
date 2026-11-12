@@ -104,6 +104,8 @@ export const providers = {
       apiTokenDescStormwall: 'StormWall personal cabinet → API key, sent as the x-api-key header',
       apiTokenDescHostup:
         'HostUp → API management → create a key with read:all (or read:billing, read:services, read:vm and read:domains)',
+      apiTokenDescGcore:
+        'Gcore portal → Profile → API tokens → create a permanent token. Any role syncs the balance, card payments and daily charges. Cloud servers (with their volumes and IPs) need the Administrators role; with a narrower role (e.g. Users) services are listed per billing feature instead.',
       managementKey: 'Management API key',
       apiTokenDescOpenrouter:
         'Go to openrouter.ai. Open "Home" → "Management Keys" → "New Key", enter any name, then "Create". Copy the key and paste it below.',
@@ -175,6 +177,7 @@ export const providers = {
       stormwallToken: 'Enter the StormWall API key',
       openrouterToken: 'Enter the OpenRouter Management API key',
       hostupToken: 'Enter the HostUp API key',
+      gcoreToken: 'Enter the Gcore API token',
       yandexKey: 'Paste the Yandex Cloud service account authorized key (JSON)',
     },
     netcup: {
@@ -350,6 +353,8 @@ export const providers = {
         'Личный кабинет StormWall → API-ключ (передаётся в заголовке x-api-key)',
       apiTokenDescHostup:
         'HostUp → API management → создать ключ со scope read:all (или read:billing, read:services, read:vm и read:domains)',
+      apiTokenDescGcore:
+        'Портал Gcore → Profile → API tokens → создайте постоянный токен. С любой ролью синкаются баланс, оплаты картой и списания по дням. Облачные серверы (вместе с дисками и IP) видны только с ролью Administrators; с более узкой (например, Users) услуги строятся по биллинговым позициям.',
       managementKey: 'Management API-ключ',
       apiTokenDescOpenrouter:
         'Зайдите на openrouter.ai. Откройте "Home" → "Management Keys" → "New Key", введите любое имя, затем "Create". Скопируйте ключ и вставьте его ниже.',
@@ -421,6 +426,7 @@ export const providers = {
       stormwallToken: 'Укажите API-ключ StormWall',
       openrouterToken: 'Укажите Management API-ключ OpenRouter',
       hostupToken: 'Укажите API-ключ HostUp',
+      gcoreToken: 'Укажите API-токен Gcore',
       yandexKey: 'Вставьте авторизованный ключ сервисного аккаунта Yandex Cloud (JSON)',
     },
     netcup: {
