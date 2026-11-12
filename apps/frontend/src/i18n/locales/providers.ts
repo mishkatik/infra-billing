@@ -115,6 +115,8 @@ export const providers = {
       hostvdsWebPassword: 'Website password',
       apiTokenDescDatapacket:
         'DataPacket client panel → Security → Add API key (read-only is enough). Syncs servers with their subscription price and location, other subscription items (IPs, traffic, DDoS) as one service per subscription, and paid invoices. The API has no account balance.',
+      apiTokenDescGcore:
+        'Gcore portal → Profile → API tokens → create a permanent token. Any role syncs the balance, card payments and daily charges. Cloud servers (with their volumes and IPs) need the Administrators role; with a narrower role (e.g. Users) services are listed per billing feature instead.',
       managementKey: 'Management API key',
       apiTokenDescOpenrouter:
         'Go to openrouter.ai. Open "Home" → "Management Keys" → "New Key", enter any name, then "Create". Copy the key and paste it below.',
@@ -194,6 +196,7 @@ export const providers = {
       hostvdsCreds: 'Enter the OpenStack login and password from the API tab',
       hostvdsWebCreds: 'Enter both the website email and password, or neither',
       datapacketToken: 'Enter the DataPacket API key',
+      gcoreToken: 'Enter the Gcore API token',
       yandexKey: 'Paste the Yandex Cloud service account authorized key (JSON)',
     },
     netcup: {
@@ -380,6 +383,8 @@ export const providers = {
       hostvdsWebPassword: 'Пароль от сайта',
       apiTokenDescDatapacket:
         'Панель DataPacket → Security → Add API key (достаточно read-only). Синхронизируются серверы с ценой из подписки и локацией, прочие позиции подписки (IP, трафик, DDoS) — одной услугой на подписку, и оплаченные счета. Баланса аккаунта в API нет.',
+      apiTokenDescGcore:
+        'Портал Gcore → Profile → API tokens → создайте постоянный токен. С любой ролью синкаются баланс, оплаты картой и списания по дням. Облачные серверы (вместе с дисками и IP) видны только с ролью Administrators; с более узкой (например, Users) услуги строятся по биллинговым позициям.',
       managementKey: 'Management API-ключ',
       apiTokenDescOpenrouter:
         'Зайдите на openrouter.ai. Откройте "Home" → "Management Keys" → "New Key", введите любое имя, затем "Create". Скопируйте ключ и вставьте его ниже.',
@@ -459,6 +464,7 @@ export const providers = {
       hostvdsCreds: 'Укажите логин и пароль OpenStack со вкладки API',
       hostvdsWebCreds: 'Укажите и email, и пароль от сайта — или ничего',
       datapacketToken: 'Укажите API-ключ DataPacket',
+      gcoreToken: 'Укажите API-токен Gcore',
       yandexKey: 'Вставьте авторизованный ключ сервисного аккаунта Yandex Cloud (JSON)',
     },
     netcup: {

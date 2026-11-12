@@ -18,12 +18,12 @@
 - **Провайдеры с API:** Timeweb Cloud, Hetzner Cloud, Hostkey (InvAPI), netcup, HostBill,
   ISPsystem BILLmanager, Selectel, 4VPS.SU, Netlen, Beget Cloud, Porkbun, Spaceship, Vultr,
   Linode, Aeza, VDSina, Cloudflare, StormWall, NetAngels, Yandex Cloud, Double Servers, OpenRouter,
-  HostUp, HostVDS / CloudCore, DataPacket, Tube-Hosting. Плюс **Manual** — провайдеры без API
-  ведутся руками.
+  HostUp, HostVDS / CloudCore, DataPacket, Tube-Hosting, Gcore. Плюс **Manual** — провайдеры без
+  API ведутся руками.
 - **Автосинк** (по расписанию + кнопкой): баланс + валюта аккаунта, список серверов/услуг, даты
   следующих списаний; история баланса по дням (снапшоты).
 - **Импорт платежей** там, где API отдаёт реестр: пополнения и списания (BILLmanager, Netlen,
-  Vultr, Aeza, VDSina, Double Servers, HostVDS, Tube-Hosting), пополнения и счета (Linode),
+  Vultr, Aeza, VDSina, Double Servers, HostVDS, Tube-Hosting, Gcore), пополнения и счета (Linode),
   оплаченные счета (HostBill, DataPacket), платежи (HostUp), потребление (Selectel, Yandex Cloud,
   OpenRouter), история биллинга (Cloudflare, best-effort). Ручные платежи — в журнале.
 - **Аналитика:** месячные/годовые расходы, разрезы по провайдеру / стране / типу / валюте, прогноз
@@ -396,6 +396,15 @@ curl -H "Authorization: Bearer ib_…" https://infra-billing/api/providers
   IPv4/трафик-бандлом; цена — сумма услуг группы, дата списания — оплаченный до `runtime`, период из
   `runtimeInterval`, 30 дней → месяц) и журнал: пополнения (PayPal, карта…) и списания за
   продления, привязанные к своей группе. Локации в API нет — страну проставьте руками.
+- **Gcore** — постоянный API-токен (портал → Profile → API tokens; заголовок `APIKey`). Деньги
+  берутся из биллингового журнала аккаунта (`/billing/client/v1`; документированный
+  `/billing/org/v1` — только для реселлеров): баланс, оплаты картой (пополнения) и списания —
+  по записи на позицию биллинга за день, окно 31 день. Услуги: с ролью токена **Administrators** —
+  из Cloud cost report, по услуге на сервер вместе с подключёнными дисками и IP (страна по
+  региону); с более узкой ролью (например, Users) Cloud недоступен — тогда по услуге на позицию
+  биллинга («Instance … Frankfurt», «Block Storage …»). Цена — расход за последние 7 дней,
+  приведённый к 30 дням. Оплата pay-as-you-go: дат списаний нет. Не-Cloud продукты (CDN и т.п.)
+  — всегда по позициям биллинга.
 - **Manual** — без API, всё вводится руками.
 
 ## Telegram-уведомления

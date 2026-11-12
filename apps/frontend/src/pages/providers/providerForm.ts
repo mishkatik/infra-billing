@@ -69,6 +69,7 @@ export const DEFAULT_LOGIN_URLS: Record<string, string> = {
   openrouter: 'https://openrouter.ai',
   hostup: 'https://cloud.hostup.se',
   hostvds: 'https://hostvds.com/control',
+  gcore: 'https://portal.gcore.com',
 };
 
 export const EMPTY_IDENTITY: IdentityFormValues = {
@@ -208,6 +209,7 @@ export function validateAccountCredentials(
   if (requireCreds && kind === 'hostvds' && Boolean(v.email) !== Boolean(v.webPassword))
     return t('providers.err.hostvdsWebCreds');
   if (requireCreds && kind === 'datapacket' && !v.token) return t('providers.err.datapacketToken');
+  if (requireCreds && kind === 'gcore' && !v.token) return t('providers.err.gcoreToken');
   return null;
 }
 

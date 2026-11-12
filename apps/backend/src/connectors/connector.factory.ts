@@ -13,6 +13,7 @@ import { Connector } from './connector.interface';
 import { DatapacketConnector } from './datapacket/datapacket.connector';
 import { DoubleServersConnector } from './doubleservers/doubleservers.connector';
 import type { DoubleServersCredentials } from './doubleservers/doubleservers.types';
+import { GcoreConnector } from './gcore/gcore.connector';
 import { HetznerConnector } from './hetzner/hetzner.connector';
 import { HostkeyConnector } from './hostkey/hostkey.connector';
 import { HostbillConnector } from './hostbill/hostbill.connector';
@@ -126,6 +127,9 @@ export class ConnectorFactory {
       case 'tubehosting':
         // Tube-Hosting secret is JSON: { username (email), password, totpSecret? } (panel login).
         return new TubeHostingConnector(JSON.parse(token) as TubeHostingCredentials);
+      case 'gcore':
+        // Gcore secret is the raw permanent API token (sent as `Authorization: APIKey <token>`).
+        return new GcoreConnector(token);
       default:
         throw new Error(`Connector for kind="${kind}" is not supported`);
     }

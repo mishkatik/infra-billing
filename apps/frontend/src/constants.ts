@@ -29,6 +29,7 @@ const PROVIDER_KINDS: ProviderKind[] = [
   'hostvds',
   'datapacket',
   'tubehosting',
+  'gcore',
   'manual',
 ];
 
