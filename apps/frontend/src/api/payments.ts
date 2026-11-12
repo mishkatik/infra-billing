@@ -1,11 +1,12 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { CreatePayment, PaginatedPayments, Payment } from '@infra/shared';
+import type { CreatePayment, PaginatedPayments, Payment, PaymentType } from '@infra/shared';
 import { api } from './client';
-import { API_PATH, isoDateSchema, uuidSchema } from '@infra/shared';
+import { API_PATH, isoDateSchema, paymentTypeSchema, uuidSchema } from '@infra/shared';
 
 export interface PaymentFilter {
   providerUuid?: string;
   serviceUuid?: string;
+  type?: PaymentType;
   from?: string;
   to?: string;
 }
@@ -20,6 +21,8 @@ export function parsePaymentFilter(raw: unknown): PaymentFilter | null {
   const f: PaymentFilter = {};
   const provider = uuidSchema.safeParse(o.providerUuid);
   if (provider.success) f.providerUuid = provider.data;
+  const type = paymentTypeSchema.safeParse(o.type);
+  if (type.success) f.type = type.data;
   const from = isoDateSchema.safeParse(o.from);
   if (from.success) f.from = from.data;
   const to = isoDateSchema.safeParse(o.to);
@@ -44,6 +47,7 @@ export function usePayments(filter: PaymentFilter = {}, opts: UsePaymentsOpts = 
       const params: Record<string, string> = { page: String(page), pageSize: String(pageSize) };
       if (filter.providerUuid) params.providerUuid = filter.providerUuid;
       if (filter.serviceUuid) params.serviceUuid = filter.serviceUuid;
+      if (filter.type) params.type = filter.type;
       if (filter.from) params.from = filter.from;
       if (filter.to) params.to = filter.to;
       return (await api.get<PaginatedPayments>(API_PATH.PAYMENTS.ROOT, { params })).data;

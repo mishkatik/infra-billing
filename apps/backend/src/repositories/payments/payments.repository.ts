@@ -6,6 +6,7 @@ export interface PaymentFilters {
   providerUuid?: string;
   accountUuid?: string;
   serviceUuid?: string;
+  type?: string;
   from?: Date;
   to?: Date;
 }
@@ -88,6 +89,7 @@ export class PaymentsRepository {
     if (filters.providerUuid) where.providerUuid = filters.providerUuid;
     if (filters.accountUuid) where.accountUuid = filters.accountUuid;
     if (filters.serviceUuid) where.serviceUuid = filters.serviceUuid;
+    if (filters.type) where.type = filters.type;
     if (filters.from || filters.to) {
       where.paymentDate = { gte: filters.from, lte: filters.to };
     }

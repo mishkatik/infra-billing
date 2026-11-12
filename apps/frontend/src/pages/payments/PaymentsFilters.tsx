@@ -4,6 +4,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { PaymentFilter } from '@/api/payments';
 import { DateField } from '@/components/DateField';
+import { Segmented } from '@/components/ink/Segmented';
 import { ProviderCombobox } from '@/components/ProviderCombobox';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -16,10 +17,14 @@ interface PaymentsFiltersProps {
   providers: Provider[] | undefined;
 }
 
-/** Header "Filter" button: provider plus a custom date range, in a popover. */
+type TypeOption = 'all' | NonNullable<PaymentFilter['type']>;
+
+/** Header "Filter" button: provider, payment type and a custom date range, in a popover. */
 export function PaymentsFilters({ filter, setFilter, providers }: PaymentsFiltersProps) {
   const { t } = useTranslation();
-  const activeCount = [filter.providerUuid, filter.from, filter.to].filter(Boolean).length;
+  const activeCount = [filter.providerUuid, filter.type, filter.from, filter.to].filter(
+    Boolean,
+  ).length;
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -38,6 +43,19 @@ export function PaymentsFilters({ filter, setFilter, providers }: PaymentsFilter
             value={filter.providerUuid ?? ''}
             onChange={(v) => setFilter((f) => ({ ...f, providerUuid: v || undefined }))}
             resetLabel={t('payments.filterAllProviders')}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <p className="text-[13px] leading-none text-ink-2">{t('payments.filterType')}</p>
+          <Segmented<TypeOption>
+            ariaLabel={t('payments.filterType')}
+            value={filter.type ?? 'all'}
+            onChange={(v) => setFilter((f) => ({ ...f, type: v === 'all' ? undefined : v }))}
+            options={[
+              { value: 'all', label: t('payments.filterTypeAll') },
+              { value: 'topup', label: t('payments.filterTypeTopup') },
+              { value: 'charge', label: t('payments.filterTypeCharge') },
+            ]}
           />
         </div>
         {/* Values are UTC-midnight ISO strings (toIso): slice the date part instead of parsing, which
