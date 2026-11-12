@@ -12,8 +12,10 @@ import {
   coveredDays,
   foldSwiftContainers,
   mapSelectelBucket,
+  mapSelectelDedicated,
   mapSelectelRouter,
   mapSelectelServer,
+  mapSelectelTransactions,
   MSK_OFFSET_MS,
   perDay,
   s3Regions,
@@ -21,8 +23,12 @@ import {
 } from './selectel.mapper';
 import {
   BalancesResponse,
+  BillingTransaction,
   CatalogEntry,
   ConsumptionRow,
+  DedicatedList,
+  DedicatedLocation,
+  DedicatedResource,
   KeystoneAuth,
   NeutronRouter,
   NovaServer,
@@ -33,8 +39,8 @@ import {
 const IDENTITY_URL = 'https://cloud.api.selcloud.ru/identity/v3/auth/tokens';
 const API_BASE = 'https://api.selectel.ru';
 
-// Selectel exposes no top-up/transaction API, but the Billing Statistics API returns per-object
-// consumption (charges). These are the valid provider keys it accepts.
+// Daily charges come from the Billing Statistics API, which breaks spend down per object. These
+// are the valid provider keys it accepts.
 const PROVIDER_KEYS = [
   'vpc',
   'serverless',
@@ -57,6 +63,13 @@ const CONSUMPTION_MONTHS = 3;
 // over this many full days: long enough to smooth out traffic spikes, short enough to follow a
 // growing bucket or a resized server.
 const COST_WINDOW_DAYS = 7;
+// Transactions are read from the start: an account has a few hundred a year, and the whole
+// top-up history lands in the ledger without manual entry. Selectel opened in 2008.
+const TRANSACTIONS_SINCE = new Date('2008-01-01T00:00:00Z');
+// Page size of the Dedicated Servers and transactions lists (the APIs' maximum).
+const PAGE_SIZE = 500;
+// Dedicated resources that are gone or cancelled are no longer paid for.
+const DEDICATED_SKIP_STATES = new Set(['deleted', 'cancel']);
 
 // The Billing Statistics API takes naive datetimes ("YYYY-MM-DDTHH:mm:ss", no zone).
 const naive = (d: Date) => d.toISOString().slice(0, 19);
@@ -74,11 +87,12 @@ function publicEndpoints(catalog: CatalogEntry[], type: string) {
 /**
  * Selectel connector (https://docs.selectel.ru/en/api/). No maintained npm SDK (official is Go
  * `go-selvpcclient`), so a thin axios client. Auth is Keystone v3 (token in the `X-Subject-Token`
- * response header). Balance and consumption use an account-scoped token; cloud servers (Nova
- * `compute`), routers (Neutron `network`) and S3 buckets (Swift `object-store`) use a
- * project-scoped token and the endpoints from its service catalog, so listing them requires
- * `projectName` (the Cloud project). None of these APIs has a price: every service's cost is its
- * average daily consumption from the Billing Statistics API.
+ * response header). Balance, consumption, transactions and dedicated servers use an
+ * account-scoped token; cloud servers (Nova `compute`), routers (Neutron `network`) and S3
+ * buckets (Swift `object-store`) use a project-scoped token and the endpoints from its service
+ * catalog, so listing them requires `projectName` (the Cloud project). Cloud APIs have no price:
+ * a cloud service's cost is its average daily consumption from the Billing Statistics API.
+ * Dedicated servers come with their plan price and paid-till date.
  */
 export class SelectelConnector implements Connector {
   private readonly logger = new Logger(SelectelConnector.name);
@@ -184,8 +198,62 @@ export class SelectelConnector implements Connector {
   }
 
   async fetchServices(signal: AbortSignal): Promise<ServiceData[]> {
-    // Cloud resources belong to a project; without one we have nothing to list.
-    if (!this.creds.projectName) return [];
+    const [dedicated, cloud] = await Promise.all([
+      this.listDedicated(signal),
+      // Cloud resources belong to a project; without one there is nothing to list there.
+      this.creds.projectName ? this.cloudServices(signal) : [],
+    ]);
+    return [...dedicated, ...cloud];
+  }
+
+  /**
+   * Rented dedicated servers (and colocation, ports etc.) of every project of the account. The
+   * list is a task: anything but a SUCCESS result fails the sync, since an empty list would mark
+   * the servers inactive. 403 means the user can't see dedicated servers at all.
+   */
+  private async listDedicated(signal: AbortSignal): Promise<ServiceData[]> {
+    const headers = { 'X-Auth-Token': await this.accountScopedToken(signal) };
+    const resources: DedicatedResource[] = [];
+    for (let page = 1; ; page++) {
+      const res = await this.http.get<DedicatedList<DedicatedResource>>(
+        `${API_BASE}/servers/v2/resource?limit=${PAGE_SIZE}&page=${page}`,
+        { headers, signal, validateStatus: (s) => (s >= 200 && s < 300) || s === 403 },
+      );
+      if (res.status === 403) return [];
+      const { status, result, item_count } = res.data ?? {};
+      if (status !== 'SUCCESS' || !Array.isArray(result)) {
+        throw new Error(`Selectel: dedicated servers list is not ready (${status ?? res.status})`);
+      }
+      resources.push(...result);
+      if (result.length < PAGE_SIZE || resources.length >= (item_count ?? 0)) break;
+    }
+
+    const live = resources.filter((r) => !DEDICATED_SKIP_STATES.has(r.state ?? ''));
+    if (live.length === 0) return [];
+    const locations = await this.dedicatedLocations(headers, signal);
+    return live.map((r) => mapSelectelDedicated(r, locations.get(r.location_uuid ?? '')));
+  }
+
+  /** Location names by uuid. Only for the country and meta, so a failure is not fatal. */
+  private async dedicatedLocations(
+    headers: Record<string, string>,
+    signal: AbortSignal,
+  ): Promise<Map<string, string>> {
+    try {
+      const { data } = await this.http.get<DedicatedList<DedicatedLocation>>(
+        `${API_BASE}/servers/v2/location`,
+        { headers, signal },
+      );
+      return new Map((data?.result ?? []).map((l) => [l.uuid, l.name ?? '']));
+    } catch (e) {
+      if (signal.aborted) throw e;
+      const reason = e instanceof Error ? e.message : String(e);
+      this.logger.warn(`Selectel: dedicated locations unavailable: ${reason}`);
+      return new Map();
+    }
+  }
+
+  private async cloudServices(signal: AbortSignal): Promise<ServiceData[]> {
     const auth = await this.projectScoped(signal);
     const [servers, routers, { buckets, failures }] = await Promise.all([
       this.listServers(auth, signal),
@@ -331,26 +399,53 @@ export class SelectelConnector implements Connector {
   }
 
   /**
-   * Import consumption (charges) from the Billing Statistics API. Selectel has no top-up/
-   * transaction API, but `/v1/cloud_billing/statistic/consumption` returns spend (kopecks) per
-   * period; we aggregate to one `charge` per day (see the mapper). Account-scoped (no project).
+   * Payments: one `charge` per day from the Billing Statistics consumption (see the mapper), plus
+   * top-ups and dedicated server charges from the account transactions. Account-scoped.
    */
   async fetchPayments(signal: AbortSignal): Promise<PaymentData[]> {
     const now = new Date();
     const start = new Date(
       Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - CONSUMPTION_MONTHS, 1),
     );
-    const rows = await this.consumption(
-      {
-        start,
-        end: now,
-        providerKeys: PROVIDER_KEYS,
-        groupType: 'project',
-        periodGroupType: 'day',
-      },
-      signal,
-    );
-    return aggregateConsumptionByDay(rows);
+    const [rows, transactions] = await Promise.all([
+      this.consumption(
+        {
+          start,
+          end: now,
+          providerKeys: PROVIDER_KEYS,
+          groupType: 'project',
+          periodGroupType: 'day',
+        },
+        signal,
+      ),
+      this.transactions(TRANSACTIONS_SINCE, now, signal),
+    ]);
+    return [...aggregateConsumptionByDay(rows), ...mapSelectelTransactions(transactions)];
+  }
+
+  /** Account transactions created in [from, to]; the API takes naive Moscow datetimes. */
+  private async transactions(
+    from: Date,
+    to: Date,
+    signal: AbortSignal,
+  ): Promise<BillingTransaction[]> {
+    const headers = { 'X-Auth-Token': await this.accountScopedToken(signal) };
+    const out: BillingTransaction[] = [];
+    for (let offset = 0; ; offset += PAGE_SIZE) {
+      const params = new URLSearchParams({
+        created_from: naive(moscowClock(from)),
+        created_to: naive(moscowClock(to)),
+        limit: String(PAGE_SIZE),
+        offset: String(offset),
+      });
+      const { data } = await this.http.get<{ data?: BillingTransaction[] }>(
+        `${API_BASE}/v2/billing/transactions?${params.toString()}`,
+        { headers, signal },
+      );
+      if (!Array.isArray(data?.data)) throw new Error('Selectel: unexpected transactions response');
+      out.push(...data.data);
+      if (data.data.length < PAGE_SIZE) return out;
+    }
   }
 
   /** Billing Statistics consumption rows (values in kopecks) for a window. Account-scoped. */
