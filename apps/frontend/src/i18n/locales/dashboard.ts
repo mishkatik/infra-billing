@@ -104,6 +104,9 @@ export const dashboard = {
       today: 'today',
       tomorrow: 'tomorrow',
       inDays: 'in {{n}} days',
+      inHours_one: 'in {{count}} hour',
+      inHours_other: 'in {{count}} hours',
+      withinHour: 'within an hour',
     },
     ago: {
       today: 'today',
@@ -215,6 +218,8 @@ export const dashboard = {
       today: 'сегодня',
       tomorrow: 'завтра',
       inDays: 'через {{n}} дн.',
+      inHours: 'через {{count}} ч',
+      withinHour: 'в течение часа',
     },
     ago: {
       today: 'сегодня',

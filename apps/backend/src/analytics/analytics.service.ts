@@ -20,7 +20,12 @@ import { CurrencyService } from '../currency/currency.service';
 import { chargeSeverity } from '@common/billing-severity';
 import { isMeteredPeriod, monthlyCost } from '@common/money';
 import { overdueDays } from '@common/overdue';
-import { burnFromMonthlyCost, burnFromSnapshots, daysOfRunway } from '@common/runway';
+import {
+  burnFromMonthlyCost,
+  burnFromSnapshots,
+  daysOfRunway,
+  hoursOfRunway,
+} from '@common/runway';
 import { accountSpend, spendWindow } from '@common/spend';
 
 const ZERO = () => new Decimal(0);
@@ -329,6 +334,7 @@ export class AnalyticsService {
       if (burn == null) continue; // no measurable spend → can't estimate
 
       const daysLeft = daysOfRunway(balance, burn);
+      const hoursLeft = hoursOfRunway(balance, burn);
       let severity: 'critical' | 'warning' | 'ok';
       if (daysLeft <= 3) severity = 'critical';
       else if (daysLeft <= 7) severity = 'warning';
@@ -341,12 +347,13 @@ export class AnalyticsService {
         currency: a.balanceCurrency,
         burnPerDay: burn.toFixed(2),
         daysLeft,
-        depletionAt: now.add(daysLeft, 'day').toISOString(),
+        hoursLeft,
+        depletionAt: now.add(hoursLeft, 'hour').toISOString(),
         basis,
         severity,
       });
     }
-    balanceRunway.sort((a, b) => a.daysLeft - b.daysLeft);
+    balanceRunway.sort((a, b) => a.hoursLeft - b.hoursLeft);
 
     return {
       baseCurrency,

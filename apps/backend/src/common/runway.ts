@@ -47,3 +47,9 @@ export function daysOfRunway(balance: Decimal, burnPerDay: Decimal): number {
   if (burnPerDay.lte(0) || balance.lte(0)) return 0;
   return balance.div(burnPerDay).floor().toNumber();
 }
+
+/** Whole hours a balance lasts at a given daily burn (floored). Non-positive inputs → 0. */
+export function hoursOfRunway(balance: Decimal, burnPerDay: Decimal): number {
+  if (burnPerDay.lte(0) || balance.lte(0)) return 0;
+  return balance.mul(24).div(burnPerDay).floor().toNumber();
+}

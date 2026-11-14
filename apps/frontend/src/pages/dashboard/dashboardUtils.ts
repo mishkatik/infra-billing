@@ -12,6 +12,17 @@ export const dayLabel = (t: TFunction, n: number) =>
       ? t('dashboard.due.tomorrow')
       : t('dashboard.due.inDays', { n });
 
+/**
+ * Runway is a duration, not a calendar date: under two days whole days would read as "today" or
+ * "tomorrow", so the label switches to hours.
+ */
+export const runwayLabel = (t: TFunction, r: AnalyticsSummary['balanceRunway'][number]) =>
+  r.hoursLeft < 1
+    ? t('dashboard.due.withinHour')
+    : r.hoursLeft < 48
+      ? t('dashboard.due.inHours', { count: r.hoursLeft })
+      : t('dashboard.due.inDays', { n: r.daysLeft });
+
 export const agoLabel = (t: TFunction, n: number) =>
   n <= 0
     ? t('dashboard.ago.today')
@@ -179,7 +190,7 @@ export function buildAttentionGroups(
     state: r.severity === 'critical' ? 'failed' : 'warn',
     provider: providerOf(r),
     service: null,
-    note: dayLabel(t, r.daysLeft),
+    note: runwayLabel(t, r),
     when: t('dashboard.attention.perDay', { amount: formatMoney(r.burnPerDay, r.currency) }),
     amount: formatMoney(r.balance, r.currency),
   });

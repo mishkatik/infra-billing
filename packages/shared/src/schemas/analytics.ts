@@ -197,6 +197,7 @@ export const balanceRunwaySchema = z.object({
   currency: currencySchema.describe('Balance currency'),
   burnPerDay: moneySchema.describe('Estimated daily spend in balance currency'),
   daysLeft: z.number().int().describe('Estimated whole days until depletion'),
+  hoursLeft: z.number().int().describe('Estimated whole hours until depletion'),
   depletionAt: isoDateSchema.describe('Estimated depletion date'),
   // How the burn rate was derived: actual snapshot decline, or service monthly cost.
   basis: z.enum(['snapshots', 'services']).describe('Burn-rate basis'),
