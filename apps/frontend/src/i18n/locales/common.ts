@@ -227,6 +227,7 @@ export const common = {
         datapacket: 'DataPacket',
         tubehosting: 'Tube-Hosting',
         gcore: 'Gcore',
+        nodehost: 'NodeHost',
         manual: 'Manual',
       },
       rateSource: {
@@ -459,6 +460,7 @@ export const common = {
         datapacket: 'DataPacket',
         tubehosting: 'Tube-Hosting',
         gcore: 'Gcore',
+        nodehost: 'NodeHost',
         manual: 'Ручной',
       },
       rateSource: {

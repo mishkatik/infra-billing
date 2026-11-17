@@ -18,14 +18,14 @@
 - **Провайдеры с API:** Timeweb Cloud, Hetzner Cloud, Hostkey (InvAPI), netcup, HostBill,
   ISPsystem BILLmanager, Selectel, 4VPS.SU, Netlen, Beget Cloud, Porkbun, Spaceship, Vultr,
   Linode, Aeza, VDSina, Cloudflare, StormWall, NetAngels, Yandex Cloud, Double Servers, OpenRouter,
-  HostUp, HostVDS / CloudCore, DataPacket, Tube-Hosting, Gcore. Плюс **Manual** — провайдеры без
-  API ведутся руками.
+  HostUp, HostVDS / CloudCore, DataPacket, Tube-Hosting, Gcore, NodeHost. Плюс **Manual** — провайдеры
+  без API ведутся руками.
 - **Автосинк** (по расписанию + кнопкой): баланс + валюта аккаунта, список серверов/услуг, даты
   следующих списаний; история баланса по дням (снапшоты).
 - **Импорт платежей** там, где API отдаёт реестр: пополнения и списания (BILLmanager, Netlen,
-  Vultr, Aeza, VDSina, Double Servers, HostVDS, Tube-Hosting, Gcore), пополнения и счета (Linode),
-  оплаченные счета (HostBill, DataPacket), платежи (HostUp), потребление (Selectel, Yandex Cloud,
-  OpenRouter), история биллинга (Cloudflare, best-effort). Ручные платежи — в журнале.
+  Vultr, Aeza, VDSina, Double Servers, HostVDS, Tube-Hosting, Gcore, NodeHost), пополнения и счета
+  (Linode), оплаченные счета (HostBill, DataPacket), платежи (HostUp), потребление (Selectel,
+  Yandex Cloud, OpenRouter), история биллинга (Cloudflare, best-effort). Ручные платежи — в журнале.
 - **Аналитика:** месячные/годовые расходы, разрезы по провайдеру / стране / типу / валюте, прогноз
   по будущим списаниям, ближайшие списания с подсветкой критичности.
 - **Мультивалютность:** суммы в своей валюте, конвертация к базовой; курсы ЦБ РФ или ручные.
@@ -405,6 +405,13 @@ curl -H "Authorization: Bearer ib_…" https://infra-billing/api/providers
   биллинга («Instance … Frankfurt», «Block Storage …»). Цена — расход за последние 7 дней,
   приведённый к 30 дням. Оплата pay-as-you-go: дат списаний нет. Не-Cloud продукты (CDN и т.п.)
   — всегда по позициям биллинга.
+- **NodeHost** — API-ключ `nh_live_…` (nodehost.cc → кабинет разработчика; достаточно ключа
+  только на чтение, scopes `account:read` и `servers:read`), заголовок `Authorization: Bearer`.
+  Баланс (USD) — из `/usage`. Серверы — из `/servers`: цена — месячная (с наценкой локации и
+  скидкой аккаунта), дата списания — `expiresAt` (серверы оплачиваются вперёд), страна — по
+  локации из `/catalog/locations`. API видит только серверы, созданные через API: купленные на
+  сайте в нём не появляются. Импортируются пополнения и списания за серверы из `/billing`
+  (последние 500 записей, лента без пагинации; у списаний нет id, ключ — сервер и время).
 - **Manual** — без API, всё вводится руками.
 
 ## Telegram-уведомления

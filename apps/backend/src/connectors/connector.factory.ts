@@ -25,6 +25,7 @@ import { LinodeConnector } from './linode/linode.connector';
 import { NetcupConnector } from './netcup/netcup.connector';
 import { NetangelsConnector } from './netangels/netangels.connector';
 import { NetlenConnector } from './netlen/netlen.connector';
+import { NodehostConnector } from './nodehost/nodehost.connector';
 import { OpenRouterConnector } from './openrouter/openrouter.connector';
 import { parseOpenRouterCredentials } from './openrouter/openrouter.types';
 import { PorkbunConnector } from './porkbun/porkbun.connector';
@@ -130,6 +131,9 @@ export class ConnectorFactory {
       case 'gcore':
         // Gcore secret is the raw permanent API token (sent as `Authorization: APIKey <token>`).
         return new GcoreConnector(token);
+      case 'nodehost':
+        // NodeHost secret is the raw API key (single string, sent as the Authorization Bearer header).
+        return new NodehostConnector(token);
       default:
         throw new Error(`Connector for kind="${kind}" is not supported`);
     }
