@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { resolveLedgerIds } from '@common/ledger-identity';
 import { Payment, Prisma } from '@generated/prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -129,6 +130,39 @@ export class PaymentsRepository {
       create: { accountUuid, providerUuid, externalId, ...data },
       update: data,
     });
+  }
+
+  /** Reconcile providers with optional references against imported rows of this account only. */
+  async upsertWithOptionalRefs(
+    accountUuid: string,
+    providerUuid: string,
+    rows: (ExternalPaymentData & { externalId: string })[],
+  ): Promise<void> {
+    await this.prisma.$transaction(
+      async (tx) => {
+        const stored = await tx.payment.findMany({
+          where: {
+            accountUuid,
+            externalId: { not: null },
+            paymentDate: { in: rows.map((p) => p.paymentDate) },
+          },
+          select: { externalId: true, type: true, currency: true, paymentDate: true, amount: true },
+        });
+        for (const { row, lookupId, externalId } of resolveLedgerIds(rows, stored)) {
+          await tx.payment.upsert({
+            where: { accountUuid_externalId: { accountUuid, externalId: lookupId } },
+            create: { ...row, accountUuid, providerUuid, externalId },
+            update: {
+              ...row,
+              externalId,
+              // Losing a provider reference on a later sync must not unlink a known server.
+              serviceUuid: row.externalId === externalId ? row.serviceUuid : undefined,
+            },
+          });
+        }
+      },
+      { isolationLevel: 'Serializable', timeout: 30000 },
+    );
   }
 
   async delete(uuid: string): Promise<void> {

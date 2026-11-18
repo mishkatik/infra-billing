@@ -117,6 +117,8 @@ export const providers = {
         'DataPacket client panel → Security → Add API key (read-only is enough). Syncs servers with their subscription price and location, other subscription items (IPs, traffic, DDoS) as one service per subscription, and paid invoices. The API has no account balance.',
       apiTokenDescGcore:
         'Gcore portal → Profile → API tokens → create a permanent token. Any role syncs the balance, card payments and daily charges. Cloud servers (with their volumes and IPs) need the Administrators role; with a narrower role (e.g. Users) services are listed per billing feature instead.',
+      apiTokenDescNodehost:
+        'NodeHost developer cabinet → API keys: a read-only key (scopes account:read and servers:read) is enough. Syncs the balance (USD), servers with the monthly price and expiry date, and top-ups and charges. Only servers created through the API are visible: servers bought on the website are not.',
       managementKey: 'Management API key',
       apiTokenDescOpenrouter:
         'Go to openrouter.ai. Open "Home" → "Management Keys" → "New Key", enter any name, then "Create". Copy the key and paste it below.',
@@ -197,6 +199,7 @@ export const providers = {
       hostvdsWebCreds: 'Enter both the website email and password, or neither',
       datapacketToken: 'Enter the DataPacket API key',
       gcoreToken: 'Enter the Gcore API token',
+      nodehostToken: 'Enter the NodeHost API key',
       yandexKey: 'Paste the Yandex Cloud service account authorized key (JSON)',
     },
     netcup: {
@@ -397,6 +400,8 @@ export const providers = {
         'Панель DataPacket → Security → Add API key (достаточно read-only). Синхронизируются серверы с ценой из подписки и локацией, прочие позиции подписки (IP, трафик, DDoS) — одной услугой на подписку, и оплаченные счета. Баланса аккаунта в API нет.',
       apiTokenDescGcore:
         'Портал Gcore → Profile → API tokens → создайте постоянный токен. С любой ролью синкаются баланс, оплаты картой и списания по дням. Облачные серверы (вместе с дисками и IP) видны только с ролью Administrators; с более узкой (например, Users) услуги строятся по биллинговым позициям.',
+      apiTokenDescNodehost:
+        'Кабинет разработчика NodeHost → API-ключи: достаточно ключа только на чтение (scopes account:read и servers:read). Синхронизируются баланс (USD), серверы с месячной ценой и датой окончания, пополнения и списания. Видны только серверы, созданные через API: купленные на сайте в нём не появляются.',
       managementKey: 'Management API-ключ',
       apiTokenDescOpenrouter:
         'Зайдите на openrouter.ai. Откройте "Home" → "Management Keys" → "New Key", введите любое имя, затем "Create". Скопируйте ключ и вставьте его ниже.',
@@ -477,6 +482,7 @@ export const providers = {
       hostvdsWebCreds: 'Укажите и email, и пароль от сайта — или ничего',
       datapacketToken: 'Укажите API-ключ DataPacket',
       gcoreToken: 'Укажите API-токен Gcore',
+      nodehostToken: 'Укажите API-ключ NodeHost',
       yandexKey: 'Вставьте авторизованный ключ сервисного аккаунта Yandex Cloud (JSON)',
     },
     netcup: {
