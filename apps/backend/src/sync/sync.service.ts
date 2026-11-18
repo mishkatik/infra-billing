@@ -204,7 +204,7 @@ export class SyncService implements OnModuleInit {
             // The narrowing from the `if` guard above does not survive into the closure.
             () => connector.fetchPayments!(controller.signal),
           );
-          const imported = await this.upsertPayments(owner, payments);
+          const imported = await this.upsertPayments(owner, payments, provider.kind);
           if (imported) {
             this.logger.log(`Sync "${name}" (${accountUuid}): imported ${imported} payment(s)`);
           }
@@ -356,24 +356,33 @@ export class SyncService implements OnModuleInit {
    * never touches manually-entered payments (those have externalId = null). Charges are linked
    * to a service of the same account when their serviceExternalId matches its externalId.
    */
-  private async upsertPayments(owner: AccountOwner, payments: PaymentData[]): Promise<number> {
+  private async upsertPayments(
+    owner: AccountOwner,
+    payments: PaymentData[],
+    kind: string,
+  ): Promise<number> {
     if (payments.length === 0) return 0;
     const services = await this.services.listExternalIds(owner.accountUuid);
     const serviceByExternalId = new Map<string, string>();
     for (const s of services) if (s.externalId) serviceByExternalId.set(s.externalId, s.uuid);
 
-    for (const p of payments) {
-      const serviceUuid = p.serviceExternalId
+    const rows = payments.map((p) => ({
+      externalId: p.externalId,
+      amount: p.amount.toFixed(2),
+      currency: p.currency,
+      type: p.type,
+      description: p.description ?? null,
+      paymentDate: p.date,
+      serviceUuid: p.serviceExternalId
         ? (serviceByExternalId.get(p.serviceExternalId) ?? null)
-        : null;
-      await this.payments.upsertExternal(owner.accountUuid, owner.providerUuid, p.externalId, {
-        amount: p.amount.toFixed(2),
-        currency: p.currency,
-        type: p.type,
-        description: p.description ?? null,
-        paymentDate: p.date,
-        serviceUuid,
-      });
+        : null,
+    }));
+    if (kind === 'nodehost') {
+      await this.payments.upsertWithOptionalRefs(owner.accountUuid, owner.providerUuid, rows);
+    } else {
+      for (const { externalId, ...data } of rows) {
+        await this.payments.upsertExternal(owner.accountUuid, owner.providerUuid, externalId, data);
+      }
     }
     return payments.length;
   }

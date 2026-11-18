@@ -1,4 +1,5 @@
 import Decimal from 'decimal.js';
+import { fallbackPaymentId } from '@common/ledger-identity';
 import { PaymentData, ServiceData } from '../connector.interface';
 import { NodehostBillingEntry, NodehostServer } from './nodehost.types';
 
@@ -46,31 +47,23 @@ export function mapNodehostServer(
   };
 }
 
-/**
- * Account ledger entry to payment. The feed has no ids for charges, so a charge is keyed by its
- * server and timestamp (millisecond precision). Zero amounts are dropped.
- */
 export function mapNodehostBillingEntry(e: NodehostBillingEntry): PaymentData | null {
-  const date = parseDate(e.at);
+  const date = new Date(e.at);
   const amount = new Decimal(e.amount).abs();
-  if (!date || amount.isZero()) return null;
-  if (e.type === 'topup') {
-    return {
-      externalId: `topup:${e.ref}`,
-      type: 'topup',
-      amount,
-      currency: NODEHOST_CURRENCY,
-      date,
-      description: e.method ? `Top-up (${e.method})` : 'Top-up',
-    };
-  }
+  if (amount.isZero()) return null;
+  const type = e.type === 'topup' ? 'topup' : 'charge';
+  const currency = NODEHOST_CURRENCY;
+  const ref = e.type === 'topup' ? e.ref : e.serverId && `${e.serverId}:${date.toISOString()}`;
   return {
-    externalId: `charge:${e.serverId}:${e.at}`,
-    type: 'charge',
+    externalId: ref
+      ? `${type}:${ref}`
+      : fallbackPaymentId({ type, currency, paymentDate: date, amount }),
+    type,
     amount,
-    currency: NODEHOST_CURRENCY,
+    currency,
     date,
-    description: e.name || undefined,
-    serviceExternalId: e.serverId,
+    description:
+      e.type === 'topup' ? (e.method ? `Top-up (${e.method})` : 'Top-up') : e.name || undefined,
+    serviceExternalId: e.type === 'server_charge' ? (e.serverId ?? undefined) : undefined,
   };
 }

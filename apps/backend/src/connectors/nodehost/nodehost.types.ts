@@ -39,25 +39,27 @@ export const nodehostLocationsSchema = z.array(
   z.object({ name: z.string(), code: z.string().regex(/^[A-Za-z]{2}$/) }),
 );
 
-/** `topup` is positive and carries a unique `ref`; `server_charge` is negative with no id. */
+/** Both references are optional in the documented /billing response. */
 export const nodehostBillingEntrySchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('topup'),
-    amount: money,
-    at: z.string(),
-    ref: z.string().min(1),
+    amount: money.nonnegative(),
+    at: z.string().datetime({ offset: true }),
+    ref: z.string().trim().min(1).nullish(),
     method: z.string().nullish(),
   }),
   z.object({
     type: z.literal('server_charge'),
-    amount: money,
-    at: z.string(),
-    serverId: z.string().min(1),
+    amount: money.nonpositive(),
+    at: z.string().datetime({ offset: true }),
+    serverId: z.string().trim().min(1).nullish(),
     name: z.string().nullish(),
   }),
 ]);
 
-export const nodehostBillingSchema = z.object({ data: z.array(z.unknown()) });
+export const nodehostBillingSchema = z.object({
+  data: z.array(z.object({ type: z.string().min(1) }).passthrough()),
+});
 
 /** Error body: { error: { code, message }, requestId }. */
 export const nodehostErrorSchema = z.object({

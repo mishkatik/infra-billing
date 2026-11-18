@@ -80,15 +80,15 @@ export class NodehostConnector implements Connector {
     const { data } = await this.http.get('/billing', { params: { limit: BILLING_LIMIT }, signal });
     const parsed = nodehostBillingSchema.safeParse(data);
     if (!parsed.success) throw new Error('NodeHost: unexpected /billing response');
-    const byId = new Map<string, PaymentData>();
+    const payments: PaymentData[] = [];
     for (const row of parsed.data.data) {
-      // Unknown entry types are skipped rather than failing the whole import.
+      if (row.type !== 'topup' && row.type !== 'server_charge') continue;
       const entry = nodehostBillingEntrySchema.safeParse(row);
-      if (!entry.success) continue;
+      if (!entry.success) throw new Error(`NodeHost: invalid ${row.type} entry in /billing`);
       const payment = mapNodehostBillingEntry(entry.data);
-      if (payment) byId.set(payment.externalId, payment);
+      if (payment) payments.push(payment);
     }
-    return [...byId.values()];
+    return payments;
   }
 
   /** Walk cursor pages (`nextCursor`, null on the last one). */
