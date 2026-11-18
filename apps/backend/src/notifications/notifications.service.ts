@@ -72,7 +72,7 @@ export class NotificationsService {
       if (await this.maybeSend(key, html)) sent += 1;
     }
 
-    // 1b) Low runway: a prepaid account (no dated charge) whose balance is estimated to drain
+    // 1b) Low runway: a prepaid account whose balance is estimated to drain
     //     within ~3 days (severity "critical": same threshold as the dashboard runway card).
     for (const r of summary.balanceRunway) {
       if (r.severity !== 'critical') continue;
