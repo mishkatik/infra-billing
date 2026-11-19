@@ -664,6 +664,25 @@ export function ProviderCredentialFields({
     );
   }
 
+  if (kind === 'nodehost') {
+    return (
+      <Field
+        id="cred-token"
+        label={t('providers.field.apiToken')}
+        description={t('providers.field.apiTokenDescNodehost')}
+        link="https://nodehost.cc/api/v1/docs"
+      >
+        <SecretFormField
+          form={form}
+          name="token"
+          id="cred-token"
+          hasStored={storedSecrets?.hasToken}
+          reveal={reveal}
+        />
+      </Field>
+    );
+  }
+
   if (kind === 'openrouter') {
     return (
       <>

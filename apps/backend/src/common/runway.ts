@@ -15,9 +15,13 @@ export interface SnapPoint {
  * Top-up intervals are dropped from both sums: within a 6h snapshot window we can't tell the
  * top-up apart from the spend, so counting them would understate the burn. Flat intervals stay
  * (they are genuine low-spend periods and correctly pull the average down).
+ * Likewise skip intervals containing a known dated charge: its drop is not continuous spend.
  * Returns null when there is < minSpanDays of usable history or no observed decline.
  */
-export function burnFromSnapshots(points: SnapPoint[], minSpanDays = 1): Decimal | null {
+export function burnFromSnapshots(
+  points: SnapPoint[],
+  { minSpanDays = 1, datedCharges = [] }: { minSpanDays?: number; datedCharges?: Date[] } = {},
+): Decimal | null {
   if (points.length < 2) return null;
   const sorted = [...points].sort((a, b) => a.capturedAt.getTime() - b.capturedAt.getTime());
   let spent = new Decimal(0);
@@ -27,6 +31,7 @@ export function burnFromSnapshots(points: SnapPoint[], minSpanDays = 1): Decimal
     const cur = sorted[i];
     const dtDays = (cur.capturedAt.getTime() - prev.capturedAt.getTime()) / MS_PER_DAY;
     if (dtDays <= 0) continue;
+    if (datedCharges.some((date) => date > prev.capturedAt && date <= cur.capturedAt)) continue;
     const delta = prev.balance.sub(cur.balance); // > 0 = balance dropped (spend)
     if (delta.isNegative()) continue; // top-up interval, drop it entirely
     spent = spent.add(delta);
@@ -46,4 +51,10 @@ export function burnFromMonthlyCost(monthlyInBalanceCcy: Decimal): Decimal | nul
 export function daysOfRunway(balance: Decimal, burnPerDay: Decimal): number {
   if (burnPerDay.lte(0) || balance.lte(0)) return 0;
   return balance.div(burnPerDay).floor().toNumber();
+}
+
+/** Whole hours a balance lasts at a given daily burn (floored). Non-positive inputs → 0. */
+export function hoursOfRunway(balance: Decimal, burnPerDay: Decimal): number {
+  if (burnPerDay.lte(0) || balance.lte(0)) return 0;
+  return balance.mul(24).div(burnPerDay).floor().toNumber();
 }

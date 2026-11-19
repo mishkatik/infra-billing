@@ -172,9 +172,9 @@ export const overdueBillingSchema = z.object({
 });
 
 /**
- * Estimated balance depletion for a prepaid account that has no upcoming dated charge.
- * Burn rate is inferred from balance-snapshot decline (or, with too little history, the sum of
- * the account's services' monthly cost). All money is in the account's own balance currency.
+ * Estimated depletion from ongoing prepaid spend, independent of any dated renewal.
+ * Burn is based on balance snapshots or, with too little history, service tariffs (metered
+ * tariffs only if the account also has a dated charge). All money is in the balance currency.
  */
 export const balanceRunwaySchema = z.object({
   providerUuid: uuidSchema.describe('Provider UUID'),
@@ -197,6 +197,7 @@ export const balanceRunwaySchema = z.object({
   currency: currencySchema.describe('Balance currency'),
   burnPerDay: moneySchema.describe('Estimated daily spend in balance currency'),
   daysLeft: z.number().int().describe('Estimated whole days until depletion'),
+  hoursLeft: z.number().int().describe('Estimated whole hours until depletion'),
   depletionAt: isoDateSchema.describe('Estimated depletion date'),
   // How the burn rate was derived: actual snapshot decline, or service monthly cost.
   basis: z.enum(['snapshots', 'services']).describe('Burn-rate basis'),
@@ -219,7 +220,7 @@ export const analyticsSummarySchema = z.object({
   overdueBillings: z
     .array(overdueBillingSchema)
     .describe('Billings already past due, most overdue first'),
-  // Prepaid providers (no dated charge) whose balance is estimated to run out soon.
+  // Prepaid accounts whose balance is estimated to run out soon.
   balanceRunway: z.array(balanceRunwaySchema).describe('Estimated balance runway'),
   // Top-up needed so prepaid balance covers upcoming dated charges (14-day window).
   balanceTopUps: z.array(balanceTopUpSchema).describe('Suggested provider top-ups'),

@@ -76,10 +76,11 @@ function whenLabel(daysUntil: number): string {
   return `через ${daysUntil} ${ruDays(daysUntil)}`;
 }
 
-/** "~N дн." for an estimated runway; "меньше суток" when the balance is essentially gone. */
-function runwayLabel(days: number): string {
-  if (days <= 0) return 'меньше суток';
-  return `~${days} ${ruDays(days)}`;
+/** "~N дн." for an estimated runway; hours under two days, where whole days read as "tomorrow". */
+function runwayLabel(r: BalanceRunway): string {
+  if (r.hoursLeft < 1) return 'меньше часа';
+  if (r.hoursLeft < 48) return `~${r.hoursLeft} ч`;
+  return `~${r.daysLeft} ${ruDays(r.daysLeft)}`;
 }
 
 // daysOverdue is >= 1 by contract (a charge dated today is upcoming, not overdue), so no "today" case.
@@ -114,7 +115,7 @@ export function lowRunwayMessage(r: BalanceRunway): string {
   return (
     `${EMOJI.balance} <b>Запас кончается</b>\n\n` +
     `${EMOJI.provider} ${ownerLink(r)}\n\n` +
-    `${EMOJI.clock} Баланса хватит ещё на ${runwayLabel(r.daysLeft)} (трата ≈<code>${esc(r.burnPerDay)} ${esc(r.currency)}</code>/день).\n` +
+    `${EMOJI.clock} Баланса хватит ещё на ${runwayLabel(r)} (трата ≈<code>${esc(r.burnPerDay)} ${esc(r.currency)}</code>/день).\n` +
     `${EMOJI.balance} Баланс: <code>${esc(r.balance)} ${esc(r.currency)}</code>`
   );
 }
@@ -234,7 +235,8 @@ export function sampleMessages(): string[] {
     currency: 'USD',
     burnPerDay: '0.80',
     daysLeft: 3,
-    depletionAt: new Date(Date.now() + 3 * 86_400_000).toISOString(),
+    hoursLeft: 80,
+    depletionAt: new Date(Date.now() + 80 * 3_600_000).toISOString(),
     basis: 'snapshots',
     severity: 'critical',
   };

@@ -30,6 +30,7 @@ const PROVIDER_KINDS: ProviderKind[] = [
   'datapacket',
   'tubehosting',
   'gcore',
+  'nodehost',
   'manual',
 ];
 

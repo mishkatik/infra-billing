@@ -20,7 +20,12 @@ import { CurrencyService } from '../currency/currency.service';
 import { chargeSeverity } from '@common/billing-severity';
 import { isMeteredPeriod, monthlyCost } from '@common/money';
 import { overdueDays } from '@common/overdue';
-import { burnFromMonthlyCost, burnFromSnapshots, daysOfRunway } from '@common/runway';
+import {
+  burnFromMonthlyCost,
+  burnFromSnapshots,
+  daysOfRunway,
+  hoursOfRunway,
+} from '@common/runway';
 import { accountSpend, spendWindow } from '@common/spend';
 
 const ZERO = () => new Decimal(0);
@@ -272,19 +277,30 @@ export class AnalyticsService {
     }
     overdueBillings.sort((a, b) => b.daysOverdue - a.daysOverdue);
 
-    // Balance runway: prepaid accounts with a draining balance but no upcoming dated charge.
-    // Estimate days-left from snapshot decline (fallback: monthly service cost), and reuse the
-    // charge-coverage severity model. An account with any dated service is governed by the dated
-    // logic above (even if the date is beyond the upcoming window), so it's not a runway candidate.
-    // Metered services don't count as dated: their balance drain is exactly what runway measures.
-    // Known simplification: an account mixing metered and monthly dated services stays on the
-    // dated path, and the metered drain is not folded into the running-balance coverage.
-    const datedAccountUuids = new Set(
-      services
-        .filter((s) => s.nextBillingAt != null && !isMeteredPeriod(s.period as Period))
-        .map((s) => s.accountUuid),
+    // A dated renewal has its own coverage alert, but doesn't stop metered services on the
+    // same account from draining the balance before that renewal.
+    const datedServices = services.filter(
+      (s) => s.nextBillingAt != null && !isMeteredPeriod(s.period as Period),
     );
+    const datedAccountUuids = new Set(datedServices.map((s) => s.accountUuid));
+    const meteredAccountUuids = new Set(
+      services.filter((s) => isMeteredPeriod(s.period as Period)).map((s) => s.accountUuid),
+    );
+    const datedServiceUuids = new Set(datedServices.map((s) => s.uuid));
     const runwayWindowStart = now.subtract(30, 'day').toDate();
+    const datedChargesByAccount = new Map<string, Date[]>();
+    for (const p of payments) {
+      if (
+        p.type !== 'charge' ||
+        !p.serviceUuid ||
+        !datedServiceUuids.has(p.serviceUuid) ||
+        p.paymentDate < runwayWindowStart
+      )
+        continue;
+      const dates = datedChargesByAccount.get(p.accountUuid);
+      if (dates) dates.push(p.paymentDate);
+      else datedChargesByAccount.set(p.accountUuid, [p.paymentDate]);
+    }
     const snapshots = await this.snapshotsRepo.listSince(runwayWindowStart);
     const snapsByAccount = new Map<string, typeof snapshots>();
     for (const snap of snapshots) {
@@ -297,7 +313,8 @@ export class AnalyticsService {
     for (const a of accounts) {
       if (a.balance == null || !a.balanceCurrency) continue;
       if (a.isPostpaid) continue; // invoice-billed → balance isn't prepaid funds
-      if (datedAccountUuids.has(a.uuid)) continue;
+      const hasDated = datedAccountUuids.has(a.uuid);
+      if (hasDated && !meteredAccountUuids.has(a.uuid)) continue;
       const balance = new Decimal(a.balance.toString());
 
       // Primary: actual decline measured from snapshots (in the account's balance currency).
@@ -307,13 +324,14 @@ export class AnalyticsService {
           balance: new Decimal(snap.balance.toString()),
           capturedAt: snap.capturedAt,
         }));
-      let burn = burnFromSnapshots(points);
+      let burn = burnFromSnapshots(points, { datedCharges: datedChargesByAccount.get(a.uuid) });
       let basis: 'snapshots' | 'services' = 'snapshots';
       if (burn == null) {
-        // Fallback: sum the account's active services' monthly cost in the balance currency.
+        // On mixed accounts only the metered tariffs represent ongoing drain.
         let monthly = ZERO();
         for (const s of services) {
-          if (s.accountUuid !== a.uuid) continue;
+          if (s.accountUuid !== a.uuid || (hasDated && !isMeteredPeriod(s.period as Period)))
+            continue;
           monthly = monthly.add(
             this.currency.convert(
               monthlyCost(new Decimal(s.cost.toString()), s.period as Period),
@@ -329,6 +347,7 @@ export class AnalyticsService {
       if (burn == null) continue; // no measurable spend → can't estimate
 
       const daysLeft = daysOfRunway(balance, burn);
+      const hoursLeft = hoursOfRunway(balance, burn);
       let severity: 'critical' | 'warning' | 'ok';
       if (daysLeft <= 3) severity = 'critical';
       else if (daysLeft <= 7) severity = 'warning';
@@ -341,12 +360,13 @@ export class AnalyticsService {
         currency: a.balanceCurrency,
         burnPerDay: burn.toFixed(2),
         daysLeft,
-        depletionAt: now.add(daysLeft, 'day').toISOString(),
+        hoursLeft,
+        depletionAt: now.add(hoursLeft, 'hour').toISOString(),
         basis,
         severity,
       });
     }
-    balanceRunway.sort((a, b) => a.daysLeft - b.daysLeft);
+    balanceRunway.sort((a, b) => a.hoursLeft - b.hoursLeft);
 
     return {
       baseCurrency,
