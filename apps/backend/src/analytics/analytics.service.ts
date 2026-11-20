@@ -500,20 +500,16 @@ export class AnalyticsService {
     // with the KPI card. Skipped entirely in force mode (tariff fill overwrites actual below).
     const needTariffs = backfill || force;
     const needBackdate = needTariffs && respectCreatedAt && backdateFromPayments;
-    const [payments, topupAccountUuids, activeServices, billedServices, earliestPayments] =
-      await Promise.all([
-        force
-          ? Promise.resolve([] as Awaited<ReturnType<PaymentsRepository['listSince']>>)
-          : this.paymentsRepo.listSince(windowStart.toDate()),
-        force ? Promise.resolve([] as string[]) : this.paymentsRepo.accountUuidsWithTopups(),
-        needTariffs
-          ? this.servicesRepo.listActive()
-          : Promise.resolve([] as Awaited<ReturnType<ServicesRepository['listActive']>>),
-        this.servicesRepo.listActiveBilled(),
-        needBackdate
-          ? this.paymentsRepo.earliestPaymentDateByAccount()
-          : Promise.resolve(new Map<string, Date>()),
-      ]);
+    const [payments, topupAccountUuids, activeServices, earliestPayments] = await Promise.all([
+      force
+        ? Promise.resolve([] as Awaited<ReturnType<PaymentsRepository['listSince']>>)
+        : this.paymentsRepo.listSince(windowStart.toDate()),
+      force ? Promise.resolve([] as string[]) : this.paymentsRepo.accountUuidsWithTopups(),
+      this.servicesRepo.listActive(),
+      needBackdate
+        ? this.paymentsRepo.earliestPaymentDateByAccount()
+        : Promise.resolve(new Map<string, Date>()),
+    ]);
     const accountsWithTopups = new Set(topupAccountUuids);
     for (const p of payments) {
       if (p.type === 'charge' && accountsWithTopups.has(p.accountUuid)) continue;
@@ -557,7 +553,23 @@ export class AnalyticsService {
     // Projection: recurring services billed strictly in the future (current month shows actuals only).
     const projStart = current.add(1, 'month');
     const projEnd = current.add(months + 1, 'month');
-    for (const s of billedServices) {
+    for (const s of activeServices) {
+      if (s.nextBillingAt) continue;
+      // No billing date (usage-billed clouds, monthly invoices) doesn't mean free: such a service
+      // still costs its normalized monthly amount in every future month.
+      const monthly = this.currency.convert(
+        monthlyCost(new Decimal(s.cost.toString()), s.period as Period),
+        s.currency,
+        baseCurrency,
+        rates,
+      );
+      if (monthly.lte(0)) continue;
+      for (const key of monthsList) {
+        if (key > currentKey) projBuckets.set(key, projBuckets.get(key)!.add(monthly));
+      }
+    }
+    for (const s of activeServices) {
+      if (!s.nextBillingAt) continue;
       const charge = this.currency.convert(
         new Decimal(s.cost.toString()),
         s.currency,
