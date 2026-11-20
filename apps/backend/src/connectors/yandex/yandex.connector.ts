@@ -102,17 +102,13 @@ export class YandexConnector implements Connector {
   }
 
   /**
-   * Fill in each resource's (server, CDN, bucket) monthly cost and next-billing date. All are
-   * usage-billed, so the "monthly cost" is the resource's billable consumption from one
-   * per-resource report over the previous and current month (see `monthlyCostByResource`); the
-   * next-billing date is the start of the next month (when Yandex closes the current billing
-   * period), the same for every resource. Best-effort: a missing billing role or a report error
-   * leaves costs unset without failing the sync.
+   * Fill in each resource's (server, CDN, bucket) monthly cost. All are usage-billed, so the
+   * "monthly cost" is the resource's billable consumption from one per-resource report over the
+   * previous and current month (see `monthlyCostByResource`). Best-effort: a missing billing role
+   * or a report error leaves costs unset without failing the sync.
    */
   private async attachMonthlyCost(services: ServiceData[], signal: AbortSignal): Promise<void> {
     if (services.length === 0) return;
-    const nextBilling = firstOfNextMonthMsk();
-    for (const s of services) s.nextBilling = nextBilling;
     const account = await this.resolveBillingAccount(signal);
     if (!account) return;
     const token = await this.iamToken(signal);
@@ -313,9 +309,4 @@ function monthStartMsk(delta: number, now = new Date()): Date {
   const msk = new Date(now.getTime() + MSK_OFFSET_MS);
   const start = Date.UTC(msk.getUTCFullYear(), msk.getUTCMonth() + delta, 1);
   return new Date(start - MSK_OFFSET_MS);
-}
-
-/** Start of next month in Moscow time: when Yandex closes the current billing period. */
-function firstOfNextMonthMsk(): Date {
-  return monthStartMsk(1);
 }

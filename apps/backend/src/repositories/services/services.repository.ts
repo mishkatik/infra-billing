@@ -36,13 +36,6 @@ export class ServicesRepository {
     return this.prisma.service.findMany({ where: { isActive: true, projectUuid } });
   }
 
-  /** Active services with a known next billing date (forecast input). */
-  listActiveBilled() {
-    return this.prisma.service.findMany({
-      where: { isActive: true, nextBillingAt: { not: null } },
-    });
-  }
-
   /** (uuid, externalId) pairs of an account's services, for linking imported payments. */
   listExternalIds(accountUuid: string) {
     return this.prisma.service.findMany({

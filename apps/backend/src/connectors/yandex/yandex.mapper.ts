@@ -14,6 +14,10 @@ export const MSK_OFFSET_MS = 3 * 60 * 60 * 1000;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+// Everything is usage-billed: Yandex debits the prepaid balance continuously, so no resource has a
+// dated charge. nextBilling is an explicit null (not left unset) so a sync also clears the
+// month-start date earlier versions wrote; the account is watched through balance runway instead.
+
 // Yandex Cloud zones map to a country by their region prefix. Compute is usage-billed, so cost is
 // filled in later by the connector from the per-resource Billing Usage report, not here.
 function countryForZone(zoneId?: string): string | undefined {
@@ -38,6 +42,7 @@ export function mapYandexInstance(i: YandexInstance): ServiceData {
     type: 'vps',
     countryCode: countryForZone(i.zoneId),
     period: 'monthly',
+    nextBilling: null,
     meta: {
       folderId: i.folderId,
       zoneId: i.zoneId,
@@ -57,6 +62,7 @@ export function mapYandexCdnResource(r: YandexCdnResource): ServiceData {
     name: r.cname || `cdn-${r.id}`,
     type: 'cdn',
     period: 'monthly',
+    nextBilling: null,
     meta: {
       folderId: r.folderId,
       active: r.active,
@@ -77,6 +83,7 @@ export function mapYandexBucket(b: YandexBucket): ServiceData {
     type: 'storage',
     countryCode: 'RU',
     period: 'monthly',
+    nextBilling: null,
     meta: {
       folderId: b.folderId,
       storageClass: b.defaultStorageClass,
