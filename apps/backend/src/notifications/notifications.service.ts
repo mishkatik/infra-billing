@@ -6,6 +6,7 @@ import { SettingsRepository } from '@repositories/settings/settings.repository';
 import { SyncRunsRepository } from '@repositories/sync-runs/sync-runs.repository';
 import { AnalyticsService } from '../analytics/analytics.service';
 import {
+  isDepleted,
   lowBalanceMessage,
   lowRunwayMessage,
   overdueBillingMessage,
@@ -74,10 +75,12 @@ export class NotificationsService {
 
     // 1b) Low runway: a prepaid account whose balance is estimated to drain
     //     within ~3 days (severity "critical": same threshold as the dashboard runway card).
+    //     Running out is news even right after a "running low" alert, hence its own key.
     for (const r of summary.balanceRunway) {
       if (r.severity !== 'critical') continue;
       const html = lowRunwayMessage(r);
-      if (await this.maybeSend(`runway:${r.accountUuid}`, html)) sent += 1;
+      const key = isDepleted(r) ? `runway-depleted:${r.accountUuid}` : `runway:${r.accountUuid}`;
+      if (await this.maybeSend(key, html)) sent += 1;
     }
 
     // 1c) Overdue: the billing date already passed. Dedup key has no date part, so like the
