@@ -28,7 +28,6 @@ const OPS_CONCURRENCY = 4;
 const MAX_OPS_PAGES = 500; // safety cap
 const COST_PAGE = 1000; // v2 cost report maximum (json)
 const MAX_COST_PAGES = 50;
-const LEDGER_DAYS = 31; // charges window; also covers the 7-day rate window
 const DAY_MS = 86_400_000;
 
 type Expense = NonNullable<ReturnType<typeof toGcoreExpense>>;
@@ -127,11 +126,10 @@ export class GcoreConnector implements Connector {
     ];
   }
 
-  /** Expense ledger for the last {@link LEDGER_DAYS} UTC days; shared by services and payments. */
   private fetchLedger(signal: AbortSignal) {
     if (!this.ledger) {
-      const today = new Date(new Date().toISOString().slice(0, 10));
-      const from = new Date(today.getTime() - (LEDGER_DAYS - 1) * DAY_MS);
+      const now = new Date();
+      const from = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
       this.ledger = this.fetchOperations(
         { acc: 'expense', applying_at__from: from.toISOString() },
         signal,
