@@ -228,6 +228,7 @@ export const common = {
         tubehosting: 'Tube-Hosting',
         gcore: 'Gcore',
         nodehost: 'NodeHost',
+        aws: 'AWS',
         manual: 'Manual',
       },
       rateSource: {
@@ -461,6 +462,7 @@ export const common = {
         tubehosting: 'Tube-Hosting',
         gcore: 'Gcore',
         nodehost: 'NodeHost',
+        aws: 'AWS',
         manual: 'Ручной',
       },
       rateSource: {

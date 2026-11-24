@@ -1036,6 +1036,36 @@ export function ProviderCredentialFields({
     );
   }
 
+  if (kind === 'aws') {
+    return (
+      <>
+        <Field
+          id="cred-token"
+          label={t('providers.field.awsAccessKeyId')}
+          description={t('providers.field.awsAccessKeyIdDesc')}
+          link="https://console.aws.amazon.com/iam/home#/users"
+        >
+          <SecretFormField
+            form={form}
+            name="token"
+            id="cred-token"
+            hasStored={storedSecrets?.hasToken}
+            reveal={reveal}
+          />
+        </Field>
+        <Field id="cred-secret-key" label={t('providers.field.awsSecretAccessKey')}>
+          <SecretFormField
+            form={form}
+            name="secretKey"
+            id="cred-secret-key"
+            hasStored={storedSecrets?.hasSecretKey}
+            reveal={reveal}
+          />
+        </Field>
+      </>
+    );
+  }
+
   if (kind === 'yandex') {
     return (
       <>
