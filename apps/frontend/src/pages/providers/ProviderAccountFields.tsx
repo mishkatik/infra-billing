@@ -10,6 +10,7 @@ import {
   type AccountFormValues,
   type StoredSecretFlags,
   validateAccountLabel,
+  validateProxyUrl,
 } from './providerForm';
 
 interface ProviderAccountFieldsProps {
@@ -34,6 +35,7 @@ export function ProviderAccountFields({
 }: ProviderAccountFieldsProps) {
   const { t } = useTranslation();
   const labelError = form.formState.errors.label;
+  const proxyError = form.formState.errors.proxyUrl;
   return (
     <>
       <FormSection icon={IconUserCircle} title={t('providers.account.section')}>
@@ -90,6 +92,17 @@ export function ProviderAccountFields({
             accountUuid={accountUuid}
             storedSecrets={storedSecrets}
           />
+          <div className="space-y-2">
+            <Label htmlFor="account-proxy">{t('providers.field.proxyUrl')}</Label>
+            <p className="text-xs text-muted-foreground">{t('providers.field.proxyUrlDesc')}</p>
+            <Input
+              id="account-proxy"
+              placeholder={t('providers.field.proxyUrlPlaceholder')}
+              aria-invalid={proxyError ? true : undefined}
+              {...form.register('proxyUrl', { validate: (v) => validateProxyUrl(v, t) })}
+            />
+            {proxyError && <p className="text-xs text-destructive">{proxyError.message}</p>}
+          </div>
         </FormSection>
       )}
     </>

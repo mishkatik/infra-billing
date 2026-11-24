@@ -1,6 +1,6 @@
 import { Logger } from '@nestjs/common';
 import axios, { type AxiosInstance } from 'axios';
-import { REQUEST_TIMEOUT_MS } from '../common/http';
+import { createHttp, REQUEST_TIMEOUT_MS } from '../common/http';
 import { totpCode } from '../common/totp';
 import { Account, Connector, PaymentData, ServiceData } from '../connector.interface';
 import { mapHostvdsPayments, mapHostvdsServer, money, nextMarker } from './hostvds.mapper';
@@ -96,7 +96,7 @@ export class HostvdsConnector implements Connector {
     this.brand = brand;
     this.creds = creds;
     // Neither API legitimately redirects; refuse rather than re-send the token elsewhere.
-    this.http = axios.create({ timeout: REQUEST_TIMEOUT_MS, maxRedirects: 0 });
+    this.http = createHttp({ timeout: REQUEST_TIMEOUT_MS, maxRedirects: 0 });
     this.http.interceptors.response.use(undefined, (e) => {
       // Never rethrow the AxiosError itself: its config carries the token or the password, and
       // sync errors end up in logs/DB. Keep only the status and the path.

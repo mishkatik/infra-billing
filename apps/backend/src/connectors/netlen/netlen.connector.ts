@@ -1,6 +1,6 @@
 import axios, { type AxiosInstance } from 'axios';
 import Decimal from 'decimal.js';
-import { REQUEST_TIMEOUT_MS } from '../common/http';
+import { createHttp, REQUEST_TIMEOUT_MS } from '../common/http';
 import { Account, Connector, PaymentData, ServiceData } from '../connector.interface';
 import { NETLEN_CURRENCY, mapNetlenServer, mapNetlenTransaction } from './netlen.mapper';
 import {
@@ -24,7 +24,7 @@ export class NetlenConnector implements Connector {
   private readonly http: AxiosInstance;
 
   constructor(token: string) {
-    this.http = axios.create({
+    this.http = createHttp({
       baseURL: BASE_URL,
       timeout: REQUEST_TIMEOUT_MS,
       headers: { 'X-API-Key': token },

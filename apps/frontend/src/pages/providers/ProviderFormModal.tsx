@@ -83,7 +83,11 @@ function CreateProviderForm({
         kind: iv.kind as ProviderKind,
         loginUrl: iv.loginUrl || undefined,
         ...(iconName ? { iconName, iconBg: iv.iconBg || DEFAULT_ICON_BG } : {}),
-        account: { isPostpaid: av.isPostpaid, ...buildCredentials(iv.kind, av) },
+        account: {
+          isPostpaid: av.isPostpaid,
+          proxyUrl: av.proxyUrl.trim(),
+          ...buildCredentials(iv.kind, av),
+        },
       });
       notifySuccess(t('providers.created'));
       onDone();

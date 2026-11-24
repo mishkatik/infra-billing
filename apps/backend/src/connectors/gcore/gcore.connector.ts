@@ -1,7 +1,7 @@
 import { Logger } from '@nestjs/common';
 import axios, { type AxiosInstance } from 'axios';
 import Decimal from 'decimal.js';
-import { REQUEST_TIMEOUT_MS } from '../common/http';
+import { createHttp, REQUEST_TIMEOUT_MS } from '../common/http';
 import { Account, Connector, PaymentData, ServiceData } from '../connector.interface';
 import {
   aggregateGcoreCharges,
@@ -59,7 +59,7 @@ export class GcoreConnector implements Connector {
 
   constructor(token: string) {
     const key = token.trim().replace(/^apikey\s+/i, '');
-    this.http = axios.create({
+    this.http = createHttp({
       baseURL: BASE_URL,
       timeout: REQUEST_TIMEOUT_MS,
       maxRedirects: 0,

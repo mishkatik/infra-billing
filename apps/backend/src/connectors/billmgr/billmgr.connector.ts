@@ -2,7 +2,7 @@ import { Logger } from '@nestjs/common';
 import axios, { type AxiosInstance } from 'axios';
 import Decimal from 'decimal.js';
 import { normalizeCurrency } from '../common/currency';
-import { REQUEST_TIMEOUT_MS } from '../common/http';
+import { createHttp, REQUEST_TIMEOUT_MS } from '../common/http';
 import { Account, Connector, PaymentData, ServiceData } from '../connector.interface';
 import { mapBillmgrService } from './billmgr.mapper';
 import {
@@ -144,7 +144,7 @@ export class BillmgrConnector implements Connector {
 
   constructor(creds: BillmgrCredentials) {
     this.creds = creds;
-    this.http = axios.create({
+    this.http = createHttp({
       baseURL: creds.baseUrl.replace(/\/+$/, ''),
       timeout: REQUEST_TIMEOUT_MS,
     });

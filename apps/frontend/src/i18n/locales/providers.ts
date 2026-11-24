@@ -176,9 +176,14 @@ export const providers = {
       loginUrlDesc: "Also used to fetch the provider's favicon",
       isPostpaid: 'Invoice-billed (postpaid)',
       isPostpaidDesc: 'Balance is not prepaid funds — exclude from low-balance and runway warnings',
+      proxyUrl: 'SOCKS proxy (optional)',
+      proxyUrlDesc:
+        'Sync of this account goes through the proxy. Prefer socks5h:// — DNS is resolved by the proxy. Empty — connect directly',
+      proxyUrlPlaceholder: 'socks5h://user:pass@host:1080',
     },
     err: {
       loginUrlInvalid: 'Enter a full link starting with https://',
+      proxyUrlInvalid: 'Enter a link starting with socks5h://, socks5:// or socks4://',
       hostbillCreds: 'Enter base URL, login and password',
       selectelCreds: 'Enter account number, username and password',
       vps4Token: 'Enter the 4VPS API token',
@@ -464,9 +469,14 @@ export const providers = {
       loginUrlDesc: 'Также используется для иконки (фавикона) провайдера',
       isPostpaid: 'Оплата по инвойсам (постоплата)',
       isPostpaidDesc: 'Баланс — не предоплата; не учитывать в предупреждениях о нехватке и запасе',
+      proxyUrl: 'SOCKS-прокси (необязательно)',
+      proxyUrlDesc:
+        'Синк этого аккаунта идёт через прокси. Лучше socks5h:// — DNS резолвит прокси. Пусто — напрямую',
+      proxyUrlPlaceholder: 'socks5h://user:pass@host:1080',
     },
     err: {
       loginUrlInvalid: 'Укажите полную ссылку, начиная с https://',
+      proxyUrlInvalid: 'Укажите ссылку, начиная с socks5h://, socks5:// или socks4://',
       hostbillCreds: 'Укажите base URL, логин и пароль',
       selectelCreds: 'Укажите номер аккаунта, имя пользователя и пароль',
       vps4Token: 'Укажите API-токен 4VPS',

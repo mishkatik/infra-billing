@@ -17,6 +17,7 @@ import { SettingsRepository } from '@repositories/settings/settings.repository';
 import { SyncRunsRepository } from '@repositories/sync-runs/sync-runs.repository';
 import { CryptoService } from '../crypto/crypto.service';
 import { FaviconsService } from '../favicons/favicons.service';
+import { withProxy } from '@connectors/common/http';
 import { ConnectorFactory } from '@connectors/connector.factory';
 import { PaymentData, ServiceData } from '@connectors/connector.interface';
 import { mapSyncRun } from '@common/mappers';
@@ -157,68 +158,71 @@ export class SyncService implements OnModuleInit {
     const timer = setTimeout(() => controller.abort(), SYNC_TIMEOUT_MS);
 
     try {
-      if (!account.credentialsEnc) throw new Error('Account has no API token');
-      const token = this.crypto.decrypt(account.credentialsEnc);
-      const connector = this.connectors.create(provider.kind, token);
+      // Everything the connector sends during this sync goes through the account's proxy.
+      return await withProxy(account.proxyUrl, async () => {
+        if (!account.credentialsEnc) throw new Error('Account has no API token');
+        const token = this.crypto.decrypt(account.credentialsEnc);
+        const connector = this.connectors.create(provider.kind, token);
 
-      // Needs no auth (reads the public login page) and runs before fetchAccount: the icon
-      // resolves even when the credentials are wrong. Non-fatal; null keeps the stored link.
-      // The icon belongs to the provider, so every account refreshes the same link.
-      if (connector.fetchFaviconUrl) {
-        try {
-          const url = await connector.fetchFaviconUrl(controller.signal);
-          if (url && url !== provider.faviconLink) {
-            await this.providers.updateFaviconLink(providerUuid, url);
-            this.favicons.invalidateProvider(providerUuid);
+        // Needs no auth (reads the public login page) and runs before fetchAccount: the icon
+        // resolves even when the credentials are wrong. Non-fatal; null keeps the stored link.
+        // The icon belongs to the provider, so every account refreshes the same link.
+        if (connector.fetchFaviconUrl) {
+          try {
+            const url = await connector.fetchFaviconUrl(controller.signal);
+            if (url && url !== provider.faviconLink) {
+              await this.providers.updateFaviconLink(providerUuid, url);
+              this.favicons.invalidateProvider(providerUuid);
+            }
+          } catch (e) {
+            this.logger.warn(
+              `Favicon fetch for "${name}" (${accountUuid}) skipped: ${e instanceof Error ? e.message : String(e)}`,
+            );
           }
-        } catch (e) {
-          this.logger.warn(
-            `Favicon fetch for "${name}" (${accountUuid}) skipped: ${e instanceof Error ? e.message : String(e)}`,
-          );
         }
-      }
 
-      const remote = await this.withRetry(`fetchAccount "${name}"`, controller.signal, () =>
-        connector.fetchAccount(controller.signal),
-      );
-      // Some providers (e.g. Hetzner) expose no account balance → skip balance/snapshot.
-      if (remote.balance !== null) {
-        const balance = remote.balance.toFixed(2);
-        await this.accounts.updateBalance(accountUuid, balance, remote.currency);
-        await this.snapshots.record(accountUuid, balance, remote.currency);
-      }
+        const remote = await this.withRetry(`fetchAccount "${name}"`, controller.signal, () =>
+          connector.fetchAccount(controller.signal),
+        );
+        // Some providers (e.g. Hetzner) expose no account balance → skip balance/snapshot.
+        if (remote.balance !== null) {
+          const balance = remote.balance.toFixed(2);
+          await this.accounts.updateBalance(accountUuid, balance, remote.currency);
+          await this.snapshots.record(accountUuid, balance, remote.currency);
+        }
 
-      const fetched = await this.withRetry(`fetchServices "${name}"`, controller.signal, () =>
-        connector.fetchServices(controller.signal),
-      );
-      const owner = { accountUuid, providerUuid };
-      const servicesFound = await this.upsertServices(owner, fetched, remote.currency);
+        const fetched = await this.withRetry(`fetchServices "${name}"`, controller.signal, () =>
+          connector.fetchServices(controller.signal),
+        );
+        const owner = { accountUuid, providerUuid };
+        const servicesFound = await this.upsertServices(owner, fetched, remote.currency);
 
-      // Import the payment/expense ledger for connectors that expose one (e.g. BILLmanager).
-      // Non-fatal: a ledger failure must not lose the services/balance sync.
-      if (connector.fetchPayments) {
-        try {
-          const payments = await this.withRetry(
-            `fetchPayments "${name}"`,
-            controller.signal,
-            // The narrowing from the `if` guard above does not survive into the closure.
-            () => connector.fetchPayments!(controller.signal),
-          );
-          const imported = await this.upsertPayments(owner, payments, provider.kind);
-          if (imported) {
-            this.logger.log(`Sync "${name}" (${accountUuid}): imported ${imported} payment(s)`);
+        // Import the payment/expense ledger for connectors that expose one (e.g. BILLmanager).
+        // Non-fatal: a ledger failure must not lose the services/balance sync.
+        if (connector.fetchPayments) {
+          try {
+            const payments = await this.withRetry(
+              `fetchPayments "${name}"`,
+              controller.signal,
+              // The narrowing from the `if` guard above does not survive into the closure.
+              () => connector.fetchPayments!(controller.signal),
+            );
+            const imported = await this.upsertPayments(owner, payments, provider.kind);
+            if (imported) {
+              this.logger.log(`Sync "${name}" (${accountUuid}): imported ${imported} payment(s)`);
+            }
+          } catch (e) {
+            this.logger.warn(
+              `Payment import for "${name}" (${accountUuid}) skipped: ${e instanceof Error ? e.message : String(e)}`,
+            );
           }
-        } catch (e) {
-          this.logger.warn(
-            `Payment import for "${name}" (${accountUuid}) skipped: ${e instanceof Error ? e.message : String(e)}`,
-          );
         }
-      }
 
-      await this.accounts.markSynced(accountUuid);
-      const done = await this.syncRuns.markOk(run.id, servicesFound);
-      this.logger.log(`Sync "${name}" (${accountUuid}): ok, ${servicesFound} service(s)`);
-      return mapSyncRun(done);
+        await this.accounts.markSynced(accountUuid);
+        const done = await this.syncRuns.markOk(run.id, servicesFound);
+        this.logger.log(`Sync "${name}" (${accountUuid}): ok, ${servicesFound} service(s)`);
+        return mapSyncRun(done);
+      });
     } catch (e) {
       // On a sync-wide abort axios reports just "canceled" — name the real reason for lastSyncError.
       const message = controller.signal.aborted

@@ -88,18 +88,20 @@ function AccountForm({
     }
     const creds = buildCredentials(provider.kind, v);
     const label = v.label.trim();
+    // Sent even when blank: an empty string clears the proxy.
+    const proxyUrl = v.proxyUrl.trim();
     try {
       let saved: ProviderAccount;
       if (account) {
         saved = await update.mutateAsync({
           uuid: account.uuid,
-          dto: { label: label || null, isPostpaid: v.isPostpaid, ...creds },
+          dto: { label: label || null, isPostpaid: v.isPostpaid, proxyUrl, ...creds },
         });
         notifySuccess(t('providers.account.updated'));
       } else {
         saved = await create.mutateAsync({
           providerUuid: provider.uuid,
-          dto: { label, isPostpaid: v.isPostpaid, ...creds },
+          dto: { label, isPostpaid: v.isPostpaid, proxyUrl, ...creds },
         });
         notifySuccess(t('providers.account.created'));
       }

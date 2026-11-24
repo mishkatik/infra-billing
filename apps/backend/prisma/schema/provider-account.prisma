@@ -10,6 +10,8 @@ model ProviderAccount {
   credentialsEnc  Bytes?    @map("credentials_enc")
   isEnabled       Boolean   @default(true) @map("is_enabled")
   isPostpaid      Boolean   @default(false) @map("is_postpaid")
+  // SOCKS proxy for this account's sync (plaintext, like the Telegram proxy); null = direct.
+  proxyUrl        String?   @map("proxy_url")
   balance         Decimal?  @map("balance") @db.Decimal(14, 2)
   balanceCurrency String?   @map("balance_currency")
   balanceSyncedAt DateTime? @map("balance_synced_at")

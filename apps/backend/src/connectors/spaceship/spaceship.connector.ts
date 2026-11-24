@@ -1,5 +1,5 @@
 import axios, { type AxiosInstance } from 'axios';
-import { REQUEST_TIMEOUT_MS } from '../common/http';
+import { createHttp, REQUEST_TIMEOUT_MS } from '../common/http';
 import { Account, Connector, ServiceData } from '../connector.interface';
 import { mapSpaceshipDomain } from './spaceship.mapper';
 import {
@@ -22,7 +22,7 @@ export class SpaceshipConnector implements Connector {
   private readonly http: AxiosInstance;
 
   constructor(creds: SpaceshipCredentials) {
-    this.http = axios.create({
+    this.http = createHttp({
       baseURL: BASE_URL,
       timeout: REQUEST_TIMEOUT_MS,
       headers: { 'X-API-Key': creds.apiKey, 'X-API-Secret': creds.apiSecret },

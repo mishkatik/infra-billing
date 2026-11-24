@@ -4,7 +4,7 @@ import {
   type GetCostAndUsageCommandOutput,
   type ResultByTime,
 } from '@aws-sdk/client-cost-explorer';
-import { REQUEST_TIMEOUT_MS } from '../common/http';
+import { proxyAgent, REQUEST_TIMEOUT_MS } from '../common/http';
 import { Account, Connector, PaymentData, ServiceData } from '../connector.interface';
 import {
   AWS_CURRENCY,
@@ -30,7 +30,7 @@ export class AwsConnector implements Connector {
       region: COST_EXPLORER_REGION,
       credentials: { accessKeyId: creds.accessKeyId, secretAccessKey: creds.secretAccessKey },
       maxAttempts: 1,
-      requestHandler: { requestTimeout: REQUEST_TIMEOUT_MS },
+      requestHandler: { requestTimeout: REQUEST_TIMEOUT_MS, httpsAgent: proxyAgent() },
     });
   }
 
