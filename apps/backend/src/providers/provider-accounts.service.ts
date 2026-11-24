@@ -36,6 +36,7 @@ export class ProviderAccountsService {
     }
     if (dto.isEnabled !== undefined) data.isEnabled = dto.isEnabled;
     if (dto.isPostpaid !== undefined) data.isPostpaid = dto.isPostpaid;
+    if (dto.proxyUrl !== undefined) data.proxyUrl = dto.proxyUrl || null;
     // Merge onto existing credentials so a partial edit works, e.g. adding only a TOTP
     // secret to an existing BILLmanager account without re-entering the password.
     const creds = this.credentials.buildCredentials(kind, dto, existing.credentialsEnc);

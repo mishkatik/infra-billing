@@ -68,3 +68,6 @@ export const moneyAmountSchema = z.object({
   currency: currencySchema.describe('Currency code'),
 });
 export type MoneyAmount = z.infer<typeof moneyAmountSchema>;
+
+/** SOCKS proxy URL (socks/socks4/socks4a/socks5/socks5h); an empty string clears the field. */
+export const socksProxyUrlSchema = z.string().regex(/^$|^socks(4a?|5h?)?:\/\/\S+$/);

@@ -1,5 +1,5 @@
 import axios, { type AxiosInstance } from 'axios';
-import { REQUEST_TIMEOUT_MS } from '../common/http';
+import { createHttp, REQUEST_TIMEOUT_MS } from '../common/http';
 import { Account, Connector, PaymentData, ServiceData } from '../connector.interface';
 import { CLOUDFLARE_CURRENCY, mapCfBilling, mapCfDomain } from './cloudflare.mapper';
 import { CfBillingItem, CfDomain, CfEnvelope, CloudflareCredentials } from './cloudflare.types';
@@ -21,7 +21,7 @@ export class CloudflareConnector implements Connector {
 
   constructor(creds: CloudflareCredentials) {
     this.acct = creds.accountId;
-    this.http = axios.create({
+    this.http = createHttp({
       baseURL: BASE_URL,
       timeout: REQUEST_TIMEOUT_MS,
       headers: { Authorization: `Bearer ${creds.apiToken}` },

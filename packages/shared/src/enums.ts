@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-/** Connector kinds. API-backed: timeweb, hetzner, hostkey, netcup, hostbill, billmgr, selectel, 4vps, netlen, beget, porkbun, spaceship, vultr, linode, aeza, vdsina, cloudflare, stormwall, netangels, yandex, doubleservers, openrouter, hostup, hostvds, datapacket, tubehosting, gcore, nodehost. manual = no sync. */
+/** Connector kinds. API-backed: timeweb, hetzner, hostkey, netcup, hostbill, billmgr, selectel, 4vps, netlen, beget, porkbun, spaceship, vultr, linode, aeza, vdsina, cloudflare, stormwall, netangels, yandex, doubleservers, openrouter, hostup, hostvds, datapacket, tubehosting, gcore, nodehost, aws. manual = no sync. */
 export const providerKindSchema = z.enum([
   'timeweb',
   'hetzner',
@@ -30,6 +30,7 @@ export const providerKindSchema = z.enum([
   'tubehosting',
   'gcore',
   'nodehost',
+  'aws',
   'manual',
 ]);
 export type ProviderKind = z.infer<typeof providerKindSchema>;
@@ -58,6 +59,7 @@ export const PROVIDER_KINDS_WITH_PAYMENT_IMPORT = [
   'tubehosting',
   'gcore',
   'nodehost',
+  'aws',
 ] as const satisfies readonly ProviderKind[];
 
 const paymentImportKindSet = new Set<string>(PROVIDER_KINDS_WITH_PAYMENT_IMPORT);

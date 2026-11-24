@@ -1,6 +1,6 @@
-import axios, { type AxiosInstance } from 'axios';
+import type { AxiosInstance } from 'axios';
 import Decimal from 'decimal.js';
-import { REQUEST_TIMEOUT_MS } from '../common/http';
+import { createHttp, REQUEST_TIMEOUT_MS } from '../common/http';
 import { Account, Connector, ServiceData } from '../connector.interface';
 import { isLivePorkbunDomain, mapPorkbunDomain, porkbunTld } from './porkbun.mapper';
 import {
@@ -26,7 +26,7 @@ export class PorkbunConnector implements Connector {
   private readonly http: AxiosInstance;
 
   constructor(creds: PorkbunCredentials) {
-    this.http = axios.create({
+    this.http = createHttp({
       baseURL: BASE_URL,
       timeout: REQUEST_TIMEOUT_MS,
       headers: { 'X-API-Key': creds.apiKey, 'X-Secret-API-Key': creds.secretApiKey },

@@ -1,5 +1,5 @@
 import axios, { type AxiosInstance } from 'axios';
-import { REQUEST_TIMEOUT_MS } from '../common/http';
+import { createHttp, REQUEST_TIMEOUT_MS } from '../common/http';
 import { Account, Connector, ServiceData } from '../connector.interface';
 import { NETCUP_CLIENT_ID, NETCUP_TOKEN_URL } from './netcup.device-flow';
 import { mapNetcupServer } from './netcup.mapper';
@@ -28,7 +28,7 @@ export class NetcupConnector implements Connector {
   private accessToken: string | null = null;
 
   constructor(private readonly refreshToken: string) {
-    this.http = axios.create({ baseURL: API_BASE_URL, timeout: REQUEST_TIMEOUT_MS });
+    this.http = createHttp({ baseURL: API_BASE_URL, timeout: REQUEST_TIMEOUT_MS });
   }
 
   kind(): string {

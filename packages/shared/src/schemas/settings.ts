@@ -1,6 +1,12 @@
 import { z } from 'zod';
 import { rateSourceSchema } from '../enums';
-import { currencySchema, isoDateSchema, timeOfDaySchema, timeZoneSchema } from './common';
+import {
+  currencySchema,
+  isoDateSchema,
+  socksProxyUrlSchema,
+  timeOfDaySchema,
+  timeZoneSchema,
+} from './common';
 
 export const settingsSchema = z.object({
   baseCurrency: currencySchema.describe('Base currency for analytics'),
@@ -58,10 +64,7 @@ export const updateSettingsSchema = z.object({
   // Empty string clears the field.
   telegramChatId: z.string().describe('Telegram chat ID').optional(),
   telegramTopicId: z.string().describe('Telegram topic ID').optional(),
-  // Empty string clears; otherwise a socks/socks4/socks4a/socks5/socks5h URL.
-  telegramProxyUrl: z
-    .string()
-    .regex(/^$|^socks(4a?|5h?)?:\/\/\S+$/)
+  telegramProxyUrl: socksProxyUrlSchema
     .describe('SOCKS proxy URL for Telegram notifications')
     .optional(),
   quietHoursEnabled: z

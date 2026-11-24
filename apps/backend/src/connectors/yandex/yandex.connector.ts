@@ -1,7 +1,7 @@
 import axios, { type AxiosInstance } from 'axios';
 import Decimal from 'decimal.js';
 import jwt from 'jsonwebtoken';
-import { REQUEST_TIMEOUT_MS } from '../common/http';
+import { createHttp, REQUEST_TIMEOUT_MS } from '../common/http';
 import { Account, Connector, PaymentData, ServiceData } from '../connector.interface';
 import { fetchResourceUsageReport, fetchUsageReport } from './yandex.consumption';
 import {
@@ -56,7 +56,7 @@ export class YandexConnector implements Connector {
 
   constructor(creds: YandexCredentials) {
     this.creds = creds;
-    this.http = axios.create({ timeout: REQUEST_TIMEOUT_MS });
+    this.http = createHttp({ timeout: REQUEST_TIMEOUT_MS });
     // Surface Yandex Cloud's structured error ({ code, message }) instead of a bare HTTP status.
     this.http.interceptors.response.use(undefined, (e) => {
       if (axios.isAxiosError(e)) {

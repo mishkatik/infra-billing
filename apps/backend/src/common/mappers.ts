@@ -41,6 +41,7 @@ export function mapProviderAccount(a: AccountRow, hints: CredentialHints = {}): 
     label: a.label,
     isEnabled: a.isEnabled,
     isPostpaid: a.isPostpaid,
+    proxyUrl: a.proxyUrl,
     balance: decimalToString(a.balance),
     balanceCurrency: a.balanceCurrency,
     balanceSyncedAt: dateToIso(a.balanceSyncedAt),

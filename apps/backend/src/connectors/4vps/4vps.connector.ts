@@ -1,6 +1,6 @@
 import axios, { type AxiosInstance } from 'axios';
 import Decimal from 'decimal.js';
-import { REQUEST_TIMEOUT_MS } from '../common/http';
+import { createHttp, REQUEST_TIMEOUT_MS } from '../common/http';
 import { Account, Connector, ServiceData } from '../connector.interface';
 import { mapFourVpsServer } from './4vps.mapper';
 import { ApiResponse, Datacenter, FourVpsCredentials, FourVpsServer } from './4vps.types';
@@ -19,7 +19,7 @@ export class FourVpsConnector implements Connector {
   private readonly http: AxiosInstance;
 
   constructor(creds: FourVpsCredentials) {
-    this.http = axios.create({
+    this.http = createHttp({
       baseURL: BASE_URL,
       timeout: REQUEST_TIMEOUT_MS,
       headers: { Authorization: `Bearer ${creds.token}` },

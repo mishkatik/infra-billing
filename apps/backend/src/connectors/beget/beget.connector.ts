@@ -1,6 +1,6 @@
 import axios, { type AxiosInstance } from 'axios';
 import Decimal from 'decimal.js';
-import { REQUEST_TIMEOUT_MS } from '../common/http';
+import { createHttp, REQUEST_TIMEOUT_MS } from '../common/http';
 import { totpCode } from '../common/totp';
 import { Account, Connector, ServiceData } from '../connector.interface';
 import { BEGET_CURRENCY, mapBegetCloudService, mapBegetVps } from './beget.mapper';
@@ -37,7 +37,7 @@ export class BegetConnector implements Connector {
 
   constructor(creds: BegetCredentials) {
     this.creds = creds;
-    this.http = axios.create({ baseURL: BASE_URL, timeout: REQUEST_TIMEOUT_MS });
+    this.http = createHttp({ baseURL: BASE_URL, timeout: REQUEST_TIMEOUT_MS });
     // New-API errors carry the reason in the `x-error-result` header with an empty body. Surface it.
     this.http.interceptors.response.use(undefined, (e) => {
       if (axios.isAxiosError(e)) {

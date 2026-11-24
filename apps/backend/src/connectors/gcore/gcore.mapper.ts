@@ -99,15 +99,11 @@ export function toGcoreExpense(op: GcoreOperation): Expense | null {
 
 export const gcoreFeatureExternalId = (featureId: number) => `feature:${featureId}`;
 
-/**
- * Expenses are posted many times a day per billing feature; keep the ledger readable with one
- * charge per feature and UTC day (re-synced days are updated in place by externalId).
- */
 export function aggregateGcoreCharges(expenses: Expense[]): PaymentData[] {
   const byKey = new Map<string, PaymentData>();
   for (const e of expenses) {
-    const day = e.date.toISOString().slice(0, 10);
-    const key = `expense:${e.featureId}:${e.currency}:${day}`;
+    const month = e.date.toISOString().slice(0, 7);
+    const key = `expense:${e.featureId}:${e.currency}:${month}`;
     const prev = byKey.get(key);
     if (prev) {
       prev.amount = prev.amount.plus(e.amount);
@@ -118,7 +114,7 @@ export function aggregateGcoreCharges(expenses: Expense[]): PaymentData[] {
       type: 'charge',
       amount: e.amount,
       currency: e.currency,
-      date: new Date(`${day}T00:00:00Z`),
+      date: new Date(`${month}-01T00:00:00Z`),
       description: e.featureName,
       serviceExternalId: gcoreFeatureExternalId(e.featureId),
     });

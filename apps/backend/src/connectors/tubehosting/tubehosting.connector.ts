@@ -1,6 +1,6 @@
 import axios, { type AxiosInstance } from 'axios';
 import type { z } from 'zod';
-import { REQUEST_TIMEOUT_MS } from '../common/http';
+import { createHttp, REQUEST_TIMEOUT_MS } from '../common/http';
 import { totpCode } from '../common/totp';
 import { Account, Connector, PaymentData, ServiceData } from '../connector.interface';
 import {
@@ -40,7 +40,7 @@ export class TubeHostingConnector implements Connector {
   private tokens: Tokens | null = null;
 
   constructor(private readonly creds: TubeHostingCredentials) {
-    this.http = axios.create({
+    this.http = createHttp({
       baseURL: BASE_URL,
       timeout: REQUEST_TIMEOUT_MS,
       maxRedirects: 0,

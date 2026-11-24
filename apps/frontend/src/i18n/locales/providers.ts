@@ -116,7 +116,7 @@ export const providers = {
       apiTokenDescDatapacket:
         'DataPacket client panel → Security → Add API key (read-only is enough). Syncs servers with their subscription price and location, other subscription items (IPs, traffic, DDoS) as one service per subscription, and paid invoices. The API has no account balance.',
       apiTokenDescGcore:
-        'Gcore portal → Profile → API tokens → create a permanent token. Any role syncs the balance, card payments and daily charges. Cloud servers (with their volumes and IPs) need the Administrators role; with a narrower role (e.g. Users) services are listed per billing feature instead.',
+        'Gcore portal → Profile → API tokens → create a permanent token. Any role syncs the balance, card payments and monthly charges per billing item. Cloud servers (with their volumes and IPs) need the Administrators role; with a narrower role (e.g. Users) services are listed per billing feature instead.',
       apiTokenDescNodehost:
         'NodeHost developer cabinet → API keys: a read-only key (scopes account:read and servers:read) is enough. Syncs the balance (USD), servers with the monthly price and expiry date, and top-ups and charges. Only servers created through the API are visible: servers bought on the website are not.',
       managementKey: 'Management API key',
@@ -168,13 +168,22 @@ export const providers = {
       spaceshipApiKey: 'API key',
       spaceshipApiKeyDesc: 'Spaceship → API manager → New API key',
       spaceshipApiSecret: 'API secret',
+      awsAccessKeyId: 'Access key ID',
+      awsAccessKeyIdDesc:
+        'IAM → Users → Create user, attach an inline policy that allows only ce:GetCostAndUsage, then Security credentials → Create access key. Cost Explorer must be enabled in Billing and Cost Management; each sync makes one paid Cost Explorer API request ($0.01).',
+      awsSecretAccessKey: 'Secret access key',
       loginUrl: 'Account link',
       loginUrlDesc: "Also used to fetch the provider's favicon",
       isPostpaid: 'Invoice-billed (postpaid)',
       isPostpaidDesc: 'Balance is not prepaid funds — exclude from low-balance and runway warnings',
+      proxyUrl: 'SOCKS proxy (optional)',
+      proxyUrlDesc:
+        'Sync of this account goes through the proxy. Prefer socks5h:// — DNS is resolved by the proxy. Empty — connect directly',
+      proxyUrlPlaceholder: 'socks5h://user:pass@host:1080',
     },
     err: {
       loginUrlInvalid: 'Enter a full link starting with https://',
+      proxyUrlInvalid: 'Enter a link starting with socks5h://, socks5:// or socks4://',
       hostbillCreds: 'Enter base URL, login and password',
       selectelCreds: 'Enter account number, username and password',
       vps4Token: 'Enter the 4VPS API token',
@@ -185,6 +194,7 @@ export const providers = {
       vultrToken: 'Enter the Vultr API key',
       porkbunCreds: 'Enter the Porkbun API key and secret key',
       spaceshipCreds: 'Enter the Spaceship API key and secret',
+      awsCreds: 'Enter the AWS access key ID and secret access key',
       linodeToken: 'Enter the Linode API token',
       aezaToken: 'Enter the Aeza API key',
       hostkeyToken: 'Enter the Hostkey InvAPI key',
@@ -399,7 +409,7 @@ export const providers = {
       apiTokenDescDatapacket:
         'Панель DataPacket → Security → Add API key (достаточно read-only). Синхронизируются серверы с ценой из подписки и локацией, прочие позиции подписки (IP, трафик, DDoS) — одной услугой на подписку, и оплаченные счета. Баланса аккаунта в API нет.',
       apiTokenDescGcore:
-        'Портал Gcore → Profile → API tokens → создайте постоянный токен. С любой ролью синкаются баланс, оплаты картой и списания по дням. Облачные серверы (вместе с дисками и IP) видны только с ролью Administrators; с более узкой (например, Users) услуги строятся по биллинговым позициям.',
+        'Портал Gcore → Profile → API tokens → создайте постоянный токен. С любой ролью синкаются баланс, оплаты картой и списания по биллинговым позициям за месяц. Облачные серверы (вместе с дисками и IP) видны только с ролью Administrators; с более узкой (например, Users) услуги строятся по биллинговым позициям.',
       apiTokenDescNodehost:
         'Кабинет разработчика NodeHost → API-ключи: достаточно ключа только на чтение (scopes account:read и servers:read). Синхронизируются баланс (USD), серверы с месячной ценой и датой окончания, пополнения и списания. Видны только серверы, созданные через API: купленные на сайте в нём не появляются.',
       managementKey: 'Management API-ключ',
@@ -451,13 +461,22 @@ export const providers = {
       spaceshipApiKey: 'API-ключ',
       spaceshipApiKeyDesc: 'Spaceship → API manager → создать API-ключ',
       spaceshipApiSecret: 'API-секрет',
+      awsAccessKeyId: 'Access key ID',
+      awsAccessKeyIdDesc:
+        'IAM → Users → Create user, добавьте inline-политику только с ce:GetCostAndUsage, затем Security credentials → Create access key. Cost Explorer должен быть включён в Billing and Cost Management; каждый синк — один платный запрос к Cost Explorer API ($0.01).',
+      awsSecretAccessKey: 'Secret access key',
       loginUrl: 'Ссылка на ЛК',
       loginUrlDesc: 'Также используется для иконки (фавикона) провайдера',
       isPostpaid: 'Оплата по инвойсам (постоплата)',
       isPostpaidDesc: 'Баланс — не предоплата; не учитывать в предупреждениях о нехватке и запасе',
+      proxyUrl: 'SOCKS-прокси (необязательно)',
+      proxyUrlDesc:
+        'Синк этого аккаунта идёт через прокси. Лучше socks5h:// — DNS резолвит прокси. Пусто — напрямую',
+      proxyUrlPlaceholder: 'socks5h://user:pass@host:1080',
     },
     err: {
       loginUrlInvalid: 'Укажите полную ссылку, начиная с https://',
+      proxyUrlInvalid: 'Укажите ссылку, начиная с socks5h://, socks5:// или socks4://',
       hostbillCreds: 'Укажите base URL, логин и пароль',
       selectelCreds: 'Укажите номер аккаунта, имя пользователя и пароль',
       vps4Token: 'Укажите API-токен 4VPS',
@@ -468,6 +487,7 @@ export const providers = {
       vultrToken: 'Укажите API-ключ Vultr',
       porkbunCreds: 'Укажите API-ключ и секретный ключ Porkbun',
       spaceshipCreds: 'Укажите API-ключ и секрет Spaceship',
+      awsCreds: 'Укажите access key ID и secret access key AWS',
       linodeToken: 'Укажите API-токен Linode',
       aezaToken: 'Укажите API-ключ Aeza',
       hostkeyToken: 'Укажите API-ключ Hostkey InvAPI',

@@ -1,6 +1,6 @@
 {
   "name": "@infra/backend",
-  "version": "0.58.1",
+  "version": "0.59.0",
   "private": true,
   "main": "dist/main.js",
   "bin": {
@@ -19,6 +19,7 @@
     "prisma:studio": "prisma studio"
   },
   "dependencies": {
+    "@aws-sdk/client-cost-explorer": "^3.1176.0",
     "@grpc/grpc-js": "^1.14.4",
     "@grpc/proto-loader": "^0.8.1",
     "@infra/shared": "*",

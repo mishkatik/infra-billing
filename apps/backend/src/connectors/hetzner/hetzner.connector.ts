@@ -1,5 +1,5 @@
-import axios, { type AxiosInstance } from 'axios';
-import { REQUEST_TIMEOUT_MS } from '../common/http';
+import type { AxiosInstance } from 'axios';
+import { createHttp, REQUEST_TIMEOUT_MS } from '../common/http';
 import { Account, Connector, ServiceData } from '../connector.interface';
 import { mapHetznerServer } from './hetzner.mapper';
 import { HetznerServersResponse } from './hetzner.types';
@@ -20,7 +20,7 @@ export class HetznerConnector implements Connector {
   private readonly http: AxiosInstance;
 
   constructor(token: string) {
-    this.http = axios.create({
+    this.http = createHttp({
       baseURL: BASE_URL,
       timeout: REQUEST_TIMEOUT_MS,
       headers: { Authorization: `Bearer ${token}` },

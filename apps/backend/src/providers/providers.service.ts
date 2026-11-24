@@ -70,6 +70,7 @@ export class ProvidersService {
         create: {
           label: account.label ?? null,
           isPostpaid: account.isPostpaid ?? false,
+          proxyUrl: account.proxyUrl || null,
           credentialsEnc: this.credentials.buildCredentials(dto.kind, account),
         },
       },
@@ -109,6 +110,7 @@ export class ProvidersService {
       providerUuid,
       label: dto.label,
       isPostpaid: dto.isPostpaid ?? false,
+      proxyUrl: dto.proxyUrl || null,
       credentialsEnc: this.credentials.buildCredentials(p.kind, dto),
     });
     return mapProviderAccount(a, this.credentials.hints(p.kind, a.credentialsEnc));

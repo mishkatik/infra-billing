@@ -1,6 +1,6 @@
 import axios, { type AxiosInstance } from 'axios';
 import Decimal from 'decimal.js';
-import { REQUEST_TIMEOUT_MS } from '../common/http';
+import { createHttp, REQUEST_TIMEOUT_MS } from '../common/http';
 import { Account, Connector, PaymentData, ServiceData } from '../connector.interface';
 import { mapNetangelsPayment, mapNetangelsVm } from './netangels.mapper';
 import {
@@ -27,12 +27,12 @@ export class NetangelsConnector implements Connector {
   private authPending: Promise<string> | undefined;
 
   constructor(private readonly apiKey: string) {
-    this.http = axios.create({
+    this.http = createHttp({
       baseURL: 'https://api-ms.netangels.ru/api/v1',
       timeout: REQUEST_TIMEOUT_MS,
       maxRedirects: 0,
     });
-    this.authHttp = axios.create({
+    this.authHttp = createHttp({
       baseURL: 'https://panel.netangels.ru',
       timeout: REQUEST_TIMEOUT_MS,
       maxRedirects: 0,

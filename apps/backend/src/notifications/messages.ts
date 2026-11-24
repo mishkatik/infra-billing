@@ -112,12 +112,25 @@ export function unknownCoverageMessage(ub: UpcomingBilling): string {
 
 /** Low runway: a prepaid account whose balance is estimated to drain in a few days. */
 export function lowRunwayMessage(r: BalanceRunway): string {
+  const rate = `трата ≈<code>${esc(r.burnPerDay)} ${esc(r.currency)}</code>/день`;
+  // At zero or below there is no runway to count — say it ran out instead of "меньше часа".
+  const head = isDepleted(r)
+    ? `${EMOJI.lowBalance} <b>Баланс исчерпан</b>`
+    : `${EMOJI.balance} <b>Запас кончается</b>`;
+  const body = isDepleted(r)
+    ? `Денег на балансе не осталось — пополни (${rate}).`
+    : `Баланса хватит ещё на ${runwayLabel(r)} (${rate}).`;
   return (
-    `${EMOJI.balance} <b>Запас кончается</b>\n\n` +
+    `${head}\n\n` +
     `${EMOJI.provider} ${ownerLink(r)}\n\n` +
-    `${EMOJI.clock} Баланса хватит ещё на ${runwayLabel(r)} (трата ≈<code>${esc(r.burnPerDay)} ${esc(r.currency)}</code>/день).\n` +
+    `${EMOJI.clock} ${body}\n` +
     `${EMOJI.balance} Баланс: <code>${esc(r.balance)} ${esc(r.currency)}</code>`
   );
+}
+
+/** A sign check on the decimal string, not arithmetic, so Number is exact enough here. */
+export function isDepleted(r: Pick<BalanceRunway, 'balance'>): boolean {
+  return Number(r.balance) <= 0;
 }
 
 /** Overdue: the billing date already passed — pay or fix the date. */

@@ -25,6 +25,25 @@ import { UpcomingTable } from './UpcomingTable';
 /** Dev-only sample runway rows so the attention table can be previewed without live low balances. */
 const PREVIEW_RUNWAY: AnalyticsSummary['balanceRunway'] = [
   {
+    providerUuid: '00000000-0000-0000-0000-000000000103',
+    accountUuid: '00000000-0000-0000-0000-000000000203',
+    providerName: 'cloud.example',
+    accountLabel: null,
+    providerKind: 'yandex',
+    providerLoginUrl: null,
+    providerFaviconLink: null,
+    providerIconName: null,
+    providerIconBg: null,
+    balance: '-85.99',
+    currency: 'RUB',
+    burnPerDay: '354.76',
+    daysLeft: 0,
+    hoursLeft: 0,
+    depletionAt: new Date().toISOString(),
+    basis: 'snapshots',
+    severity: 'critical',
+  },
+  {
     providerUuid: '00000000-0000-0000-0000-000000000101',
     accountUuid: '00000000-0000-0000-0000-000000000201',
     providerName: 'selectel.ru',

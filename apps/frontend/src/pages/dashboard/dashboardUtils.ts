@@ -14,14 +14,17 @@ export const dayLabel = (t: TFunction, n: number) =>
 
 /**
  * Runway is a duration, not a calendar date: under two days whole days would read as "today" or
- * "tomorrow", so the label switches to hours.
+ * "tomorrow", so the label switches to hours. A balance at or below zero has no runway left —
+ * "within an hour" next to a negative amount would read as if there still were some.
  */
 export const runwayLabel = (t: TFunction, r: AnalyticsSummary['balanceRunway'][number]) =>
-  r.hoursLeft < 1
-    ? t('dashboard.due.withinHour')
-    : r.hoursLeft < 48
-      ? t('dashboard.due.inHours', { count: r.hoursLeft })
-      : t('dashboard.due.inDays', { n: r.daysLeft });
+  Number(r.balance) <= 0
+    ? t('dashboard.due.depleted')
+    : r.hoursLeft < 1
+      ? t('dashboard.due.withinHour')
+      : r.hoursLeft < 48
+        ? t('dashboard.due.inHours', { count: r.hoursLeft })
+        : t('dashboard.due.inDays', { n: r.daysLeft });
 
 export const agoLabel = (t: TFunction, n: number) =>
   n <= 0

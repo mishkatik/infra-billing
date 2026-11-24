@@ -1,6 +1,6 @@
 import axios, { type AxiosInstance } from 'axios';
 import { z } from 'zod';
-import { REQUEST_TIMEOUT_MS } from '../common/http';
+import { createHttp, REQUEST_TIMEOUT_MS } from '../common/http';
 import { Account, Connector, PaymentData, ServiceData } from '../connector.interface';
 import {
   DATAPACKET_FALLBACK_CURRENCY,
@@ -81,7 +81,7 @@ export class DatapacketConnector implements Connector {
   private readonly http: AxiosInstance;
 
   constructor(token: string) {
-    this.http = axios.create({
+    this.http = createHttp({
       baseURL: ENDPOINT,
       timeout: REQUEST_TIMEOUT_MS,
       maxRedirects: 0,

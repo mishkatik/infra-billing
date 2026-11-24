@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import axios, { type AxiosInstance } from 'axios';
 import type { NetcupDevicePollResult, NetcupDeviceStart } from '@infra/shared';
-import { REQUEST_TIMEOUT_MS } from '../common/http';
+import { createHttp, REQUEST_TIMEOUT_MS } from '../common/http';
 
 // netcup SCP OAuth2 (Keycloak realm `scp`). Single source for the connector + device flow.
 const OIDC = 'https://www.servercontrolpanel.de/realms/scp/protocol/openid-connect';
@@ -33,7 +33,7 @@ interface TokenResponse {
  */
 @Injectable()
 export class NetcupDeviceFlowService {
-  private readonly http: AxiosInstance = axios.create({
+  private readonly http: AxiosInstance = createHttp({
     timeout: REQUEST_TIMEOUT_MS,
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
   });

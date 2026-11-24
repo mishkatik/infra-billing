@@ -107,6 +107,7 @@ export const dashboard = {
       inHours_one: 'in {{count}} hour',
       inHours_other: 'in {{count}} hours',
       withinHour: 'within an hour',
+      depleted: 'already ran out',
     },
     ago: {
       today: 'today',
@@ -220,6 +221,7 @@ export const dashboard = {
       inDays: 'через {{n}} дн.',
       inHours: 'через {{count}} ч',
       withinHour: 'в течение часа',
+      depleted: 'уже исчерпан',
     },
     ago: {
       today: 'сегодня',

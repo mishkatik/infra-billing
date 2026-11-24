@@ -1,6 +1,6 @@
 import axios, { type AxiosInstance } from 'axios';
 import Decimal from 'decimal.js';
-import { REQUEST_TIMEOUT_MS } from '../common/http';
+import { createHttp, REQUEST_TIMEOUT_MS } from '../common/http';
 import { Account, Connector, PaymentData, ServiceData } from '../connector.interface';
 import { mapVdsinaOperation, mapVdsinaServer } from './vdsina.mapper';
 import {
@@ -53,7 +53,7 @@ export class VdsinaConnector implements Connector {
       );
     }
     this.currency = currency;
-    this.http = axios.create({
+    this.http = createHttp({
       baseURL: baseUrl,
       timeout: REQUEST_TIMEOUT_MS,
       headers: { Authorization: creds.token },
