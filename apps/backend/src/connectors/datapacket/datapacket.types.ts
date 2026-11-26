@@ -35,6 +35,14 @@ export const datapacketSubscriptionSchema = z.object({
     })
     .nullish(),
   subscriptionItems: z.array(datapacketSubscriptionItemSchema),
+  invoices: z
+    .array(
+      z.object({
+        period: z.object({ to: z.string() }).nullish(),
+        payment: z.object({ status: z.string() }).nullish(),
+      }),
+    )
+    .nullish(),
 });
 
 export const datapacketInvoiceSchema = z.object({
