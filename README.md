@@ -18,13 +18,13 @@
 - **Провайдеры с API:** Timeweb Cloud, Hetzner Cloud, Hostkey (InvAPI), netcup, HostBill,
   ISPsystem BILLmanager, Selectel, 4VPS.SU, Netlen, Beget Cloud, Porkbun, Spaceship, Vultr,
   Linode, Aeza, VDSina, Cloudflare, StormWall, NetAngels, Yandex Cloud, Double Servers, OpenRouter,
-  HostUp, HostVDS / CloudCore, DataPacket, Tube-Hosting, Gcore, NodeHost, AWS. Плюс **Manual** — провайдеры
+  HostUp, HostVDS / CloudCore, DataPacket, Tube-Hosting, Gcore, NodeHost, ishosting, AWS. Плюс **Manual** — провайдеры
   без API ведутся руками.
 - **Автосинк** (по расписанию + кнопкой): баланс + валюта аккаунта, список серверов/услуг, даты
   следующих списаний; история баланса по дням (снапшоты).
 - **Импорт платежей** там, где API отдаёт реестр: пополнения и списания (BILLmanager, Netlen,
   Vultr, Aeza, VDSina, Double Servers, HostVDS, Tube-Hosting, Gcore, NodeHost), пополнения и счета
-  (Linode), оплаченные счета (HostBill, DataPacket), платежи (HostUp), потребление (Selectel,
+  (Linode), оплаченные счета (HostBill, DataPacket, ishosting), платежи (HostUp), потребление (Selectel,
   Yandex Cloud, OpenRouter, AWS), история биллинга (Cloudflare, best-effort). Ручные платежи — в журнале.
 - **Аналитика:** месячные/годовые расходы, разрезы по провайдеру / стране / типу / валюте, прогноз
   по будущим списаниям, ближайшие списания с подсветкой критичности.
@@ -418,6 +418,20 @@ curl -H "Authorization: Bearer ib_…" https://infra-billing/api/providers
   сопоставляется по типу, валюте, времени и сумме. Списание без `serverId` относится к аккаунту;
   если ID появится позже, синк привяжет тот же платёж к серверу. Неоднозначные совпадения
   останавливают импорт платежей этого синка с предупреждением в логе.
+- **ishosting** — API-токен из кабинета (my.ishosting.com), заголовок `X-Api-Token`. Перед API
+  стоит Cloudflare: User-Agent популярных HTTP-клиентов (curl, node, axios, python-requests, Go)
+  получает JS-челлендж, поэтому коннектор шлёт свой UA, а челлендж на первом запросе после паузы
+  повторяет. Баланс — из `/profile`. Услуги — из `/services/list`. VPS, dedicated, storage и VPN
+  дочитываются из `/{тип}/{id}`: цена — `plan.total` плюс промо-скидка `plan.discount` (то, что
+  реально спишут при продлении), период — `plan.period`, дата списания — `plan.next_charge`,
+  страна — `location.code`. Имя по умолчанию совпадает с тарифом, поэтому такие услуги называются
+  «страна категория тарифа номер» (`CL Premium 1`, нумерация по id внутри группы); имя, заданное в
+  панели ishosting, сохраняется. У прочих услуг (подписка is*smart, SSL и т.п.) своего эндпоинта
+  нет: цена и период берутся из их строки в последнем оплаченном счёте (`/billing/invoice/{id}`),
+  дата списания — конец оплаченного периода; не нашлось счёта — цена остаётся прежней. Платежи:
+  оплаченные счета из `/billing/invoices` и пополнения баланса (`income` из
+  `/billing/balance/invoices`) — пополнения; оплата счёта с баланса (`outcome`) — списание,
+  привязанное к услуге, если счёт на одну услугу, а сам такой счёт пополнением не считается.
 - **AWS** — access key IAM-пользователя с единственным правом `ce:GetCostAndUsage` (IAM → Users →
   Create user → inline-политика → Security credentials → Create access key). Cost Explorer нужно один
   раз включить в Billing and Cost Management, данные появляются в течение 24 часов. API Cost
