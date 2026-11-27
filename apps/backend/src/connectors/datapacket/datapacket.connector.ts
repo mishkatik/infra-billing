@@ -26,6 +26,7 @@ const SUBSCRIPTIONS_QUERY = `query Subscriptions($input: PaginatedSubscriptionsI
       type
       currency
       billingCycle { unit quantity start }
+      invoices { period { to } payment { status } }
       subscriptionItems {
         description
         price

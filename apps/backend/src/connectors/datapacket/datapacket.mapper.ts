@@ -139,6 +139,17 @@ function nextCycleStart(
   return null;
 }
 
+function lastPaidPeriodEnd(invoices: DatapacketSubscription['invoices']): Date | null {
+  let last: Date | null = null;
+  for (const inv of invoices ?? []) {
+    if (inv.payment?.status !== 'PAID' || !inv.period) continue;
+    const to = new Date(inv.period.to);
+    if (Number.isNaN(to.getTime())) continue;
+    if (!last || to > last) last = to;
+  }
+  return last;
+}
+
 function itemCost(item: DatapacketSubscriptionItem, billing: Billing): Decimal {
   const price = toDecimal(item.price);
   if (!price.isFinite()) throw new Error('DataPacket: invalid subscription item price');
@@ -180,6 +191,9 @@ function mapServer(
  */
 export function mapDatapacketSubscription(sub: DatapacketSubscription, now: Date): ServiceData[] {
   const billing = resolveDatapacketBilling(sub.billingCycle, now);
+  if (billing.period !== 'daily') {
+    billing.nextBilling = lastPaidPeriodEnd(sub.invoices) ?? billing.nextBilling;
+  }
   const servers = new Map<string, ServiceData>();
   const extras: DatapacketSubscriptionItem[] = [];
   for (const item of sub.subscriptionItems) {
