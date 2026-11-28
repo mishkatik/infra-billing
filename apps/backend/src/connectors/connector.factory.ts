@@ -20,6 +20,7 @@ import { HetznerConnector } from './hetzner/hetzner.connector';
 import { HostkeyConnector } from './hostkey/hostkey.connector';
 import { HostbillConnector } from './hostbill/hostbill.connector';
 import type { HostbillCredentials } from './hostbill/hostbill.types';
+import { IshostingConnector } from './ishosting/ishosting.connector';
 import { HostvdsConnector } from './hostvds/hostvds.connector';
 import type { HostvdsCredentials } from './hostvds/hostvds.types';
 import { HostupConnector } from './hostup/hostup.connector';
@@ -136,6 +137,9 @@ export class ConnectorFactory {
       case 'nodehost':
         // NodeHost secret is the raw API key (single string, sent as the Authorization Bearer header).
         return new NodehostConnector(token);
+      case 'ishosting':
+        // ishosting secret is the raw API token (single string, sent as the X-Api-Token header).
+        return new IshostingConnector(token);
       case 'aws':
         return new AwsConnector(JSON.parse(token) as AwsCredentials);
       default:

@@ -683,6 +683,25 @@ export function ProviderCredentialFields({
     );
   }
 
+  if (kind === 'ishosting') {
+    return (
+      <Field
+        id="cred-token"
+        label={t('providers.field.apiToken')}
+        description={t('providers.field.apiTokenDescIshosting')}
+        link="https://my.ishosting.com/openapi.yaml"
+      >
+        <SecretFormField
+          form={form}
+          name="token"
+          id="cred-token"
+          hasStored={storedSecrets?.hasToken}
+          reveal={reveal}
+        />
+      </Field>
+    );
+  }
+
   if (kind === 'openrouter') {
     return (
       <>

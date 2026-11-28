@@ -119,6 +119,8 @@ export const providers = {
         'Gcore portal → Profile → API tokens → create a permanent token. Any role syncs the balance, card payments and monthly charges per billing item. Cloud servers (with their volumes and IPs) need the Administrators role; with a narrower role (e.g. Users) services are listed per billing feature instead.',
       apiTokenDescNodehost:
         'NodeHost developer cabinet → API keys: a read-only key (scopes account:read and servers:read) is enough. Syncs the balance (USD), servers with the monthly price and expiry date, and top-ups and charges. Only servers created through the API are visible: servers bought on the website are not.',
+      apiTokenDescIshosting:
+        'API token from the ishosting client area (my.ishosting.com). Syncs the balance, servers and other services (the is*smart subscription, SSL, …) with the price (promo discount included), location and next charge date, paid invoices, balance top-ups and charges from the balance.',
       managementKey: 'Management API key',
       apiTokenDescOpenrouter:
         'Go to openrouter.ai. Open "Home" → "Management Keys" → "New Key", enter any name, then "Create". Copy the key and paste it below.',
@@ -210,6 +212,7 @@ export const providers = {
       datapacketToken: 'Enter the DataPacket API key',
       gcoreToken: 'Enter the Gcore API token',
       nodehostToken: 'Enter the NodeHost API key',
+      ishostingToken: 'Enter the ishosting API token',
       yandexKey: 'Paste the Yandex Cloud service account authorized key (JSON)',
     },
     netcup: {
@@ -412,6 +415,8 @@ export const providers = {
         'Портал Gcore → Profile → API tokens → создайте постоянный токен. С любой ролью синкаются баланс, оплаты картой и списания по биллинговым позициям за месяц. Облачные серверы (вместе с дисками и IP) видны только с ролью Administrators; с более узкой (например, Users) услуги строятся по биллинговым позициям.',
       apiTokenDescNodehost:
         'Кабинет разработчика NodeHost → API-ключи: достаточно ключа только на чтение (scopes account:read и servers:read). Синхронизируются баланс (USD), серверы с месячной ценой и датой окончания, пополнения и списания. Видны только серверы, созданные через API: купленные на сайте в нём не появляются.',
+      apiTokenDescIshosting:
+        'API-токен из кабинета ishosting (my.ishosting.com). Синхронизируются баланс, серверы и прочие услуги (подписка is*smart, SSL и т.п.) с ценой (с учётом промо-скидки), локацией и датой следующего списания, оплаченные счета, пополнения баланса и списания с него.',
       managementKey: 'Management API-ключ',
       apiTokenDescOpenrouter:
         'Зайдите на openrouter.ai. Откройте "Home" → "Management Keys" → "New Key", введите любое имя, затем "Create". Скопируйте ключ и вставьте его ниже.',
@@ -503,6 +508,7 @@ export const providers = {
       datapacketToken: 'Укажите API-ключ DataPacket',
       gcoreToken: 'Укажите API-токен Gcore',
       nodehostToken: 'Укажите API-ключ NodeHost',
+      ishostingToken: 'Укажите API-токен ishosting',
       yandexKey: 'Вставьте авторизованный ключ сервисного аккаунта Yandex Cloud (JSON)',
     },
     netcup: {

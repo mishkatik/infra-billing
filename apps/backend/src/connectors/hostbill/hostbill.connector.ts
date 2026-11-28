@@ -193,7 +193,11 @@ export class HostbillConnector implements Connector {
   async fetchPayments(signal: AbortSignal): Promise<PaymentData[]> {
     const headers = await this.authHeaders(signal);
     const { data } = await this.http.get<InvoicesResponse>('invoice', { headers, signal });
-    const paid = (data?.invoices ?? []).filter(isPaidInvoice);
+    const allPaid = (data?.invoices ?? []).filter(isPaidInvoice);
+    // Paying a merged invoice marks every invoice merged into it Paid as well: the money went in
+    // once, through the merged one, so its parts are skipped while that invoice counts as paid.
+    const paidIds = new Set(allPaid.map((inv) => String(inv.id)));
+    const paid = allPaid.filter((inv) => !paidIds.has(String(inv.merge_id ?? '')));
     const out: PaymentData[] = [];
     for (let i = 0; i < paid.length; i += DETAIL_CONCURRENCY) {
       const batch = paid.slice(i, i + DETAIL_CONCURRENCY);

@@ -48,6 +48,7 @@ export interface HostbillInvoice {
   subtotal?: string;
   status?: string;
   currency?: string;
+  merge_id?: number | string | null; // id of the invoice this one was merged into
   [key: string]: unknown;
 }
 
